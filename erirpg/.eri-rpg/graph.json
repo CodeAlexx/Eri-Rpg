@@ -1,0 +1,666 @@
+{
+  "project": "erirpg",
+  "version": "1.0.0",
+  "indexed_at": "2026-01-25T20:47:25.005252",
+  "modules": {
+    "cli.py": {
+      "path": "cli.py",
+      "lang": "python",
+      "lines": 614,
+      "summary": "EriRPG CLI - Cross-project feature transplant.",
+      "interfaces": [
+        {
+          "name": "cli",
+          "type": "function",
+          "signature": "def cli()",
+          "docstring": "EriRPG - Cross-project feature transplant tool.",
+          "methods": [],
+          "line": 26
+        },
+        {
+          "name": "add",
+          "type": "function",
+          "signature": "def add(name: str, path: str, lang: str)",
+          "docstring": "Register a project.",
+          "methods": [],
+          "line": 44
+        },
+        {
+          "name": "remove",
+          "type": "function",
+          "signature": "def remove(name: str)",
+          "docstring": "Remove a project from registry.",
+          "methods": [],
+          "line": 68
+        },
+        {
+          "name": "list_projects",
+          "type": "function",
+          "signature": "def list_projects()",
+          "docstring": "List registered projects.",
+          "methods": [],
+          "line": 80
+        },
+        {
+          "name": "index",
+          "type": "function",
+          "signature": "def index(name: str, verbose: bool)",
+          "docstring": "Index a project's codebase.",
+          "methods": [],
+          "line": 106
+        },
+        {
+          "name": "show",
+          "type": "function",
+          "signature": "def show(project: str)",
+          "docstring": "Show project structure from graph.",
+          "methods": [],
+          "line": 142
+        },
+        {
+          "name": "find",
+          "type": "function",
+          "signature": "def find(project: str, query: str, limit: int)",
+          "docstring": "Find modules matching a query.",
+          "methods": [],
+          "line": 189
+        },
+        {
+          "name": "impact",
+          "type": "function",
+          "signature": "def impact(project: str, module_path: str)",
+          "docstring": "Analyze impact of changing a module.",
+          "methods": [],
+          "line": 226
+        },
+        {
+          "name": "extract",
+          "type": "function",
+          "signature": "def extract(project: str, query: str, output: str, name: str)",
+          "docstring": "Extract a feature from a project.",
+          "methods": [],
+          "line": 283
+        },
+        {
+          "name": "plan",
+          "type": "function",
+          "signature": "def plan(feature_file: str, target_project: str)",
+          "docstring": "Plan transplant to target project.",
+          "methods": [],
+          "line": 333
+        },
+        {
+          "name": "context",
+          "type": "function",
+          "signature": "def context(feature_file: str, target_project: str)",
+          "docstring": "Generate context for Claude Code.",
+          "methods": [],
+          "line": 385
+        },
+        {
+          "name": "do_task",
+          "type": "function",
+          "signature": "def do_task(task: str)",
+          "docstring": "Smart mode - figure out steps for a task.",
+          "methods": [],
+          "line": 440
+        },
+        {
+          "name": "status",
+          "type": "function",
+          "signature": "def status()",
+          "docstring": "Show current status and next step.",
+          "methods": [],
+          "line": 499
+        },
+        {
+          "name": "validate",
+          "type": "function",
+          "signature": "def validate()",
+          "docstring": "Validate Claude's implementation.",
+          "methods": [],
+          "line": 506
+        },
+        {
+          "name": "diagnose",
+          "type": "function",
+          "signature": "def diagnose()",
+          "docstring": "Diagnose what went wrong.",
+          "methods": [],
+          "line": 556
+        },
+        {
+          "name": "reset",
+          "type": "function",
+          "signature": "def reset()",
+          "docstring": "Reset state to idle.",
+          "methods": [],
+          "line": 596
+        },
+        {
+          "name": "main",
+          "type": "function",
+          "signature": "def main()",
+          "docstring": "Main entry point.",
+          "methods": [],
+          "line": 607
+        }
+      ],
+      "deps_internal": [
+        "context.py",
+        "indexer.py",
+        "registry.py",
+        "graph.py",
+        "state.py",
+        "ops.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "graph.py": {
+      "path": "graph.py",
+      "lang": "python",
+      "lines": 256,
+      "summary": "Graph data structures for representing codebases.",
+      "interfaces": [
+        {
+          "name": "Interface",
+          "type": "class",
+          "signature": "",
+          "docstring": "A public interface (class, function, method, const) in a module.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 16
+        },
+        {
+          "name": "Module",
+          "type": "class",
+          "signature": "",
+          "docstring": "A source file/module in the project.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 48
+        },
+        {
+          "name": "Edge",
+          "type": "class",
+          "signature": "",
+          "docstring": "A dependency edge between modules.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 83
+        },
+        {
+          "name": "Graph",
+          "type": "class",
+          "signature": "",
+          "docstring": "Complete dependency graph for a project.",
+          "methods": [
+            "save",
+            "load",
+            "get_module",
+            "add_module",
+            "add_edge",
+            "get_deps",
+            "get_dependents",
+            "get_transitive_deps",
+            "get_transitive_dependents",
+            "topo_sort",
+            "stats"
+          ],
+          "line": 109
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "indexer.py": {
+      "path": "indexer.py",
+      "lang": "python",
+      "lines": 198,
+      "summary": "Code indexer for building dependency graphs.",
+      "interfaces": [
+        {
+          "name": "STDLIB_MODULES",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 23
+        },
+        {
+          "name": "index_project",
+          "type": "function",
+          "signature": "def index_project(project: Project, verbose: bool) -> Graph",
+          "docstring": "Index a project and build its dependency graph.",
+          "methods": [],
+          "line": 60
+        },
+        {
+          "name": "_find_python_files",
+          "type": "function",
+          "signature": "def _find_python_files(root: str) -> List[str]",
+          "docstring": "Find all Python files in a directory tree.",
+          "methods": [],
+          "line": 163
+        },
+        {
+          "name": "get_or_load_graph",
+          "type": "function",
+          "signature": "def get_or_load_graph(project: Project) -> Graph",
+          "docstring": "Get project graph, loading from disk if exists.",
+          "methods": [],
+          "line": 193
+        }
+      ],
+      "deps_internal": [
+        "graph.py",
+        "registry.py",
+        "parsers/python.py"
+      ],
+      "deps_external": []
+    },
+    "state.py": {
+      "path": "state.py",
+      "lang": "python",
+      "lines": 153,
+      "summary": "State tracking for orchestration mode.",
+      "interfaces": [
+        {
+          "name": "State",
+          "type": "class",
+          "signature": "",
+          "docstring": "Orchestration state for tracking progress.",
+          "methods": [
+            "__post_init__",
+            "update",
+            "log",
+            "reset",
+            "get_next_step",
+            "save",
+            "load",
+            "format_status"
+          ],
+          "line": 16
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "ops.py": {
+      "path": "ops.py",
+      "lang": "python",
+      "lines": 405,
+      "summary": "Core operations: find, extract, impact, plan.",
+      "interfaces": [
+        {
+          "name": "Feature",
+          "type": "class",
+          "signature": "",
+          "docstring": "An extracted feature - self-contained unit of code.",
+          "methods": [
+            "save",
+            "load"
+          ],
+          "line": 23
+        },
+        {
+          "name": "Mapping",
+          "type": "class",
+          "signature": "",
+          "docstring": "A mapping between source and target module/interface.",
+          "methods": [
+            "to_dict"
+          ],
+          "line": 64
+        },
+        {
+          "name": "WiringTask",
+          "type": "class",
+          "signature": "",
+          "docstring": "A wiring task for transplant.",
+          "methods": [
+            "to_dict"
+          ],
+          "line": 85
+        },
+        {
+          "name": "TransplantPlan",
+          "type": "class",
+          "signature": "",
+          "docstring": "Plan for transplanting a feature to a target project.",
+          "methods": [
+            "save",
+            "load"
+          ],
+          "line": 96
+        },
+        {
+          "name": "find_modules",
+          "type": "function",
+          "signature": "def find_modules(graph: Graph, query: str, limit: int) -> List[Tuple[Module, float]]",
+          "docstring": "Find modules matching a query.",
+          "methods": [],
+          "line": 133
+        },
+        {
+          "name": "_tokenize",
+          "type": "function",
+          "signature": "def _tokenize(text: str) -> Set[str]",
+          "docstring": "Tokenize text into words.",
+          "methods": [],
+          "line": 193
+        },
+        {
+          "name": "_jaccard",
+          "type": "function",
+          "signature": "def _jaccard(set1: Set[str], set2: Set[str]) -> float",
+          "docstring": "Jaccard similarity between two sets.",
+          "methods": [],
+          "line": 198
+        },
+        {
+          "name": "extract_feature",
+          "type": "function",
+          "signature": "def extract_feature(graph: Graph, project: Project, query: str, feature_name: str) -> Feature",
+          "docstring": "Extract a feature from a project.",
+          "methods": [],
+          "line": 207
+        },
+        {
+          "name": "analyze_impact",
+          "type": "function",
+          "signature": "def analyze_impact(graph: Graph, module_path: str) -> Dict",
+          "docstring": "Analyze impact of changing a module.",
+          "methods": [],
+          "line": 280
+        },
+        {
+          "name": "plan_transplant",
+          "type": "function",
+          "signature": "def plan_transplant(feature: Feature, target_graph: Graph, target_project: Project) -> TransplantPlan",
+          "docstring": "Plan how to transplant a feature to a target project.",
+          "methods": [],
+          "line": 322
+        },
+        {
+          "name": "_suggest_target_path",
+          "type": "function",
+          "signature": "def _suggest_target_path(source_path: str, target_project: Project) -> str",
+          "docstring": "Suggest a target path for a new module.",
+          "methods": [],
+          "line": 399
+        }
+      ],
+      "deps_internal": [
+        "graph.py",
+        "registry.py"
+      ],
+      "deps_external": []
+    },
+    "registry.py": {
+      "path": "registry.py",
+      "lang": "python",
+      "lines": 161,
+      "summary": "Project registry for managing registered projects.",
+      "interfaces": [
+        {
+          "name": "Project",
+          "type": "class",
+          "signature": "",
+          "docstring": "A registered project.",
+          "methods": [
+            "__post_init__",
+            "to_dict",
+            "from_dict",
+            "is_indexed",
+            "index_age_days"
+          ],
+          "line": 17
+        },
+        {
+          "name": "Registry",
+          "type": "class",
+          "signature": "",
+          "docstring": "Registry of all known projects.",
+          "methods": [
+            "__post_init__",
+            "add",
+            "remove",
+            "get",
+            "list",
+            "save",
+            "load",
+            "update_indexed",
+            "get_instance"
+          ],
+          "line": 64
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "context.py": {
+      "path": "context.py",
+      "lang": "python",
+      "lines": 180,
+      "summary": "Context generation for Claude Code.",
+      "interfaces": [
+        {
+          "name": "generate_context",
+          "type": "function",
+          "signature": "def generate_context(feature: Feature, plan: TransplantPlan, target_graph: Graph, target_project: Project, output_dir: Optional[str]) -> str",
+          "docstring": "Generate context file for Claude Code.",
+          "methods": [],
+          "line": 20
+        },
+        {
+          "name": "estimate_tokens",
+          "type": "function",
+          "signature": "def estimate_tokens(feature: Feature, plan: TransplantPlan) -> int",
+          "docstring": "Estimate token count for context.",
+          "methods": [],
+          "line": 167
+        }
+      ],
+      "deps_internal": [
+        "graph.py",
+        "ops.py",
+        "registry.py"
+      ],
+      "deps_external": []
+    },
+    "__init__.py": {
+      "path": "__init__.py",
+      "lang": "python",
+      "lines": 29,
+      "summary": "EriRPG - Cross-project feature transplant tool.",
+      "interfaces": [],
+      "deps_internal": [
+        "graph.py",
+        "registry.py"
+      ],
+      "deps_external": []
+    },
+    "parsers/python.py": {
+      "path": "parsers/python.py",
+      "lang": "python",
+      "lines": 272,
+      "summary": "Python parser using stdlib ast module.",
+      "interfaces": [
+        {
+          "name": "parse_python_file",
+          "type": "function",
+          "signature": "def parse_python_file(path: str) -> Dict[str, Any]",
+          "docstring": "Parse Python file, extract interfaces and imports.",
+          "methods": [],
+          "line": 16
+        },
+        {
+          "name": "_get_first_line",
+          "type": "function",
+          "signature": "def _get_first_line(docstring: Optional[str]) -> str",
+          "docstring": "Extract first line of docstring.",
+          "methods": [],
+          "line": 114
+        },
+        {
+          "name": "_get_name",
+          "type": "function",
+          "signature": "def _get_name(node: ast.expr) -> str",
+          "docstring": "Get string name from AST node.",
+          "methods": [],
+          "line": 122
+        },
+        {
+          "name": "_get_function_signature",
+          "type": "function",
+          "signature": "def _get_function_signature(node, is_async: bool) -> str",
+          "docstring": "Extract function signature as string.",
+          "methods": [],
+          "line": 134
+        },
+        {
+          "name": "resolve_import_to_module",
+          "type": "function",
+          "signature": "def resolve_import_to_module(import_info: dict, project_modules: List[str], project_name: str) -> Optional[str]",
+          "docstring": "Resolve an import to a project module path.",
+          "methods": [],
+          "line": 188
+        },
+        {
+          "name": "classify_external_package",
+          "type": "function",
+          "signature": "def classify_external_package(import_info: dict) -> Optional[str]",
+          "docstring": "Extract external package name from import.",
+          "methods": [],
+          "line": 255
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "parsers/__init__.py": {
+      "path": "parsers/__init__.py",
+      "lang": "python",
+      "lines": 13,
+      "summary": "Language-specific parsers for code analysis.",
+      "interfaces": [],
+      "deps_internal": [
+        "parsers/python.py"
+      ],
+      "deps_external": []
+    }
+  },
+  "edges": [
+    {
+      "source": "cli.py",
+      "target": "context.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli.py",
+      "target": "indexer.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli.py",
+      "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli.py",
+      "target": "state.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli.py",
+      "target": "ops.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "indexer.py",
+      "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "indexer.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "indexer.py",
+      "target": "parsers/python.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "ops.py",
+      "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "ops.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "context.py",
+      "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "context.py",
+      "target": "ops.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "context.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "__init__.py",
+      "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "__init__.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "parsers/__init__.py",
+      "target": "parsers/python.py",
+      "edge_type": "imports",
+      "specifics": []
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+"""
+Language-specific parsers for code analysis.
+
+Each parser extracts:
+- Imports/dependencies
+- Interfaces (classes, functions, exports)
+- Module docstrings/summaries
+
+Supported languages:
+- Python (.py) - uses stdlib ast
+- C/C++ (.c, .h, .cpp, .hpp) - regex-based
+- Rust (.rs) - regex-based
+"""
+
+from erirpg.parsers.python import parse_python_file, resolve_import_to_module
+from erirpg.parsers.c import parse_c_file, resolve_include_to_module
+from erirpg.parsers.rust import parse_rust_file, resolve_use_to_module, classify_external_crate
+
+__all__ = [
+    "parse_python_file",
+    "resolve_import_to_module",
+    "parse_c_file",
+    "resolve_include_to_module",
+    "parse_rust_file",
+    "resolve_use_to_module",
+    "classify_external_crate",
+]
+
+
+def get_parser_for_file(path: str):
+    """Get appropriate parser function for a file path.
+
+    Returns:
+        Parser function or None if unsupported
+    """
+    if path.endswith(".py"):
+        return parse_python_file
+    elif path.endswith((".c", ".h", ".cpp", ".hpp", ".cc", ".hh")):
+        return parse_c_file
+    elif path.endswith(".rs"):
+        return parse_rust_file
+    return None
+
+
+def detect_language(path: str) -> str:
+    """Detect language from file extension.
+
+    Returns:
+        Language string: 'python', 'c', 'rust', or 'unknown'
+    """
+    if path.endswith(".py"):
+        return "python"
+    elif path.endswith((".c", ".h", ".cpp", ".hpp", ".cc", ".hh")):
+        return "c"
+    elif path.endswith(".rs"):
+        return "rust"
+    return "unknown"

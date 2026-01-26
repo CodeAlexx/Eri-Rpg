@@ -1,0 +1,21 @@
+# Virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Egg info
+*.egg-info/
+
+# pytest cache
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Build
+dist/
+build/
