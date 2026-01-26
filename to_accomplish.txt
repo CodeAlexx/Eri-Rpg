@@ -1,0 +1,137 @@
+EriRPG: 30/60/90 Day Roadmap + Spec-Runner Core Architecture
+
+Assumptions:
+- Goal is a full spec-driven runner (spec -> plan -> execute -> verify) that surpasses GSD.
+- EriRPG remains a CLI-first Python tool with local-only analysis.
+
+===============================================================================
+30/60/90 DAY ROADMAP
+===============================================================================
+
+0-30 Days: Stabilize the Foundation
+- Fix core correctness issues:
+  - Map plan interfaces to true source modules (not topo deps).
+  - Resolve relative imports for Python indexing.
+- Make knowledge durable:
+  - Move learnings to a separate store or merge on reindex.
+  - Track file hash/mtime; mark learnings stale on changes.
+- Align language support:
+  - Either add TS/Go indexers or remove them from CLI until supported.
+- Hardening & tests:
+  - Add unit tests for indexer/graph/ops/context.
+  - Add fixtures for Python, C, Rust with relative imports.
+- Workflow polish:
+  - Add missing state phases ("building") and normalize CLI state.
+  - Use correct code fences per language in context.
+Deliverables:
+- Reliable graph and extraction.
+- Knowledge persistence across reindex.
+- A minimal test suite that blocks regressions.
+
+31-60 Days: Spec Runner MVP
+- Define spec schema:
+  - TaskSpec / ProjectSpec / TransplantSpec (JSON + Markdown).
+  - Validation rules and linting (schema checks).
+- Implement a runner loop:
+  - Plan generation: convert spec -> ordered steps.
+  - Execution engine: step runner with checkpoints.
+  - Verification gate: tests/lint checks after steps.
+- Context+tooling integration:
+  - Automated context packs per step.
+  - Tool abstraction for "run tests", "apply patch", "summarize diff".
+- Persistent run artifacts:
+  - Save spec, plan, context, logs, verification output in .eri-rpg/runs/.
+Deliverables:
+- `eri-rpg run <spec>` that executes a plan and produces a verification report.
+
+61-90 Days: Outperform GSD
+- Advanced planning & orchestration:
+  - Multi-stage planning (global plan + per-step microplan).
+  - Risk-aware ordering using graph impact.
+- Memory & retrieval:
+  - Semantic search over learnings + graph summaries.
+  - Staleness-aware retrieval with auto-refresh prompts.
+- Better verification:
+  - Test selection based on impacted modules.
+  - Lint/format gating; fail-fast mode.
+- Developer experience:
+  - Report summaries, diffs, and failure diagnostics.
+  - Optional integrations (git, CI hints, commit drafts).
+Deliverables:
+- A robust spec-runner with measurable reliability and speed gains over GSD.
+
+===============================================================================
+SPEC-RUNNER CORE ARCHITECTURE (MINIMAL)
+===============================================================================
+
+Core Modules
+1) Spec Intake
+   - Input: TaskSpec/ProjectSpec/TransplantSpec (Markdown + JSON).
+   - Output: validated, normalized Spec object.
+   - Responsibilities: parse, validate, enforce required fields.
+
+2) Planner
+   - Input: Spec + Graph + Knowledge.
+   - Output: Plan (ordered Steps with dependencies).
+   - Responsibilities: decompose into steps, choose modules, define outputs.
+
+3) Context Builder
+   - Input: Step + Graph + Knowledge.
+   - Output: Context pack for that step (code + notes + constraints).
+   - Responsibilities: include relevant source, patterns, decisions, dependencies.
+
+4) Executor
+   - Input: Step + Context.
+   - Output: Applied change or action log.
+   - Responsibilities: run edits, record changes, block on failure.
+
+5) Verifier
+   - Input: Step outputs + project.
+   - Output: pass/fail + diagnostics.
+   - Responsibilities: run tests/lint; create fix suggestions.
+
+6) Memory Store
+   - Input: Learnings, decisions, patterns, run history.
+   - Output: retrieval API for planner/context.
+   - Responsibilities: persistence, staleness, merge on reindex.
+
+7) Orchestrator / State Machine
+   - Input: Spec.
+   - Output: Execution lifecycle (plan -> execute -> verify).
+   - Responsibilities: resume/pause, phase transitions, checkpointing.
+
+Data Flow (Minimal Runner)
+Spec -> Planner -> Plan
+Plan step -> Context Builder -> Executor -> Verifier -> step status
+Repeat until complete or failed
+
+Spec Formats (Minimal fields)
+- TaskSpec:
+  - title, goal, constraints, non_goals, target_project, acceptance_tests
+- ProjectSpec:
+  - name, language, structure, core_features, constraints
+- TransplantSpec:
+  - feature_name, source_project, target_project, mappings, wiring
+
+Plan Step Model (suggested)
+- id, title, description, inputs, outputs, depends_on, status, verify_cmds
+
+Artifacts and Storage
+- .eri-rpg/specs/  : raw specs + normalized specs
+- .eri-rpg/plans/  : generated plans
+- .eri-rpg/context/: per-step context packs
+- .eri-rpg/runs/   : logs, verification results, diffs
+- .eri-rpg/knowledge/: learnings + decisions (separate from graph.json)
+
+CLI Surface (Minimal)
+- eri-rpg spec new <type>
+- eri-rpg plan <spec>
+- eri-rpg run <spec>
+- eri-rpg verify <run_id>
+- eri-rpg resume <run_id>
+
+MVP Success Criteria
+- Given a TaskSpec, the runner produces a plan, executes steps, and verifies
+  without manual wiring, and logs an auditable run artifact set.
+
+If you want, I can convert this into a sprint board or a detailed implementation plan.

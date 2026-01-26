@@ -12,6 +12,35 @@ import yaml
 
 
 @dataclass
+class SpecStep:
+    """A step defined in the spec file."""
+    id: str
+    goal: str
+    description: str = ""
+    context_files: List[str] = field(default_factory=list)
+    verification: List[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "SpecStep":
+        return cls(
+            id=d.get("id", ""),
+            goal=d.get("goal", ""),
+            description=d.get("description", ""),
+            context_files=d.get("context_files", []),
+            verification=d.get("verification", []),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "goal": self.goal,
+            "description": self.description,
+            "context_files": self.context_files,
+            "verification": self.verification,
+        }
+
+
+@dataclass
 class Spec:
     """A goal specification for the agent."""
 
@@ -22,6 +51,7 @@ class Spec:
     verification: List[str] = field(default_factory=list)
     context_hints: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    steps: List[SpecStep] = field(default_factory=list)  # Custom steps
 
     # Path to spec file (for relative path resolution)
     spec_path: Optional[str] = None
@@ -36,6 +66,11 @@ class Spec:
         with open(p) as f:
             data = yaml.safe_load(f) or {}
 
+        # Parse custom steps if provided
+        steps = []
+        for s in data.get("steps", []):
+            steps.append(SpecStep.from_dict(s))
+
         return cls(
             goal=data.get("goal", ""),
             source_project=data.get("source_project"),
@@ -44,12 +79,14 @@ class Spec:
             verification=data.get("verification", []),
             context_hints=data.get("context", []),
             metadata=data.get("metadata", {}),
+            steps=steps,
             spec_path=str(p.absolute()),
         )
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Spec":
         """Create spec from dictionary."""
+        steps = [SpecStep.from_dict(s) for s in data.get("steps", [])]
         return cls(
             goal=data.get("goal", ""),
             source_project=data.get("source_project"),
@@ -58,6 +95,7 @@ class Spec:
             verification=data.get("verification", []),
             context_hints=data.get("context", []),
             metadata=data.get("metadata", {}),
+            steps=steps,
         )
 
     @classmethod
@@ -67,7 +105,7 @@ class Spec:
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
-        return {
+        d = {
             "goal": self.goal,
             "source_project": self.source_project,
             "target_project": self.target_project,
@@ -76,6 +114,9 @@ class Spec:
             "context": self.context_hints,
             "metadata": self.metadata,
         }
+        if self.steps:
+            d["steps"] = [s.to_dict() for s in self.steps]
+        return d
 
     def save(self, path: str) -> None:
         """Save spec to YAML file."""

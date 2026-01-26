@@ -36,7 +36,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from erirpg.agent.spec import Spec
+from erirpg.agent.spec import Spec, SpecStep
 from erirpg.agent.plan import Plan, Step, StepStatus
 from erirpg.agent.run import RunState, save_run, load_run, get_latest_run
 from erirpg.agent.learner import auto_learn, get_knowledge, is_stale, update_learning
@@ -142,8 +142,30 @@ class Agent:
         """
         Generate a plan from a spec.
 
-        This creates steps based on the goal type.
+        If spec has explicit steps, use those.
+        Otherwise, create steps based on the goal type.
         """
+        # Use custom steps from spec if provided
+        if spec.steps:
+            steps = []
+            for i, spec_step in enumerate(spec.steps):
+                steps.append(Step(
+                    id=spec_step.id,
+                    goal=spec_step.goal,
+                    description=spec_step.description,
+                    order=i + 1,
+                    context_files=spec_step.context_files,
+                    verification_commands=spec_step.verification or spec.verification,
+                ))
+            return Plan.create(
+                goal=spec.goal,
+                steps=steps,
+                source_project=spec.source_project,
+                target_project=spec.target_project,
+                constraints=spec.constraints,
+                final_verification=spec.verification,
+            )
+
         # Parse goal to determine type
         goal_lower = spec.goal.lower()
 

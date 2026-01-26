@@ -1,0 +1,208 @@
+Detailed Implementation Plan: Spec-Driven Runner for EriRPG
+
+Overview
+- Build a spec -> plan -> execute -> verify loop on top of the existing graph/knowledge/context core.
+- Stabilize correctness first, then add durable memory, then specs/planning, then runner orchestration.
+- Keep Claude as the default executor while allowing scripted execution later.
+
+===============================================================================
+PHASE 0: FOUNDATION AND CORRECTNESS (Stabilize Core)
+===============================================================================
+
+Goals
+- Fix the two biggest correctness failures (mapping provenance + relative imports).
+- Align language support with what the indexer can actually handle.
+- Make context output language-aware.
+- Normalize state handling for all phases.
+- Add tests to prevent regressions.
+
+Tasks
+0.1 Fix mapping provenance (plan accuracy)
+- Update Feature to include explicit primary module or per-interface module mapping.
+- Use that mapping in plan_transplant.
+- Ensure the plan references the true source module.
+- Files: erirpg/ops.py, erirpg/graph.py (if needed)
+- Tests: plan_transplant chooses correct source module.
+
+0.2 Resolve relative imports (dependency accuracy)
+- Add file context to resolve_import_to_module for relative paths.
+- Pass current module path into parser or resolve step.
+- Use this to build correct internal edges.
+- Files: erirpg/parsers/python.py, erirpg/indexer.py
+- Tests: relative import edge appears in graph.
+
+0.3 Align language options
+- Either implement TS/Go parsing or remove from CLI/new flow.
+- Prevent user selection that the indexer cannot handle.
+- Files: erirpg/cli.py, erirpg/modes/new.py, erirpg/indexer.py
+
+0.4 Language-aware context output
+- Render code fences based on language.
+- Use module extension or graph.lang.
+- Files: erirpg/context.py, erirpg/modes/work.py
+
+0.5 Normalize state phases
+- Add "building" and/or unify phases to known values.
+- Update format_status and next-step logic.
+- Files: erirpg/state.py, erirpg/modes/new.py
+
+0.6 Test scaffolding
+- Add tests for index/graph/extract/plan/context.
+- Start with fixture projects for Python (with relative imports).
+- Files: tests/ (new)
+
+Deliverables
+- Correct plan mappings.
+- Accurate dependency graph for Python packages with relative imports.
+- Consistent CLI language support.
+- Basic test suite in place.
+
+===============================================================================
+PHASE 1: DURABLE MEMORY (Make Learnings Persistent)
+===============================================================================
+
+Goals
+- Make knowledge independent from graph.json.
+- Track staleness and preserve learnings across reindex.
+
+Tasks
+1.1 Create a dedicated knowledge store
+- Add erirpg/memory.py to read/write .eri-rpg/knowledge.json.
+- Store learnings, decisions, patterns, history separately from graph.
+
+1.2 Add staleness tracking
+- Extend Learning with source_hash and source_mtime.
+- On recall, warn if stale.
+- On reindex, update staleness metadata.
+- Files: erirpg/knowledge.py, erirpg/cli.py, erirpg/indexer.py
+
+1.3 Migrate existing knowledge
+- If graph.json has embedded knowledge, extract and write to knowledge.json.
+- Provide a one-time migration step in load logic.
+
+Deliverables
+- Knowledge survives reindex.
+- Stale learnings are detected.
+
+===============================================================================
+PHASE 2: SPEC AND PLANNING (Introduce Spec Runner Inputs)
+===============================================================================
+
+Goals
+- Define spec formats.
+- Convert specs into plans with explicit steps.
+- Persist spec and plan artifacts.
+
+Tasks
+2.1 Spec models and validation
+- Create erirpg/specs.py for TaskSpec, ProjectSpec, TransplantSpec.
+- Include schema validation and versioning.
+- Provide normalization (trim, defaults).
+
+2.2 Plan model
+- Create erirpg/planner.py for Plan and PlanStep.
+- Each step has id, description, inputs, outputs, dependencies, verify commands.
+
+2.3 Planner logic
+- Convert spec -> plan using graph and knowledge.
+- Order steps by dependencies and impact.
+- Identify needed modules and wiring tasks.
+
+2.4 Spec and plan persistence
+- Save to .eri-rpg/specs and .eri-rpg/plans.
+- Add CLI for spec creation and plan display.
+
+Deliverables
+- Spec ingestion and plan generation CLI.
+- Plans are serialized and reproducible.
+
+===============================================================================
+PHASE 3: RUNNER AND VERIFICATION (Execution Loop)
+===============================================================================
+
+Goals
+- Build a step runner with checkpoints and resume.
+- Add verification hooks and reporting.
+
+Tasks
+3.1 Runner orchestration
+- Create erirpg/runner.py with a step loop: build context -> execute -> verify.
+- Allow pause/resume on failure or manual approval.
+
+3.2 Run records
+- Create erirpg/runs.py with RunRecord and StepStatus.
+- Store per-run logs and artifacts.
+
+3.3 Verification
+- Create erirpg/verification.py with lint/test command hooks.
+- Auto-select checks from spec or config.
+
+3.4 CLI commands
+- Add `eri-rpg run <spec>`, `resume <run_id>`, `verify <run_id>`, `report <run_id>`.
+
+Deliverables
+- End-to-end runnable spec: spec -> plan -> run -> verify.
+- Run logs and verification reports stored.
+
+===============================================================================
+PHASE 4: ADVANCED CAPABILITIES (Better Than GSD)
+===============================================================================
+
+Goals
+- Make plans smarter and verification tighter.
+- Improve retrieval and debugging.
+
+Tasks
+4.1 Risk-aware planning
+- Use Graph impact to reorder or flag risky steps.
+
+4.2 Semantic retrieval
+- Add embeddings/keyword scoring over learnings + summaries.
+- Improve module ranking beyond token overlap.
+
+4.3 Failure diagnosis
+- Produce structured diffs and failure explanations.
+- Suggest next actions based on failing checks.
+
+Deliverables
+- Faster debugging, fewer failed runs, clearer reports.
+
+===============================================================================
+CORE DATA MODELS (Suggested)
+===============================================================================
+
+TaskSpec
+- title, goal, constraints, non_goals, target_project, acceptance_tests
+
+ProjectSpec
+- name, language, structure, core_features, constraints
+
+TransplantSpec
+- feature_name, source_project, target_project, mappings, wiring
+
+PlanStep
+- id, title, description, inputs, outputs, depends_on, verify_cmds, status
+
+RunRecord
+- run_id, spec_id, started_at, steps, logs, artifacts, status
+
+===============================================================================
+STORAGE LAYOUT
+===============================================================================
+
+.eri-rpg/specs/      # normalized spec files
+.eri-rpg/plans/      # generated plan files
+.eri-rpg/context/    # per-step context packs
+.eri-rpg/runs/       # logs, verification reports
+.eri-rpg/knowledge/  # durable memory (knowledge.json)
+
+===============================================================================
+ACCEPTANCE CRITERIA
+===============================================================================
+
+- Spec -> plan -> run -> verify works end-to-end without manual glue.
+- Knowledge persists across reindex and staleness is detected.
+- Plan mappings reference correct source modules.
+- Indexer correctly resolves relative imports.
+- Runner can pause/resume with consistent state.
+- Tests exist for critical flows.
