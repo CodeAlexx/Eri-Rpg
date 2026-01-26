@@ -254,6 +254,10 @@ class KnowledgeStore:
             return True
         return False
 
+    def list_modules(self) -> List[str]:
+        """List all modules with learnings."""
+        return list(self.learnings.keys())
+
     # CRUD for decisions
 
     def add_decision(self, decision: StoredDecision) -> None:
