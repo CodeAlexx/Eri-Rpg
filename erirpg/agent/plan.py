@@ -47,6 +47,10 @@ class Step:
     verification_commands: List[str] = field(default_factory=list)
     verification_passed: Optional[bool] = None
 
+    # Multi-agent support
+    parallelizable: bool = False  # Can run in parallel with other parallelizable steps
+    depends_on: List[str] = field(default_factory=list)  # Step IDs this depends on
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -63,6 +67,8 @@ class Step:
             "error": self.error,
             "verification_commands": self.verification_commands,
             "verification_passed": self.verification_passed,
+            "parallelizable": self.parallelizable,
+            "depends_on": self.depends_on,
         }
 
     @classmethod
@@ -82,6 +88,8 @@ class Step:
             error=d.get("error"),
             verification_commands=d.get("verification_commands", []),
             verification_passed=d.get("verification_passed"),
+            parallelizable=d.get("parallelizable", False),
+            depends_on=d.get("depends_on", []),
         )
 
 

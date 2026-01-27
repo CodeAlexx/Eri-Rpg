@@ -56,6 +56,7 @@ from erirpg.agent.plan import Plan, Step, StepStatus
 from erirpg.agent.run import RunState, save_run, load_run, get_latest_run, Decision, RunSummary
 from erirpg.agent.learner import auto_learn, get_knowledge, is_stale, update_learning
 from erirpg.memory import load_knowledge as load_knowledge_store, git_head, in_git_repo
+from erirpg.config import load_config, ProjectConfig
 
 if TYPE_CHECKING:
     from erirpg.preflight import PreflightReport
@@ -158,6 +159,9 @@ class Agent:
         self.project_path = project_path
         self._run = run
 
+        # Load project configuration
+        self._config = load_config(project_path)
+
         # Preflight enforcement
         self._preflight_done = False
         self._preflight_report: Optional["PreflightReport"] = None
@@ -172,6 +176,21 @@ class Agent:
         from erirpg.write_guard import install_hooks
         install_hooks()
         _set_active_agent(self)
+
+    @property
+    def config(self) -> ProjectConfig:
+        """Get the project configuration."""
+        return self._config
+
+    @property
+    def multi_agent_enabled(self) -> bool:
+        """Check if multi-agent mode is enabled."""
+        return self._config.multi_agent.enabled
+
+    @property
+    def max_concurrency(self) -> int:
+        """Get max concurrent sub-agents."""
+        return self._config.multi_agent.max_concurrency
 
     @classmethod
     def from_spec(cls, spec_path: str, project_path: Optional[str] = None) -> "Agent":

@@ -203,6 +203,14 @@ def main():
             print(json.dumps({}))
             sys.exit(0)
 
+        # Always allow Claude Code system files (~/.claude/)
+        home = os.path.expanduser("~")
+        claude_dir = os.path.join(home, ".claude")
+        if file_path.startswith(claude_dir):
+            log(f"Allowing Claude Code system file: {file_path}")
+            print(json.dumps({}))
+            sys.exit(0)
+
         # Find project root (look for .eri-rpg directory)
         project_path = cwd
         check_path = Path(file_path).parent
