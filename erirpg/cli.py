@@ -360,7 +360,7 @@ def next_chunk(verbose: bool):
 @cli.command()
 @click.argument("project")
 def show(project: str):
-    """Show project structure from graph."""
+    """Show project structure and metadata."""
     registry = Registry.get_instance()
     proj = registry.get(project)
 
@@ -368,38 +368,73 @@ def show(project: str):
         click.echo(f"Error: Project '{project}' not found", err=True)
         sys.exit(1)
 
-    try:
-        graph = get_or_load_graph(proj)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-    stats = graph.stats()
+    # Project header
     click.echo(f"Project: {project}")
+    if proj.description:
+        click.echo(f"Description: {proj.description}")
     click.echo(f"Path: {proj.path}")
-    click.echo(f"Modules: {stats['modules']}")
-    click.echo(f"Lines: {stats['total_lines']:,}")
+    click.echo(f"Language: {proj.lang}")
+
+    # Index status
+    if proj.indexed_at:
+        age_days = (datetime.now() - proj.indexed_at).days
+        age_str = "today" if age_days == 0 else f"{age_days}d ago"
+        click.echo(f"Indexed: {age_str}")
+    else:
+        click.echo("Indexed: not indexed")
+
     click.echo("")
 
-    # Group by top-level directory
-    dirs = {}
-    for mod_path in sorted(graph.modules.keys()):
-        parts = mod_path.split("/")
-        top = parts[0] if len(parts) > 1 else "(root)"
-        if top not in dirs:
-            dirs[top] = []
-        dirs[top].append(mod_path)
+    # TODOs
+    if proj.todos:
+        click.echo("TODOs:")
+        for i, todo in enumerate(proj.todos):
+            click.echo(f"  [{i}] {todo}")
+        click.echo("")
 
-    for dir_name, modules in sorted(dirs.items()):
-        click.echo(f"{dir_name}/")
-        for mod in modules[:5]:  # Show first 5
-            m = graph.get_module(mod)
-            ifaces = ", ".join(i.name for i in m.interfaces[:3])
-            if len(m.interfaces) > 3:
-                ifaces += "..."
-            click.echo(f"  {mod}: {ifaces}")
-        if len(modules) > 5:
-            click.echo(f"  ... and {len(modules) - 5} more")
+    # Notes
+    if proj.notes:
+        click.echo("Notes:")
+        for line in proj.notes.split('\n'):
+            click.echo(f"  {line}")
+        click.echo("")
+
+    # Try to load graph for stats
+    try:
+        graph = get_or_load_graph(proj)
+        stats = graph.stats()
+        knowledge = graph.knowledge
+        k_stats = knowledge.stats()
+
+        click.echo(f"Modules: {stats['modules']}")
+        click.echo(f"Lines: {stats['total_lines']:,}")
+        click.echo(f"Patterns: {k_stats['patterns']} stored")
+        click.echo(f"Decisions: {k_stats['decisions']} stored")
+        click.echo(f"Learnings: {k_stats['learnings']} stored")
+        click.echo("")
+
+        # Group by top-level directory
+        dirs = {}
+        for mod_path in sorted(graph.modules.keys()):
+            parts = mod_path.split("/")
+            top = parts[0] if len(parts) > 1 else "(root)"
+            if top not in dirs:
+                dirs[top] = []
+            dirs[top].append(mod_path)
+
+        for dir_name, modules in sorted(dirs.items()):
+            click.echo(f"{dir_name}/")
+            for mod in modules[:5]:  # Show first 5
+                m = graph.get_module(mod)
+                ifaces = ", ".join(i.name for i in m.interfaces[:3])
+                if len(m.interfaces) > 3:
+                    ifaces += "..."
+                click.echo(f"  {mod}: {ifaces}")
+            if len(modules) > 5:
+                click.echo(f"  ... and {len(modules) - 5} more")
+
+    except ValueError:
+        click.echo("(not indexed - run: eri-rpg index {})".format(project))
 
 
 @cli.command()
@@ -1259,6 +1294,264 @@ def pattern(project: str, name: str, description: str):
 
     click.echo(f"✓ Stored pattern: {name}")
     click.echo(f"  {description}")
+
+
+@cli.command("patterns")
+@click.argument("project")
+def list_patterns(project: str):
+    """List all stored patterns for a project.
+
+    Example:
+        eri-rpg patterns myproject
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    try:
+        graph = get_or_load_graph(proj)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    patterns = graph.knowledge.patterns
+    if not patterns:
+        click.echo("No patterns stored.")
+        click.echo(f"\nAdd one: eri-rpg pattern {project} <name> \"<description>\"")
+        return
+
+    click.echo(f"Patterns for {project}:")
+    click.echo("=" * 40)
+    for name, desc in sorted(patterns.items()):
+        click.echo(f"\n• {name}")
+        click.echo(f"  {desc}")
+
+
+# ============================================================================
+# Project Metadata Commands
+# ============================================================================
+
+@cli.command("describe")
+@click.argument("project")
+@click.argument("description")
+def set_description(project: str, description: str):
+    """Set project description.
+
+    Example:
+        eri-rpg describe myproject "ML training toolkit for LoRA/SDXL"
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    proj.description = description
+    registry.save()
+
+    click.echo(f"✓ Description set for {project}")
+    click.echo(f"  {description}")
+
+
+@cli.command("todo")
+@click.argument("project")
+@click.argument("item", required=False)
+@click.option("-l", "--list", "list_todos", is_flag=True, help="List all todos")
+@click.option("-d", "--done", "done_index", type=int, help="Mark todo as done by index")
+def manage_todos(project: str, item: str, list_todos: bool, done_index: int):
+    """Manage project TODOs.
+
+    Examples:
+        eri-rpg todo myproject "Add config validation"
+        eri-rpg todo myproject --list
+        eri-rpg todo myproject --done 0
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    # List todos
+    if list_todos or (not item and done_index is None):
+        if not proj.todos:
+            click.echo(f"No TODOs for {project}.")
+            click.echo(f"\nAdd one: eri-rpg todo {project} \"<item>\"")
+            return
+
+        click.echo(f"TODOs for {project}:")
+        for i, todo in enumerate(proj.todos):
+            click.echo(f"  [{i}] {todo}")
+        return
+
+    # Mark as done
+    if done_index is not None:
+        if done_index < 0 or done_index >= len(proj.todos):
+            click.echo(f"Error: Invalid index {done_index}. Valid: 0-{len(proj.todos)-1}", err=True)
+            sys.exit(1)
+
+        removed = proj.todos.pop(done_index)
+        registry.save()
+        click.echo(f"✓ Marked done: {removed}")
+        return
+
+    # Add new todo
+    if item:
+        proj.todos.append(item)
+        registry.save()
+        click.echo(f"✓ Added TODO [{len(proj.todos)-1}]: {item}")
+
+
+@cli.command("notes")
+@click.argument("project")
+@click.argument("note", required=False)
+@click.option("--show", "show_notes", is_flag=True, help="Show notes")
+@click.option("--clear", "clear_notes", is_flag=True, help="Clear all notes")
+@click.option("--append", "append_mode", is_flag=True, help="Append to existing notes")
+def manage_notes(project: str, note: str, show_notes: bool, clear_notes: bool, append_mode: bool):
+    """Manage project notes.
+
+    Examples:
+        eri-rpg notes myproject "Needs CUDA 12.1+"
+        eri-rpg notes myproject --show
+        eri-rpg notes myproject "Additional info" --append
+        eri-rpg notes myproject --clear
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    # Show notes
+    if show_notes or (not note and not clear_notes):
+        if not proj.notes:
+            click.echo(f"No notes for {project}.")
+            click.echo(f"\nAdd notes: eri-rpg notes {project} \"<note>\"")
+            return
+
+        click.echo(f"Notes for {project}:")
+        click.echo("-" * 40)
+        click.echo(proj.notes)
+        return
+
+    # Clear notes
+    if clear_notes:
+        proj.notes = ""
+        registry.save()
+        click.echo(f"✓ Notes cleared for {project}")
+        return
+
+    # Set/append notes
+    if note:
+        if append_mode and proj.notes:
+            proj.notes = proj.notes + "\n" + note
+        else:
+            proj.notes = note
+        registry.save()
+        click.echo(f"✓ Notes {'appended' if append_mode else 'set'} for {project}")
+
+
+@cli.command("decision")
+@click.argument("project")
+@click.argument("title")
+@click.option("--reason", "-r", required=True, help="Reason for the decision")
+@click.option("--affects", "-a", help="Comma-separated list of affected files")
+@click.option("--alternatives", help="Comma-separated list of alternatives considered")
+def add_decision(project: str, title: str, reason: str, affects: str, alternatives: str):
+    """Record an architectural decision.
+
+    Example:
+        eri-rpg decision myproject "Use PostgreSQL" \\
+            --reason "Need concurrent writes" \\
+            --affects "src/db.py,src/models.py" \\
+            --alternatives "SQLite,MySQL"
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    try:
+        graph = get_or_load_graph(proj)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    # Parse comma-separated lists
+    affects_list = [a.strip() for a in affects.split(",")] if affects else []
+    alternatives_list = [a.strip() for a in alternatives.split(",")] if alternatives else []
+
+    # Create decision ID
+    decision_id = f"dec-{len(graph.knowledge.decisions) + 1:03d}"
+
+    decision = Decision(
+        id=decision_id,
+        date=datetime.now(),
+        title=title,
+        reason=reason,
+        affects=affects_list,
+        alternatives=alternatives_list,
+    )
+
+    graph.knowledge.add_decision(decision)
+    graph.save(proj.graph_path)
+
+    click.echo(f"✓ Recorded decision: {decision_id}")
+    click.echo(f"  Title: {title}")
+    click.echo(f"  Reason: {reason}")
+    if affects_list:
+        click.echo(f"  Affects: {', '.join(affects_list)}")
+    if alternatives_list:
+        click.echo(f"  Alternatives: {', '.join(alternatives_list)}")
+
+
+@cli.command("decisions")
+@click.argument("project")
+def list_decisions(project: str):
+    """List all architectural decisions for a project.
+
+    Example:
+        eri-rpg decisions myproject
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    try:
+        graph = get_or_load_graph(proj)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    decisions = graph.knowledge.decisions
+    if not decisions:
+        click.echo("No decisions recorded.")
+        click.echo(f"\nAdd one: eri-rpg decision {project} \"<title>\" --reason \"<why>\"")
+        return
+
+    click.echo(f"Decisions for {project}:")
+    click.echo("=" * 50)
+    for d in decisions:
+        age_days = (datetime.now() - d.date).days
+        age_str = "today" if age_days == 0 else f"{age_days}d ago"
+        click.echo(f"\n[{d.id}] {d.title} ({age_str})")
+        click.echo(f"  Reason: {d.reason}")
+        if d.affects:
+            click.echo(f"  Affects: {', '.join(d.affects)}")
+        if d.alternatives:
+            click.echo(f"  Alternatives: {', '.join(d.alternatives)}")
 
 
 @cli.command()
