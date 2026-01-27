@@ -2,21 +2,23 @@
 
 **Spec-driven development toolkit for AI-assisted coding.**
 
-EriRPG helps manage complex code changes by enforcing a structured workflow: learn → preflight → edit → verify. Originally designed for cross-project "transplants" (copying features between codebases), it now supports general development workflows.
+EriRPG helps manage complex code changes by enforcing a structured workflow: discuss → plan → learn → preflight → edit → verify. Originally designed for cross-project "transplants" (copying features between codebases), it now supports general development workflows.
 
-## Status: Alpha (v0.1.0)
+## Status: v2.0
 
-This is working software but has rough edges. See [Known Issues](#known-issues) below.
+Production-ready for personal use. See [docs/MANUAL.md](docs/MANUAL.md) for complete documentation.
 
 ## What It Does
 
-1. **Project Registry** - Register and index codebases (Python, Rust, C)
-2. **Knowledge Storage** - Save learnings about modules to avoid re-reading code
-3. **Preflight Checks** - Verify understanding before making changes
-4. **Run Tracking** - Track multi-step changes with rollback capability
-5. **Quick Fix Mode** - Lightweight single-file edits without full ceremony
-6. **Claude Code Integration** - Hooks enforce workflow in AI coding sessions
-7. **One-Command Install** - `eri-rpg install` sets up Claude Code integration
+1. **Discussion Mode** - Clarify vague goals with structured Q&A before planning
+2. **Roadmap Planning** - Break large goals into phased milestones
+3. **Project Registry** - Register and index codebases (Python, Rust, C, Dart)
+4. **Knowledge Storage** - Save learnings about modules to avoid re-reading code
+5. **Preflight Checks** - Verify understanding before making changes
+6. **Run Tracking** - Track multi-step changes with rollback capability
+7. **Run Summaries** - Track decisions and generate summaries of completed runs
+8. **Quick Fix Mode** - Lightweight single-file edits without full ceremony
+9. **Claude Code Integration** - Hooks enforce workflow in AI coding sessions
 
 ## Quick Start
 
@@ -24,7 +26,7 @@ This is working software but has rough edges. See [Known Issues](#known-issues) 
 # Install
 pip install -e /path/to/eri-rpg
 
-# Set up Claude Code integration (optional)
+# Set up Claude Code integration
 eri-rpg install
 
 # Register a project
@@ -33,14 +35,14 @@ eri-rpg add myproject /path/to/project
 # Index it (builds dependency graph)
 eri-rpg index myproject
 
-# Find modules
-eri-rpg find myproject "loss calculation"
+# Start a discussion for a vague goal
+eri-rpg discuss myproject "improve the caching system"
 
-# Store learning after understanding a module
-eri-rpg learn myproject src/utils.py -s "Utility functions" -p "String helpers and validators"
+# Or generate a spec directly for a clear goal
+eri-rpg goal-plan myproject "add retry logic to api.py"
 
-# Recall it later
-eri-rpg recall myproject src/utils.py
+# Start the run
+eri-rpg goal-run myproject
 ```
 
 ## Core Commands
@@ -53,11 +55,20 @@ eri-rpg list                   # List registered projects
 eri-rpg index <name>           # Build dependency graph
 ```
 
+### Discussion & Planning
+```bash
+eri-rpg discuss <project> "<goal>"        # Start discussion for vague goal
+eri-rpg discuss-answer <project> <n> "answer"  # Answer question N
+eri-rpg discuss-resolve <project>         # Mark discussion complete
+eri-rpg roadmap-add <project> "Phase" "Description"  # Add milestone
+eri-rpg roadmap <project>                 # Show roadmap progress
+```
+
 ### Knowledge
 ```bash
-eri-rpg learn <project> <file> # Store learning about a module
+eri-rpg learn <project> <file>  # Store learning about a module
 eri-rpg recall <project> <file> # Retrieve stored learning
-eri-rpg knowledge <project>    # Show all learnings
+eri-rpg knowledge <project>     # Show all learnings
 eri-rpg relearn <project> <file> # Force re-read
 ```
 
@@ -68,7 +79,17 @@ eri-rpg show <project>          # Show project structure
 eri-rpg impact <project> <file> # Analyze change impact
 ```
 
-### Quick Fix Mode (Lightweight)
+### Run Management
+```bash
+eri-rpg goal-plan <project> "<goal>"  # Generate spec from goal
+eri-rpg goal-run <project>            # Start/resume run
+eri-rpg runs <project>                # List runs
+eri-rpg cleanup <project>             # Show stale runs
+eri-rpg cleanup <project> --prune     # Delete stale runs
+eri-rpg rollback <project> <file>     # Rollback changes
+```
+
+### Quick Fix Mode
 ```bash
 eri-rpg quick <project> <file> "description"  # Start quick fix
 eri-rpg quick-done <project>                  # Commit and complete
@@ -76,43 +97,11 @@ eri-rpg quick-cancel <project>                # Restore and abort
 eri-rpg quick-status <project>                # Check status
 ```
 
-### Run Management
-```bash
-eri-rpg runs <project>           # List runs
-eri-rpg cleanup <project>        # Show stale runs
-eri-rpg cleanup <project> --prune # Delete stale runs
-eri-rpg rollback <project> <file> # Rollback changes
-```
-
-### Installation Management
+### Installation
 ```bash
 eri-rpg install          # Install Claude Code commands and hooks
 eri-rpg uninstall        # Remove from Claude Code
 eri-rpg install-status   # Check installation status
-```
-
-## Real Example Output
-
-```
-$ eri-rpg list
-eritrainer: /home/alex/OneTrainer/eritrainer (python, indexed (today))
-onetrainer: /home/alex/OneTrainer/modules (python, indexed (today))
-ai-toolkit: /home/alex/ai-toolkit (python, indexed (today))
-
-$ eri-rpg find erirpg "agent"
-Matching modules in erirpg:
-
-  agent/__init__.py (0.63)
-    EriRPG Agent API.
-  agent/spec.py (0.49)
-    Spec file parsing for agent-driven workflows.
-  agent/run.py (0.11)
-    Run state management.
-
-$ eri-rpg install-status
-EriRPG Installation Status:
-  Commands: /eri:execute, /eri:quick, /eri:status
-  Hooks: PreToolUse, PreCompact, SessionStart
 ```
 
 ## Claude Code Integration
@@ -123,55 +112,37 @@ EriRPG includes hooks for Claude Code that:
 2. **PreCompact** - Saves state before context compaction
 3. **SessionStart** - Reminds about incomplete runs
 
-### Quick Setup
+### Slash Commands
 
-```bash
-eri-rpg install
+After `eri-rpg install`:
+
+- `/eri:start` - Initialize EriRPG for a coding session
+- `/eri:execute` - Run the full agent workflow
+- `/eri:guard` - Check if edits are allowed
+- `/eri:status` - Show current run status
+
+## Example Session
+
 ```
+$ eri-rpg discuss myproject "improve performance"
+Discussion started: d8f3a2b1
 
-This automatically:
-- Installs `/eri:*` slash commands
-- Configures hooks in `~/.claude/settings.json`
-- Sets up enforcement for Edit/Write/MultiEdit tools
+Questions:
+  ○ 1. What specific aspect should be improved?
+  ○ 2. Are there constraints (backwards compatibility, etc.)?
+  ○ 3. What's the success criteria for this refactor?
 
-To remove:
-```bash
-eri-rpg uninstall
+$ eri-rpg discuss-answer myproject 1 "Database queries are slow"
+$ eri-rpg discuss-answer myproject 2 "Must maintain API compatibility"
+$ eri-rpg discuss-answer myproject 3 "Query times under 100ms"
+
+$ eri-rpg roadmap-add myproject "Profile" "Identify slow queries"
+$ eri-rpg roadmap-add myproject "Optimize" "Add indexes and caching"
+$ eri-rpg roadmap-add myproject "Verify" "Benchmark improvements"
+
+$ eri-rpg discuss-resolve myproject
+Discussion resolved. Ready for: eri-rpg goal-plan myproject
 ```
-
-See [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) for manual setup.
-
-## Known Issues
-
-### Working
-- ✅ Project registration and indexing
-- ✅ Module search (`find`)
-- ✅ Learning storage and recall (v2 knowledge)
-- ✅ Quick fix mode (single-file edits)
-- ✅ Cleanup command (list/prune stale runs)
-- ✅ Basic rollback functionality
-- ✅ PreToolUse hook enforcement
-- ✅ One-command installer (`eri-rpg install`)
-- ✅ Python parser
-- ✅ Rust parser (basic)
-- ✅ C parser (basic)
-
-### Partially Working
-- ⚠️ Full agent workflow (Agent.from_goal) - works but complex
-- ⚠️ Verification gating - implemented but not all projects have configs
-- ⚠️ Take/transplant mode - needs more testing
-- ⚠️ Context generation - works but token estimates may be off
-
-### Not Working / Incomplete
-- ❌ `hooks.py` shadows `hooks/` directory (module import conflict)
-- ❌ Auto-learning sometimes fails on complex files
-- ❌ MCP server not implemented
-- ❌ Batch learn mode (`--batch` flag) not implemented
-- ❌ Some CLI commands are stubs from original design
-
-### Known Bugs
-- Path normalization issues with nested `.eri-rpg` directories
-- Preflight state can get stale if session crashes
 
 ## Architecture
 
@@ -182,28 +153,41 @@ erirpg/
 ├── indexer.py       # Code indexing
 ├── graph.py         # Dependency graph
 ├── memory.py        # Knowledge storage (v2)
+├── discuss.py       # Discussion mode & roadmaps
 ├── preflight.py     # Preflight checks
 ├── verification.py  # Test running
 ├── quick.py         # Quick fix mode
 ├── install.py       # Claude Code installer
+├── write_guard.py   # Write interception (enforcement)
 ├── agent/           # Agent API
 │   ├── __init__.py  # Main Agent class
-│   ├── run.py       # Run state
+│   ├── run.py       # Run state, Decision, RunSummary
 │   ├── plan.py      # Plan generation
+│   ├── spec.py      # Spec parsing
 │   └── learner.py   # Auto-learning
 ├── hooks/           # Claude Code hooks
 │   ├── pretooluse.py
 │   ├── precompact.py
 │   └── sessionstart.py
 ├── parsers/         # Language parsers
-│   ├── python.py
-│   ├── rust.py
-│   └── c.py
+│   ├── python.py    # AST-based
+│   ├── rust.py      # Regex-based
+│   ├── c.py         # Regex-based
+│   └── dart.py      # Regex-based
 └── modes/           # High-level workflows
     ├── take.py      # Transplant mode
     ├── work.py      # Modify mode
     └── new.py       # New project mode
 ```
+
+## Language Support
+
+| Language | Parser | Status |
+|----------|--------|--------|
+| Python | AST-based | Full support |
+| Rust | Regex | Basic support |
+| C/C++ | Regex | Basic support |
+| Dart | Regex | Full support |
 
 ## Requirements
 
@@ -215,6 +199,13 @@ Optional:
 - pytest (for verification)
 - ruff (for linting)
 
+## Documentation
+
+- [docs/MANUAL.md](docs/MANUAL.md) - Complete user manual
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) - Version history
+- [DESIGN.md](DESIGN.md) - Technical design document
+- [.planning/](.planning/) - Development roadmap and phase documentation
+
 ## License
 
 MIT
@@ -222,3 +213,36 @@ MIT
 ## Contributing
 
 This is a personal project. Issues and PRs welcome but response time may vary.
+
+## Status Details
+
+### Working
+- ✅ Project registration and indexing
+- ✅ Module search (`find`)
+- ✅ Learning storage and recall (v2 knowledge)
+- ✅ Quick fix mode (single-file edits)
+- ✅ Cleanup command (list/prune stale runs)
+- ✅ Basic rollback functionality
+- ✅ PreToolUse hook enforcement
+- ✅ One-command installer (`eri-rpg install`)
+- ✅ Discussion mode with Q&A
+- ✅ Roadmap/milestone tracking
+- ✅ Run summaries with decision tracking
+- ✅ Python parser (AST-based)
+- ✅ Rust parser (regex)
+- ✅ C parser (regex)
+- ✅ Dart parser (regex)
+
+### Partially Working
+- ⚠️ Take/transplant mode - works but needs more testing
+- ⚠️ Context generation - works but token estimates may be off
+
+### Not Implemented
+- ❌ MCP server
+- ❌ Batch learn mode (`--batch` flag)
+- ❌ Wave execution (parallel steps)
+
+### Fixed in v2.0
+- ~~`hooks.py` shadows `hooks/` directory~~ → Renamed to `write_guard.py`
+- ~~Agent workflow too complex~~ → Streamlined with `goal-plan`/`goal-run`
+- ~~No goal clarification~~ → Added discussion mode
