@@ -19,6 +19,7 @@ Production-ready for personal use. See [docs/MANUAL.md](docs/MANUAL.md) for comp
 7. **Run Summaries** - Track decisions and generate summaries of completed runs
 8. **Quick Fix Mode** - Lightweight single-file edits without full ceremony
 9. **Claude Code Integration** - Hooks enforce workflow in AI coding sessions
+10. **Multi-Agent Configuration** - Toggle parallel execution and subagent delegation
 
 ## Quick Start
 
@@ -104,6 +105,13 @@ eri-rpg uninstall        # Remove from Claude Code
 eri-rpg install-status   # Check installation status
 ```
 
+### Configuration
+```bash
+eri-rpg config <project> --show           # Show current settings
+eri-rpg config <project> --multi-agent on # Enable multi-agent mode
+eri-rpg config <project> --concurrency 5  # Set max concurrent agents
+```
+
 ## Claude Code Integration
 
 EriRPG includes hooks for Claude Code that:
@@ -158,6 +166,7 @@ erirpg/
 ├── verification.py  # Test running
 ├── quick.py         # Quick fix mode
 ├── install.py       # Claude Code installer
+├── config.py        # Project configuration
 ├── write_guard.py   # Write interception (enforcement)
 ├── agent/           # Agent API
 │   ├── __init__.py  # Main Agent class
@@ -236,6 +245,7 @@ This is a personal project. Issues and PRs welcome but response time may vary.
 ### Partially Working
 - ⚠️ Take/transplant mode - works but needs more testing
 - ⚠️ Context generation - works but token estimates may be off
+- ⚠️ Multi-agent mode - config added, parallel execution in progress
 
 ### Not Implemented
 - ❌ MCP server
