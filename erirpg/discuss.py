@@ -42,7 +42,7 @@ def count_project_files(project_path: str) -> int:
         dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
         
         for f in files:
-            if f.endswith((".py", ".rs", ".c", ".h", ".js", ".ts", ".go")):
+            if f.endswith((".py", ".rs", ".c", ".h", ".js", ".ts", ".go", ".dart")):
                 count += 1
                 
         # Early exit if we've found enough files
@@ -77,7 +77,7 @@ def is_vague_goal(goal: str) -> bool:
     
     # Check for specifics that make it less vague
     specific_indicators = [
-        ".py", ".rs", ".c", ".js", ".ts",  # File references
+        ".py", ".rs", ".c", ".js", ".ts", ".dart",  # File references
         "()", "function", "method", "class",  # Code references
         "error", "bug", "crash", "fail",  # Specific problems
         "add", "create", "implement", "remove",  # Concrete actions
