@@ -1028,8 +1028,8 @@ class Agent:
                 if os.path.abspath(proj.path) == os.path.abspath(self.project_path):
                     graph = get_or_load_graph(proj)
                     break
-        except Exception:
-            pass
+        except Exception as e:
+            import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
         report = run_preflight(
             project_path=self.project_path,
@@ -1093,8 +1093,8 @@ class Agent:
         if full_path.exists():
             try:
                 self._snapshots[file_path] = full_path.read_text()
-            except Exception:
-                pass  # Can't snapshot, proceed anyway
+            except Exception as e:
+                import sys; print(f"[EriRPG] {e}", file=sys.stderr)  # Can't snapshot, proceed anyway
 
     def reset_preflight(self) -> None:
         """Reset preflight state for a new operation."""

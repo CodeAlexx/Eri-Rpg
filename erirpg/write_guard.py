@@ -45,7 +45,7 @@ def guarded_open(file, mode='r', *args, **kwargs):
         # Get absolute path for comparison
         try:
             abs_path = os.path.abspath(str(file))
-        except Exception:
+        except Exception as e:  # Path resolution fallback
             abs_path = str(file)
 
         # Check if path is always allowed (temp files, git, etc.)

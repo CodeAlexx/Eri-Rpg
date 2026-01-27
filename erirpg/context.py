@@ -718,7 +718,8 @@ def estimate_tokens(
             hydrated = feature.hydrate_code(source_project.path)
             for code in hydrated.values():
                 total_tokens += count_tokens(code)
-        except Exception:
+        except Exception as e:
+            import sys; print(f'[EriRPG] hydration error: {e}', file=sys.stderr)
             # Fall back to snapshots if hydration fails
             for code in feature.code.values():
                 total_tokens += count_tokens(code)

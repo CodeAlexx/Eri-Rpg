@@ -163,8 +163,8 @@ def uninstall_claude_code(verbose: bool = True) -> bool:
                 settings_file.write_text(json.dumps(settings, indent=2))
                 if verbose:
                     print(f"Updated: {settings_file}")
-        except (json.JSONDecodeError, KeyError):
-            pass
+        except (json.JSONDecodeError, KeyError) as e:
+            pass  # Invalid settings, skip
 
     if verbose:
         if removed_items:
@@ -297,8 +297,8 @@ def check_installation() -> dict:
                         if "erirpg" in cmd:
                             status["hooks_installed"] = True
                             status["hooks"].append(hook_type)
-        except (json.JSONDecodeError, KeyError):
-            pass
+        except (json.JSONDecodeError, KeyError) as e:
+            pass  # Invalid settings, skip
 
     return status
 

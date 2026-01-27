@@ -40,8 +40,8 @@ def hash_file(path: str) -> str:
     try:
         with open(path, 'rb') as f:
             return hashlib.sha256(f.read()).hexdigest()[:16]
-    except Exception:
-        return ""
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return ""
 
 
 def read_file_content(path: str) -> str:
@@ -49,8 +49,8 @@ def read_file_content(path: str) -> str:
     try:
         with open(path, 'r', errors='replace') as f:
             return f.read()
-    except Exception:
-        return ""
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return ""
 
 
 def git_head() -> Optional[str]:
@@ -64,8 +64,8 @@ def git_head() -> Optional[str]:
         )
         if result.returncode == 0:
             return result.stdout.strip()[:12]
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
     return None
 
 

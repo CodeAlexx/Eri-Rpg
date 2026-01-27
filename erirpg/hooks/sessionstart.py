@@ -19,8 +19,8 @@ def log(msg: str):
     try:
         with open("/tmp/erirpg-sessionstart.log", "a") as f:
             f.write(f"[{datetime.now().isoformat()}] {msg}\n")
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
 
 def find_project_roots(start_path: str) -> list:
@@ -68,7 +68,8 @@ def get_incomplete_runs(project_path: str) -> list:
                         age_days = (datetime.now() - started_dt).days
                     else:
                         age_days = 0
-                except Exception:
+                except Exception as e:
+                    pass  # date parse, use default
                     age_days = 0
 
                 incomplete.append({
@@ -77,8 +78,8 @@ def get_incomplete_runs(project_path: str) -> list:
                     "progress": f"{completed}/{len(steps)}",
                     "age_days": age_days,
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
     return incomplete
 
@@ -92,8 +93,8 @@ def get_quick_fix_state(project_path: str) -> dict:
     try:
         with open(state_file) as f:
             return json.load(f)
-    except Exception:
-        return None
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
 def get_resume_file(project_path: str) -> str:
@@ -104,8 +105,8 @@ def get_resume_file(project_path: str) -> str:
 
     try:
         return resume_path.read_text()
-    except Exception:
-        return None
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
 def main():
@@ -136,8 +137,8 @@ def main():
                 # Clean up resume file after notifying
                 try:
                     (Path(project_path) / ".eri-rpg" / "resume.md").unlink()
-                except Exception:
-                    pass
+                except Exception as e:
+                    import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
             # Check for incomplete runs
             incomplete = get_incomplete_runs(project_path)

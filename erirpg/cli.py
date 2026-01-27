@@ -1911,8 +1911,8 @@ def plan_generate(spec_path: str, output: str, project: str):
             try:
                 graph = get_or_load_graph(proj)
                 knowledge = graph.knowledge if hasattr(graph, 'knowledge') else None
-            except ValueError:
-                pass
+            except ValueError as e:
+                pass  # Expected: user typed option name
 
     # Generate plan
     try:
@@ -2941,13 +2941,13 @@ def goal_plan(project: str, goal: str, output: str):
     knowledge = None
     try:
         graph = get_or_load_graph(proj)
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
     try:
         knowledge = load_knowledge(proj.path, project)
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
     # Generate spec
     planner = Planner(project, graph, knowledge)
@@ -3285,7 +3285,8 @@ def cleanup_cmd(project: str, prune: bool, days: int, force: bool):
                     started_dt = datetime.fromisoformat(started.replace("Z", "+00:00").split("+")[0])
                 else:
                     started_dt = datetime.fromtimestamp(run_file.stat().st_mtime)
-            except Exception:
+            except Exception as e:
+                import sys; print(f'[EriRPG] {e}', file=sys.stderr)
                 started_dt = datetime.fromtimestamp(run_file.stat().st_mtime)
 
             run_info = {

@@ -703,8 +703,8 @@ def find_relevant_tests(
                         # Convert to relative path
                         rel_path = str(test_file.relative_to(project))
                         relevant_tests.add(rel_path)
-                except Exception:
-                    continue  # Skip unreadable files
+                except Exception as e:
+                    import sys; print(f"[EriRPG] {e}", file=sys.stderr); continue  # Skip unreadable files
 
     if not relevant_tests:
         return None  # No relevant tests found, run all

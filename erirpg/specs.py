@@ -607,8 +607,8 @@ def list_specs(project_path: str, spec_type: Optional[str] = None) -> List[str]:
                     spec = load_spec(path)
                     if getattr(spec, "spec_type", None) == spec_type:
                         specs.append(path)
-                except Exception:
-                    pass
+                except Exception as e:
+                    import sys; print(f"[EriRPG] {e}", file=sys.stderr)
             else:
                 specs.append(path)
 

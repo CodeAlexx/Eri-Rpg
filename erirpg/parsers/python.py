@@ -151,7 +151,7 @@ def _get_function_signature(node, is_async: bool = False) -> str:
         if arg.annotation:
             try:
                 arg_str += f": {ast.unparse(arg.annotation)}"
-            except Exception:
+            except Exception as e:  # arg annotation error
                 arg_str += ": ?"
         args.append(arg_str)
 
@@ -161,8 +161,8 @@ def _get_function_signature(node, is_async: bool = False) -> str:
         if node.args.vararg.annotation:
             try:
                 vararg += f": {ast.unparse(node.args.vararg.annotation)}"
-            except Exception:
-                pass
+            except Exception as e:
+                import sys; print(f"[EriRPG] {e}", file=sys.stderr)
         args.append(vararg)
 
     # **kwargs
@@ -171,8 +171,8 @@ def _get_function_signature(node, is_async: bool = False) -> str:
         if node.args.kwarg.annotation:
             try:
                 kwarg += f": {ast.unparse(node.args.kwarg.annotation)}"
-            except Exception:
-                pass
+            except Exception as e:
+                import sys; print(f"[EriRPG] {e}", file=sys.stderr)
         args.append(kwarg)
 
     prefix = "async def" if is_async else "def"
@@ -181,7 +181,7 @@ def _get_function_signature(node, is_async: bool = False) -> str:
     if node.returns:
         try:
             sig += f" -> {ast.unparse(node.returns)}"
-        except Exception:
+        except Exception as e:  # return annotation error
             sig += " -> ?"
 
     return sig

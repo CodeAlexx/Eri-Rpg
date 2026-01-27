@@ -48,7 +48,8 @@ def auto_learn(
         # Create CodeRef for staleness tracking
         try:
             source_ref = CodeRef.from_file(project_path, file_path)
-        except Exception:
+        except Exception as e:
+            import sys; print(f'[EriRPG] source_ref error: {e}', file=sys.stderr)
             source_ref = None
 
         # Check if we already have a learning that's still fresh
@@ -119,8 +120,8 @@ def update_learning(
     if os.path.exists(full_path):
         try:
             existing.source_ref = CodeRef.from_file(project_path, file_path)
-        except Exception:
-            pass
+        except Exception as e:
+            import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
     existing.learned_at = datetime.now()
     store.add_learning(existing)  # Overwrites existing

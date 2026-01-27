@@ -235,8 +235,8 @@ def preflight(
                 if os.path.abspath(proj.path) == os.path.abspath(project_path):
                     graph = get_or_load_graph(proj)
                     break
-        except Exception:
-            pass  # Graph not available, skip dependency analysis
+        except Exception as e:
+            import sys; print(f"[EriRPG] {e}", file=sys.stderr)  # Graph not available, skip dependency analysis
 
     # Check learnings for each file
     for file_path in normalized_files:

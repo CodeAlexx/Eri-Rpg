@@ -48,8 +48,8 @@ def get_module_info(project_path: str, module_path: str, graph: "Graph") -> Opti
                 'gotchas': learning.gotchas,
                 'source': 'v2_knowledge'
             }
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
     
     # Fall back to v1 graph knowledge
     learning = graph.knowledge.get_learning(module_path)
@@ -99,16 +99,16 @@ def resolve_project(request: WorkRequest, registry: Registry) -> Tuple[str, str]
         try:
             if os.path.samefile(p.path, cwd):
                 return p.name, p.path
-        except OSError:
-            continue
+        except OSError as e:
+            continue  # Skip unreadable file
 
     # Try parent directories
     for p in registry.list():
         try:
             if cwd.startswith(os.path.realpath(p.path)):
                 return p.name, p.path
-        except OSError:
-            continue
+        except OSError as e:
+            continue  # Skip unreadable file
 
     raise ValueError(
         f"No project specified and current directory is not a registered project.\n"

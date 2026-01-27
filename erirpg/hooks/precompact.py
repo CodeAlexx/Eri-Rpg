@@ -21,8 +21,8 @@ def log(msg: str):
     try:
         with open("/tmp/erirpg-precompact.log", "a") as f:
             f.write(f"[{datetime.now().isoformat()}] {msg}\n")
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
 
 def find_project_root(start_path: str) -> str:
@@ -54,8 +54,8 @@ def get_active_run(project_path: str) -> dict:
 
         if run_state.get("completed_at") is None:
             return run_state
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
     return None
 
@@ -69,8 +69,8 @@ def get_quick_fix_state(project_path: str) -> dict:
     try:
         with open(state_file) as f:
             return json.load(f)
-    except Exception:
-        return None
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
 def create_resume_file(project_path: str, run_state: dict, quick_fix: dict) -> str:

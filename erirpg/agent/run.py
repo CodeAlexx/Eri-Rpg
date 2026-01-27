@@ -364,8 +364,8 @@ def list_runs(project_path: str) -> List[Dict[str, Any]]:
                     "progress": run.progress(),
                     "started_at": run.started_at.isoformat(),
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                import sys; print(f"[EriRPG] {e}", file=sys.stderr)
     return sorted(runs, key=lambda r: r["started_at"], reverse=True)
 
 

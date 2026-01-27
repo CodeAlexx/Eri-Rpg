@@ -50,8 +50,8 @@ def get_module_info(project_path: str, module_path: str, graph: "Graph") -> Opti
                 'gotchas': learning.gotchas,
                 'source': 'v2_knowledge'
             }
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
     
     # Fall back to v1 graph knowledge
     learning = graph.knowledge.get_learning(module_path)

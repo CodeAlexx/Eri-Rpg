@@ -83,8 +83,8 @@ def _is_git_repo(path: str) -> bool:
             timeout=5,
         )
         return result.returncode == 0
-    except Exception:
-        return False
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return False
 
 
 def _git_head(path: str) -> Optional[str]:
@@ -99,8 +99,8 @@ def _git_head(path: str) -> Optional[str]:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
     return None
 
 
@@ -148,8 +148,8 @@ def load_quick_fix_state(project_path: str) -> Optional[Dict[str, Any]]:
     try:
         with open(state_file) as f:
             return json.load(f)
-    except Exception:
-        return None
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -495,8 +495,8 @@ def _restore_snapshot(project_path: str, file_path: str) -> bool:
         snapshot_file.unlink()
 
         return True
-    except Exception:
-        return False
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return False
 
 
 def _git_commit(project_path: str, files: List[str], message: str) -> Optional[str]:
@@ -521,8 +521,8 @@ def _git_commit(project_path: str, files: List[str], message: str) -> Optional[s
 
         # Get commit hash
         return _git_head(project_path)
-    except subprocess.CalledProcessError:
-        return None
+    except subprocess.CalledProcessError as e:
+        return None  # Git command failed
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

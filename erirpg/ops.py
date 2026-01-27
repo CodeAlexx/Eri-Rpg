@@ -354,8 +354,8 @@ def extract_feature(
             # Always create CodeRef for freshness tracking
             try:
                 code_refs[comp] = CodeRef.from_file(project.path, comp)
-            except Exception:
-                pass  # Skip if can't create ref
+            except Exception as e:
+                import sys; print(f"[EriRPG] {e}", file=sys.stderr)  # Skip if can't create ref
 
             # Optionally include full code snapshot
             if snapshot:

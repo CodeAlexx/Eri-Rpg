@@ -51,8 +51,8 @@ def log(msg: str):
     try:
         with open(LOG_FILE, "a") as f:
             f.write(f"[{datetime.now().isoformat()}] {msg}\n")
-    except Exception:
-        pass  # Can't log, ignore
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)  # Can't log, ignore
 
 
 def get_active_run_state(project_path: str) -> dict:
@@ -76,8 +76,8 @@ def get_active_run_state(project_path: str) -> dict:
         # Check if run is still in progress
         if run_state.get("completed_at") is None:
             return run_state
-    except Exception:
-        pass
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
 
     return None
 
@@ -91,8 +91,8 @@ def get_preflight_state(project_path: str) -> dict:
     try:
         with open(preflight_file) as f:
             return json.load(f)
-    except Exception:
-        return None
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
 def get_quick_fix_state(project_path: str) -> dict:
@@ -104,8 +104,8 @@ def get_quick_fix_state(project_path: str) -> dict:
     try:
         with open(quick_fix_file) as f:
             return json.load(f)
-    except Exception:
-        return None
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
 def detect_bash_file_write(command: str) -> str:
