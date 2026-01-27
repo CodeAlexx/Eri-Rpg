@@ -7,7 +7,9 @@ and querying indexed project structures.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Set, TYPE_CHECKING
+from collections import deque
+from functools import lru_cache
+from typing import Dict, List, Optional, Set, FrozenSet, TYPE_CHECKING
 import json
 from pathlib import Path
 
@@ -116,6 +118,7 @@ class Graph:
     indexed_at: datetime = field(default_factory=datetime.now)
     modules: Dict[str, Module] = field(default_factory=dict)
     edges: List[Edge] = field(default_factory=list)
+    _dependents_index: Dict[str, Set[str]] = field(default_factory=dict, repr=False)
     _knowledge: Optional["Knowledge"] = field(default=None, repr=False)
 
     @property
@@ -181,6 +184,8 @@ class Graph:
             from erirpg.knowledge import Knowledge
             graph._knowledge = Knowledge.from_dict(data["knowledge"])
 
+        # Build dependents index for O(1) lookups
+        graph._build_dependents_index()
         return graph
 
     def get_module(self, path: str) -> Optional[Module]:
@@ -194,6 +199,18 @@ class Graph:
     def add_edge(self, edge: Edge) -> None:
         """Add an edge to the graph."""
         self.edges.append(edge)
+        # Update index
+        if edge.target not in self._dependents_index:
+            self._dependents_index[edge.target] = set()
+        self._dependents_index[edge.target].add(edge.source)
+
+    def _build_dependents_index(self) -> None:
+        """Build reverse lookup index for get_dependents(). O(edges) once."""
+        self._dependents_index = {}
+        for edge in self.edges:
+            if edge.target not in self._dependents_index:
+                self._dependents_index[edge.target] = set()
+            self._dependents_index[edge.target].add(edge.source)
 
     def get_deps(self, path: str) -> List[str]:
         """Get modules that this module depends on (internal only)."""
@@ -203,15 +220,19 @@ class Graph:
         return module.deps_internal
 
     def get_dependents(self, path: str) -> List[str]:
-        """Get modules that depend on this module."""
-        dependents = []
-        for edge in self.edges:
-            if edge.target == path and edge.source in self.modules:
-                dependents.append(edge.source)
-        return dependents
+        """Get modules that depend on this module. O(1) via index."""
+        # Filter to only modules that exist in graph
+        return [m for m in self._dependents_index.get(path, set()) 
+                if m in self.modules]
 
     def get_transitive_deps(self, path: str) -> Set[str]:
         """Get all transitive dependencies of a module."""
+        # Use cached version, convert frozenset back to set
+        return set(self._get_transitive_deps_cached(path))
+    
+    @lru_cache(maxsize=512)
+    def _get_transitive_deps_cached(self, path: str) -> FrozenSet[str]:
+        """Cached transitive deps computation. Returns frozenset for hashability."""
         visited = set()
         to_visit = [path]
 
@@ -227,7 +248,7 @@ class Graph:
                     to_visit.append(dep)
 
         visited.discard(path)  # Don't include self
-        return visited
+        return frozenset(visited)
 
     def get_transitive_dependents(self, path: str) -> Set[str]:
         """Get all modules that transitively depend on this module."""
@@ -252,37 +273,45 @@ class Graph:
         """Topologically sort modules by dependencies.
 
         Returns modules in order where dependencies come before dependents.
+        O(V + E) using Kahn's algorithm with deque.
         """
         # Build dependency subgraph for requested modules
         module_set = set(modules)
         in_degree = {m: 0 for m in modules}
+        
+        # Build reverse lookup: module -> modules that depend on it (within subset)
+        dependents_in_set: Dict[str, List[str]] = {m: [] for m in modules}
 
         for m in modules:
             deps = self.get_deps(m)
             for dep in deps:
                 if dep in module_set:
                     in_degree[m] += 1
+                    dependents_in_set[dep].append(m)
 
-        # Kahn's algorithm
+        # Kahn's algorithm with deque - O(1) popleft
         result = []
-        queue = [m for m, d in in_degree.items() if d == 0]
+        queue = deque(m for m, d in in_degree.items() if d == 0)
 
         while queue:
-            current = queue.pop(0)
+            current = queue.popleft()  # O(1) instead of O(n)
             result.append(current)
 
-            # Find modules that depend on current
-            for m in modules:
-                if current in self.get_deps(m):
-                    in_degree[m] -= 1
-                    if in_degree[m] == 0:
-                        queue.append(m)
+            # Only check modules that actually depend on current
+            for m in dependents_in_set.get(current, []):
+                in_degree[m] -= 1
+                if in_degree[m] == 0:
+                    queue.append(m)
 
         # Handle cycles by appending remaining
         remaining = [m for m in modules if m not in result]
         result.extend(remaining)
 
         return result
+
+    def clear_caches(self) -> None:
+        """Clear LRU caches. Call after modifying graph."""
+        self._get_transitive_deps_cached.cache_clear()
 
     def stats(self) -> dict:
         """Get graph statistics."""
