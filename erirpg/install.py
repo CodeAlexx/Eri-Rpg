@@ -53,7 +53,7 @@ def install_claude_code(verbose: bool = True) -> bool:
     # Update settings.json with hooks
     hooks_config = {
         "PreToolUse": [{
-            "matcher": "Edit|Write|MultiEdit",
+            "matcher": "Edit|Write|MultiEdit|Bash",
             "hooks": [{
                 "type": "command",
                 "command": f"python3 {erirpg_root}/erirpg/hooks/pretooluse.py",
