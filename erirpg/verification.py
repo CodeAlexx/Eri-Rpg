@@ -14,11 +14,14 @@ Usage:
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import json
 import os
 import subprocess
 import shlex
+
+if TYPE_CHECKING:
+    from erirpg.graph import Graph
 
 
 class VerificationStatus(Enum):
@@ -602,3 +605,190 @@ def get_default_node_config() -> VerificationConfig:
         run_at_checkpoints=True,
         stop_on_failure=True,
     )
+
+
+# =============================================================================
+# Contract Validation
+# =============================================================================
+
+@dataclass
+class BreakingChange:
+    """A breaking change in an interface signature."""
+    module: str
+    interface_name: str
+    before_signature: str
+    after_signature: str
+    change_type: str = ""  # "removed", "modified", "params_changed"
+    details: str = ""
+
+    def format(self) -> str:
+        """Format for display."""
+        return (
+            f"  ✗ {self.module}::{self.interface_name}\n"
+            f"    Before: {self.before_signature}\n"
+            f"    After:  {self.after_signature}\n"
+            f"    Type:   {self.change_type}"
+        )
+
+
+def signatures_compatible(before: str, after: str) -> bool:
+    """
+    Check if two signatures are compatible.
+
+    Compatible means:
+    - Same function/method name
+    - Same required parameters (can add optional ones)
+    - Same return type (if typed)
+
+    This is a simplified check - real compatibility depends on language.
+    """
+    if not before or not after:
+        return True  # Can't compare empty signatures
+
+    # Exact match is always compatible
+    if before == after:
+        return True
+
+    # Extract function name (everything before first '(')
+    before_name = before.split('(')[0].strip() if '(' in before else before
+    after_name = after.split('(')[0].strip() if '(' in after else after
+
+    if before_name != after_name:
+        return False  # Name changed = breaking
+
+    # Extract parameters
+    def extract_params(sig: str) -> List[str]:
+        if '(' not in sig or ')' not in sig:
+            return []
+        params_str = sig[sig.find('(')+1:sig.rfind(')')]
+        if not params_str.strip():
+            return []
+        # Split by comma, but be careful of nested structures
+        params = []
+        depth = 0
+        current = ""
+        for char in params_str:
+            if char in '([{':
+                depth += 1
+            elif char in ')]}':
+                depth -= 1
+            elif char == ',' and depth == 0:
+                params.append(current.strip())
+                current = ""
+                continue
+            current += char
+        if current.strip():
+            params.append(current.strip())
+        return params
+
+    before_params = extract_params(before)
+    after_params = extract_params(after)
+
+    # Check required params (those without defaults)
+    def is_required(param: str) -> bool:
+        # Has no default value
+        return '=' not in param and '*' not in param
+
+    before_required = [p for p in before_params if is_required(p)]
+    after_required = [p for p in after_params if is_required(p)]
+
+    # All before required params must still exist
+    # (simplified: just check count - real check would compare names/types)
+    if len(after_required) > len(before_required):
+        return False  # Added required params = breaking
+
+    return True
+
+
+def validate_interface_contracts(
+    before_graph: "Graph",
+    after_graph: "Graph",
+) -> List[BreakingChange]:
+    """
+    Detect if any interface signatures changed incompatibly.
+
+    Compares interfaces between two versions of a graph to find
+    breaking changes that could affect dependent code.
+
+    Args:
+        before_graph: Graph before changes
+        after_graph: Graph after changes
+
+    Returns:
+        List of BreakingChange objects for incompatible changes
+    """
+    from erirpg.graph import Graph
+
+    breaking = []
+
+    for module_path, before_module in before_graph.modules.items():
+        if module_path not in after_graph.modules:
+            # Module removed entirely - check if it had public interfaces
+            for iface in before_module.interfaces:
+                breaking.append(BreakingChange(
+                    module=module_path,
+                    interface_name=iface.name,
+                    before_signature=iface.signature,
+                    after_signature="<removed>",
+                    change_type="removed",
+                    details="Module was removed",
+                ))
+            continue
+
+        after_module = after_graph.modules[module_path]
+
+        # Build lookup for after interfaces
+        after_interfaces = {i.name: i for i in after_module.interfaces}
+
+        for before_iface in before_module.interfaces:
+            if before_iface.name not in after_interfaces:
+                # Interface removed
+                breaking.append(BreakingChange(
+                    module=module_path,
+                    interface_name=before_iface.name,
+                    before_signature=before_iface.signature,
+                    after_signature="<removed>",
+                    change_type="removed",
+                    details="Interface was removed",
+                ))
+                continue
+
+            after_iface = after_interfaces[before_iface.name]
+
+            # Check signature compatibility
+            if not signatures_compatible(before_iface.signature, after_iface.signature):
+                # Determine change type
+                change_type = "modified"
+                if "(" in before_iface.signature and "(" in after_iface.signature:
+                    change_type = "params_changed"
+
+                breaking.append(BreakingChange(
+                    module=module_path,
+                    interface_name=before_iface.name,
+                    before_signature=before_iface.signature,
+                    after_signature=after_iface.signature,
+                    change_type=change_type,
+                ))
+
+    return breaking
+
+
+def format_breaking_changes(changes: List[BreakingChange]) -> str:
+    """Format breaking changes for display."""
+    if not changes:
+        return "✓ No breaking changes detected"
+
+    lines = [
+        f"{'═' * 50}",
+        f" ⚠️  BREAKING CHANGES DETECTED ({len(changes)})",
+        f"{'═' * 50}",
+    ]
+
+    for change in changes:
+        lines.append(change.format())
+        lines.append("")
+
+    lines.append("These changes may break dependent code.")
+    lines.append("Review impact zone before proceeding.")
+
+    return "\n".join(lines)

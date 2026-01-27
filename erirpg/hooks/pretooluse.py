@@ -92,6 +92,19 @@ def get_preflight_state(project_path: str) -> dict:
         return None
 
 
+def get_quick_fix_state(project_path: str) -> dict:
+    """Check for active quick fix state."""
+    quick_fix_file = Path(project_path) / ".eri-rpg" / "quick_fix_state.json"
+    if not quick_fix_file.exists():
+        return None
+
+    try:
+        with open(quick_fix_file) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
 def main():
     """Main hook entry point."""
     log("=" * 50)
@@ -151,6 +164,45 @@ def main():
         else:
             log(f"No .eri-rpg found, using cwd: {project_path}")
 
+        # Check for quick fix mode FIRST (lightweight mode, no full run required)
+        log(f"Checking for quick fix in: {project_path}")
+        quick_fix = get_quick_fix_state(project_path)
+        if quick_fix and quick_fix.get("quick_fix_active"):
+            target_file = quick_fix.get("target_file", "")
+            rel_path = os.path.relpath(file_path, project_path)
+            # Normalize paths for comparison
+            rel_path = os.path.normpath(rel_path)
+            target_file = os.path.normpath(target_file)
+            log(f"Quick fix active: target={target_file}, rel_path={rel_path}")
+
+            if rel_path == target_file or file_path == target_file:
+                # File matches quick fix target - ALLOW
+                log(f"ALLOWING (quick fix): {rel_path}")
+                output = {"decision": "allow"}
+                output_str = json.dumps(output)
+                log(f"OUTPUT: {output_str}")
+                print(output_str)
+                sys.exit(0)
+            else:
+                # Wrong file for quick fix
+                log(f"BLOCKING: {rel_path} not quick fix target {target_file}")
+                output = {
+                    "decision": "block",
+                    "reason": (
+                        f"ERI-RPG ENFORCEMENT: Quick fix is for a different file.\n"
+                        f"Requested: {rel_path}\n"
+                        f"Quick fix target: {target_file}\n\n"
+                        f"Complete current quick fix first:\n"
+                        f"  eri-rpg quick-done <project>\n\n"
+                        f"Or start a new quick fix:\n"
+                        f"  eri-rpg quick <project> {rel_path} \"description\""
+                    )
+                }
+                output_str = json.dumps(output)
+                log(f"OUTPUT: {output_str}")
+                print(output_str)
+                sys.exit(0)
+
         # Check for active run
         log(f"Checking for active run in: {project_path}")
         run_state = get_active_run_state(project_path)
@@ -166,7 +218,9 @@ def main():
                     f"Start an EriRPG run first:\n"
                     f"  from erirpg.agent import Agent\n"
                     f"  agent = Agent.from_goal('task', project_path='{project_path}')\n"
-                    f"  agent.preflight(['{os.path.relpath(file_path, project_path)}'], 'modify')"
+                    f"  agent.preflight(['{os.path.relpath(file_path, project_path)}'], 'modify')\n\n"
+                    f"Or use quick fix for single-file edits:\n"
+                    f"  eri-rpg quick <project> {os.path.relpath(file_path, project_path)} \"description\""
                 )
             }
             output_str = json.dumps(output)

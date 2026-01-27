@@ -1072,3 +1072,373 @@ def save_plan_to_project(plan: Plan, project_path: str) -> str:
 
     plan.save(path)
     return path
+
+
+# =============================================================================
+# Spec-Driven Planner (New System)
+# =============================================================================
+
+@dataclass
+class Planner:
+    """Generates execution specs from goals.
+
+    This is the NEW spec-driven planner that replaces ad-hoc goal parsing.
+    It analyzes goals, project structure, and existing knowledge to produce
+    ordered steps with dependencies and verification.
+
+    Usage:
+        from erirpg.planner import Planner
+        from erirpg.spec import Spec
+
+        planner = Planner(project, graph, knowledge)
+        spec = planner.plan("add logging to config.py")
+    """
+
+    project: str
+    graph: Any = None
+    knowledge: Any = None
+
+    def plan(self, goal: str) -> "Spec":
+        """
+        Generate a spec from a goal.
+
+        Analyzes the goal, project structure, and existing
+        knowledge to produce ordered steps.
+        """
+        from erirpg.spec import Spec, Step, generate_spec_id
+
+        spec_id = generate_spec_id(goal)
+        goal_lower = goal.lower()
+
+        # Detect goal type and generate appropriate steps
+        if self._is_transplant(goal_lower):
+            steps = self._plan_transplant_steps(goal)
+        elif self._is_refactor(goal_lower):
+            steps = self._plan_refactor_steps(goal)
+        elif self._is_create(goal_lower):
+            steps = self._plan_create_steps(goal)
+        elif self._is_modify(goal_lower):
+            steps = self._plan_modify_steps(goal)
+        elif self._is_fix(goal_lower):
+            steps = self._plan_fix_steps(goal)
+        else:
+            steps = self._plan_generic_steps(goal)
+
+        # Add verification based on project type
+        verification = self._detect_verification()
+
+        return Spec(
+            id=spec_id,
+            goal=goal,
+            project=self.project,
+            steps=steps,
+            verification=verification,
+        )
+
+    def _is_transplant(self, goal: str) -> bool:
+        return "transplant" in goal or ("from" in goal and "to" in goal)
+
+    def _is_refactor(self, goal: str) -> bool:
+        return "refactor" in goal or "restructure" in goal or "reorganize" in goal
+
+    def _is_create(self, goal: str) -> bool:
+        return "create" in goal or "add new" in goal or "implement new" in goal
+
+    def _is_modify(self, goal: str) -> bool:
+        return "modify" in goal or "update" in goal or "change" in goal or "add" in goal
+
+    def _is_fix(self, goal: str) -> bool:
+        return "fix" in goal or "bug" in goal or "error" in goal or "issue" in goal
+
+    def _plan_transplant_steps(self, goal: str) -> List["Step"]:
+        """Plan a transplant operation."""
+        from erirpg.spec import Step
+
+        return [
+            Step(
+                id="learn-source",
+                action="learn",
+                targets=[],
+                description="Understand source module and its dependencies",
+                verification="Knowledge stored for source files",
+            ),
+            Step(
+                id="learn-target",
+                action="learn",
+                targets=[],
+                description="Understand target integration points",
+                depends_on=["learn-source"],
+                verification="Knowledge stored for target files",
+            ),
+            Step(
+                id="implement",
+                action="create",
+                targets=[],
+                description="Transplant feature to target project",
+                depends_on=["learn-target"],
+                verification="Files created/modified as planned",
+            ),
+            Step(
+                id="wire",
+                action="modify",
+                targets=[],
+                description="Connect transplanted code to existing system",
+                depends_on=["implement"],
+                verification="Feature is accessible from existing code",
+            ),
+            Step(
+                id="verify",
+                action="verify",
+                targets=[],
+                description="Run tests and verify transplant works",
+                depends_on=["wire"],
+                verification="All tests pass",
+            ),
+        ]
+
+    def _plan_refactor_steps(self, goal: str) -> List["Step"]:
+        """Plan a refactoring operation."""
+        from erirpg.spec import Step
+        targets = self._find_targets(goal)
+
+        return [
+            Step(
+                id="learn",
+                action="learn",
+                targets=targets,
+                description="Understand current implementation",
+                verification="Knowledge stored for target files",
+            ),
+            Step(
+                id="analyze",
+                action="learn",
+                targets=[],
+                description="Identify all affected modules",
+                depends_on=["learn"],
+                verification="Impact zone documented",
+            ),
+            Step(
+                id="refactor",
+                action="refactor",
+                targets=[],
+                description="Apply refactoring changes",
+                depends_on=["analyze"],
+                verification="Code refactored without changing behavior",
+            ),
+            Step(
+                id="update-deps",
+                action="modify",
+                targets=[],
+                description="Update dependent modules if needed",
+                depends_on=["refactor"],
+                verification="All imports and references updated",
+            ),
+            Step(
+                id="verify",
+                action="verify",
+                targets=[],
+                description="Run tests and verify behavior unchanged",
+                depends_on=["update-deps"],
+                verification="All tests pass",
+            ),
+        ]
+
+    def _plan_create_steps(self, goal: str) -> List["Step"]:
+        """Plan creating new functionality."""
+        from erirpg.spec import Step
+        targets = self._find_targets(goal)
+
+        return [
+            Step(
+                id="learn-context",
+                action="learn",
+                targets=[],
+                description="Understand where new code will integrate",
+                verification="Integration points identified",
+            ),
+            Step(
+                id="create",
+                action="create",
+                targets=targets,
+                description="Create new files/functions",
+                depends_on=["learn-context"],
+                verification="New code created",
+            ),
+            Step(
+                id="wire",
+                action="modify",
+                targets=[],
+                description="Connect new code to existing system",
+                depends_on=["create"],
+                verification="New code is accessible",
+            ),
+            Step(
+                id="test",
+                action="create",
+                targets=[],
+                description="Add tests for new functionality",
+                depends_on=["wire"],
+                verification="Tests written and passing",
+            ),
+        ]
+
+    def _plan_modify_steps(self, goal: str) -> List["Step"]:
+        """Plan modifying existing code."""
+        from erirpg.spec import Step
+        targets = self._find_targets(goal)
+
+        steps = []
+
+        if targets:
+            steps.append(Step(
+                id="learn",
+                action="learn",
+                targets=targets,
+                description="Understand current implementation",
+                verification="Knowledge stored for target files",
+            ))
+            depends = ["learn"]
+        else:
+            depends = []
+
+        steps.append(Step(
+            id="modify",
+            action="modify",
+            targets=targets,
+            description=f"Apply changes: {goal}",
+            depends_on=depends,
+            verification="Changes applied correctly",
+        ))
+
+        steps.append(Step(
+            id="verify",
+            action="verify",
+            targets=[],
+            description="Run tests and verify changes",
+            depends_on=["modify"],
+            verification="All tests pass",
+        ))
+
+        return steps
+
+    def _plan_fix_steps(self, goal: str) -> List["Step"]:
+        """Plan fixing a bug."""
+        from erirpg.spec import Step
+        targets = self._find_targets(goal)
+
+        return [
+            Step(
+                id="investigate",
+                action="learn",
+                targets=targets,
+                description="Find and understand the root cause",
+                verification="Root cause identified",
+            ),
+            Step(
+                id="fix",
+                action="modify",
+                targets=[],
+                description="Apply the fix",
+                depends_on=["investigate"],
+                verification="Bug fixed",
+            ),
+            Step(
+                id="test",
+                action="verify",
+                targets=[],
+                description="Verify fix and add regression test",
+                depends_on=["fix"],
+                verification="Bug doesn't recur, tests pass",
+            ),
+        ]
+
+    def _plan_generic_steps(self, goal: str) -> List["Step"]:
+        """Plan a generic operation."""
+        from erirpg.spec import Step
+        targets = self._find_targets(goal)
+
+        return [
+            Step(
+                id="execute",
+                action="modify",
+                targets=targets,
+                description=goal,
+                verification="Goal accomplished",
+            ),
+            Step(
+                id="verify",
+                action="verify",
+                targets=[],
+                description="Verify the result",
+                depends_on=["execute"],
+                verification="All tests pass",
+            ),
+        ]
+
+    def _find_targets(self, goal: str) -> List[str]:
+        """Extract file targets from goal text."""
+        import re
+        targets = []
+
+        # Pattern: common file extensions
+        file_pattern = r'[\w/.-]+\.(?:py|rs|ts|js|go|c|h|cpp|hpp)'
+        matches = re.findall(file_pattern, goal)
+        targets.extend(matches)
+
+        # If we have a graph, try to find matching modules
+        if self.graph and not targets:
+            for module_path in self.graph.modules.keys():
+                module_name = module_path.split('/')[-1].replace('.py', '')
+                if module_name.lower() in goal.lower():
+                    targets.append(module_path)
+
+        return targets
+
+    def _detect_verification(self) -> List[str]:
+        """Detect project verification commands."""
+        return ["pytest"]
+
+    def _get_unknown_files(self, files: List[str]) -> List[str]:
+        """Get files we don't have knowledge for."""
+        if not self.knowledge:
+            return files
+
+        unknown = []
+        for f in files:
+            if not self.knowledge.get_learning(f):
+                unknown.append(f)
+
+        return unknown
+
+    def _get_dependencies(self, files: List[str]) -> Set[str]:
+        """Get all dependencies of given files."""
+        deps = set()
+
+        if not self.graph:
+            return deps
+
+        for f in files:
+            module_deps = self.graph.get_deps(f)
+            deps.update(module_deps)
+
+            for d in module_deps:
+                transitive = self.graph.get_transitive_deps(d)
+                deps.update(transitive)
+
+        return deps
+
+    def _get_dependents(self, files: List[str]) -> Set[str]:
+        """Get all modules that depend on given files."""
+        dependents = set()
+
+        if not self.graph:
+            return dependents
+
+        for f in files:
+            direct = self.graph.get_dependents(f)
+            dependents.update(direct)
+
+            transitive = self.graph.get_transitive_dependents(f)
+            dependents.update(transitive)
+
+        return dependents

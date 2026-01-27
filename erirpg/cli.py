@@ -844,7 +844,8 @@ def reset():
 @click.argument("module_path")
 @click.option("--summary", "-s", prompt=True, help="One-line summary of the module")
 @click.option("--purpose", "-p", prompt=True, help="Detailed purpose explanation")
-def learn(project: str, module_path: str, summary: str, purpose: str):
+@click.option("--non-interactive", "-y", is_flag=True, help="Skip interactive prompts for key functions and gotchas")
+def learn(project: str, module_path: str, summary: str, purpose: str, non_interactive: bool):
     """Store a learning about a module.
 
     After understanding a module, record key insights so you don't
@@ -852,6 +853,11 @@ def learn(project: str, module_path: str, summary: str, purpose: str):
 
     Example:
         eri-rpg learn onetrainer modules/util/loss.py \\
+            -s "Loss calculation utilities" \\
+            -p "Handles MSE, masked, and prior-based losses"
+
+        # Non-interactive mode (for scripts/automation):
+        eri-rpg learn onetrainer modules/util/loss.py -y \\
             -s "Loss calculation utilities" \\
             -p "Handles MSE, masked, and prior-based losses"
     """
@@ -868,24 +874,26 @@ def learn(project: str, module_path: str, summary: str, purpose: str):
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    # Prompt for optional details
-    click.echo("\nOptional: Enter key functions (name: description), empty line to finish:")
     key_functions = {}
-    while True:
-        line = click.prompt("", default="", show_default=False)
-        if not line:
-            break
-        if ":" in line:
-            name, desc = line.split(":", 1)
-            key_functions[name.strip()] = desc.strip()
-
-    click.echo("\nOptional: Enter gotchas (one per line), empty line to finish:")
     gotchas = []
-    while True:
-        line = click.prompt("", default="", show_default=False)
-        if not line:
-            break
-        gotchas.append(line)
+
+    if not non_interactive:
+        # Prompt for optional details
+        click.echo("\nOptional: Enter key functions (name: description), empty line to finish:")
+        while True:
+            line = click.prompt("", default="", show_default=False)
+            if not line:
+                break
+            if ":" in line:
+                name, desc = line.split(":", 1)
+                key_functions[name.strip()] = desc.strip()
+
+        click.echo("\nOptional: Enter gotchas (one per line), empty line to finish:")
+        while True:
+            line = click.prompt("", default="", show_default=False)
+            if not line:
+                break
+            gotchas.append(line)
 
     # Create CodeRef for source file tracking
     source_path = os.path.join(proj.path, module_path)
@@ -982,6 +990,194 @@ def relearn(project: str, module_path: str):
         click.echo(f"  eri-rpg learn {project} {module_path}")
     else:
         click.echo(f"No learning stored for {module_path}")
+
+
+@cli.command()
+@click.argument("project")
+@click.argument("module_path")
+def history(project: str, module_path: str):
+    """Show version history for a module's learning.
+
+    Displays all recorded versions with timestamps, operations,
+    and associated git commits.
+
+    Example:
+        eri-rpg history eritrainer training/optimizer.py
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    store = load_knowledge(proj.path, project)
+    learning = store.get_learning(module_path)
+
+    if not learning:
+        click.echo(f"No learning found for {module_path}")
+        return
+
+    click.echo(f"{'═' * 50}")
+    click.echo(f" History: {module_path}")
+    click.echo(f"{'═' * 50}")
+    click.echo(f"Current version: v{learning.current_version}")
+    click.echo("")
+
+    if not learning.versions:
+        click.echo("No version history available")
+        click.echo("(Versions are created when learnings are modified)")
+        return
+
+    for v in reversed(learning.versions):
+        marker = " (current)" if v.version == learning.current_version else ""
+        click.echo(f"v{v.version}{marker} - {v.timestamp.strftime('%Y-%m-%d %H:%M')} - {v.operation}")
+        if v.change_description:
+            click.echo(f"    {v.change_description}")
+        if v.commit_before:
+            click.echo(f"    git before: {v.commit_before}")
+        if v.commit_after:
+            click.echo(f"    git after: {v.commit_after}")
+        click.echo("")
+
+    if learning.transplanted_from:
+        click.echo(f"Transplanted from: {learning.transplanted_from}")
+
+    if learning.transplanted_to_list:
+        click.echo(f"Transplanted to: {', '.join(learning.transplanted_to_list)}")
+
+
+@cli.command()
+@click.argument("project")
+@click.argument("module_path")
+@click.option("-v", "--version", "target_version", type=int, default=None,
+              help="Version to rollback to (default: previous)")
+@click.option("--code", is_flag=True, help="Also restore files to disk from snapshot")
+@click.option("--dry-run", is_flag=True, help="Show what would be restored without doing it")
+@click.option("--use-git", is_flag=True, help="Use git checkout instead of stored snapshots")
+def rollback(project: str, module_path: str, target_version: int, code: bool, dry_run: bool, use_git: bool):
+    """Rollback a module's learning to a previous version.
+
+    Restores the learning's summary, purpose, key_functions, and gotchas
+    to the state they were in at the specified version.
+
+    With --code: Also restores the actual file contents from stored snapshots.
+
+    Example:
+        eri-rpg rollback eritrainer training/optimizer.py
+        eri-rpg rollback eritrainer training/optimizer.py -v 2
+        eri-rpg rollback eritrainer training/optimizer.py --code
+        eri-rpg rollback eritrainer training/optimizer.py --code --dry-run
+        eri-rpg rollback eritrainer training/optimizer.py --code --use-git
+    """
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    store = load_knowledge(proj.path, project)
+    learning = store.get_learning(module_path)
+
+    if not learning:
+        click.echo(f"No learning found for {module_path}")
+        return
+
+    if not learning.versions:
+        click.echo("No version history available")
+        return
+
+    # Find target version
+    target = target_version if target_version is not None else learning.current_version - 1
+
+    if target < 1:
+        click.echo("Already at earliest version (versions start at 1)")
+        return
+
+    # Find the version by number
+    version_obj = None
+    for v in learning.versions:
+        if v.version == target:
+            version_obj = v
+            break
+
+    if not version_obj:
+        available = [v.version for v in learning.versions]
+        click.echo(f"Version {target} not found. Available: {available}")
+        return
+
+    old_version = learning.current_version
+
+    if code:
+        # Restore files to disk
+        if use_git and version_obj.commit_before:
+            # Use git checkout
+            import subprocess
+            if dry_run:
+                click.echo(f"Would run: git checkout {version_obj.commit_before} -- {module_path}")
+            else:
+                try:
+                    subprocess.run(
+                        ['git', 'checkout', version_obj.commit_before, '--', module_path],
+                        cwd=proj.path,
+                        check=True,
+                        capture_output=True,
+                    )
+                    click.echo(f"✓ Restored {module_path} from git commit {version_obj.commit_before}")
+                except subprocess.CalledProcessError as e:
+                    click.echo(f"Git checkout failed: {e.stderr.decode() if e.stderr else str(e)}", err=True)
+                    sys.exit(1)
+
+                # Also rollback metadata
+                learning.rollback(target)
+                store.add_learning(learning)
+                save_knowledge(proj.path, store)
+                click.echo(f"✓ Rolled back learning: v{old_version} -> v{target}")
+
+        elif version_obj.files_content:
+            # Use stored snapshot
+            result = learning.rollback_files(
+                project_path=proj.path,
+                to_version=target,
+                dry_run=dry_run,
+            )
+
+            click.echo(result.format())
+
+            if not dry_run and result.success:
+                store.add_learning(learning)
+                save_knowledge(proj.path, store)
+
+        else:
+            click.echo(f"No code snapshot available for version {target}.")
+            if version_obj.commit_before:
+                click.echo(f"\nGit commit available. Re-run with --use-git:")
+                click.echo(f"  eri-rpg rollback {project} {module_path} -v {target} --code --use-git")
+            else:
+                click.echo("You may need to restore manually from git history.")
+            sys.exit(1)
+
+    else:
+        # Metadata-only rollback
+        try:
+            learning.rollback(target)
+            store.add_learning(learning)
+            save_knowledge(proj.path, store)
+
+            click.echo(f"Rolled back {module_path}: v{old_version} -> v{target}")
+            click.echo("\nNote: Only learning metadata was rolled back.")
+            click.echo("To also restore file contents, use --code flag.")
+
+            # Show what's available
+            if version_obj.files_content:
+                click.echo(f"\n  eri-rpg rollback {project} {module_path} -v {target} --code")
+            elif version_obj.commit_before:
+                click.echo(f"\n  eri-rpg rollback {project} {module_path} -v {target} --code --use-git")
+
+        except ValueError as e:
+            click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
 
 
 @cli.command()
@@ -2428,6 +2624,514 @@ def verify_results(run_id: str, project: str, step: str, as_json: bool):
             click.echo(json.dumps([r.to_dict() for r in results], indent=2))
         else:
             click.echo(format_verification_summary(results))
+
+
+# ============================================================================
+# Spec-Driven Execution Commands (NEW)
+# ============================================================================
+
+@cli.command("goal-plan")
+@click.argument("project")
+@click.argument("goal")
+@click.option("-o", "--output", default=None, help="Output spec file path")
+def goal_plan(project: str, goal: str, output: str):
+    """Generate a spec from a goal.
+
+    Creates a structured spec with ordered steps from a natural language goal.
+    This is the entry point for spec-driven execution.
+
+    \b
+    Example:
+        eri-rpg goal-plan eritrainer "add logging to config.py"
+        eri-rpg goal-plan myproject "refactor auth module" -o spec.yaml
+    """
+    from erirpg.spec import Spec
+    from erirpg.planner import Planner
+
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        click.echo(f"\nAdd it first: eri-rpg add {project} /path/to/project")
+        sys.exit(1)
+
+    # Load graph and knowledge for intelligent planning
+    graph = None
+    knowledge = None
+    try:
+        graph = get_or_load_graph(proj)
+    except Exception:
+        pass
+
+    try:
+        knowledge = load_knowledge(proj.path, project)
+    except Exception:
+        pass
+
+    # Generate spec
+    planner = Planner(project, graph, knowledge)
+    spec = planner.plan(goal)
+
+    # Save spec
+    if output:
+        spec_path = output
+    else:
+        spec_dir = os.path.join(proj.path, ".eri-rpg", "specs")
+        os.makedirs(spec_dir, exist_ok=True)
+        spec_path = os.path.join(spec_dir, f"{spec.id}.yaml")
+
+    spec.save(spec_path)
+
+    click.echo(f"Generated spec: {spec_path}")
+    click.echo("")
+    click.echo(spec.format_status())
+    click.echo("")
+    click.echo(f"Execute with: eri-rpg goal-run {project}")
+
+
+@cli.command("goal-run")
+@click.argument("project")
+@click.option("--spec", "spec_path", default=None, help="Specific spec file to run")
+@click.option("--resume", "resume_run", is_flag=True, help="Resume incomplete run")
+def goal_run(project: str, spec_path: str, resume_run: bool):
+    """Execute a spec for a project.
+
+    Runs the latest spec (or specified spec) step by step.
+    Agent refuses to proceed if verification fails.
+
+    \b
+    Example:
+        eri-rpg goal-run eritrainer
+        eri-rpg goal-run myproject --spec ./spec.yaml
+        eri-rpg goal-run myproject --resume
+    """
+    from erirpg.spec import Spec
+    from erirpg.agent import Agent
+
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    # Check for resume
+    if resume_run:
+        agent = Agent.resume(proj.path)
+        if agent:
+            click.echo(f"Resumed run: {agent._run.id if agent._run else 'unknown'}")
+            click.echo("")
+            click.echo(agent.get_spec_status())
+            return
+        else:
+            click.echo("No incomplete run to resume.")
+
+    # Load spec
+    if spec_path:
+        spec = Spec.load(spec_path)
+    else:
+        # Find latest spec
+        spec_dir = os.path.join(proj.path, ".eri-rpg", "specs")
+        if not os.path.exists(spec_dir):
+            click.echo("No specs found.")
+            click.echo(f"\nGenerate one: eri-rpg goal-plan {project} \"<goal>\"")
+            sys.exit(1)
+
+        specs = sorted([
+            os.path.join(spec_dir, f)
+            for f in os.listdir(spec_dir)
+            if f.endswith(".yaml")
+        ], key=os.path.getmtime, reverse=True)
+
+        if not specs:
+            click.echo("No specs found.")
+            click.echo(f"\nGenerate one: eri-rpg goal-plan {project} \"<goal>\"")
+            sys.exit(1)
+
+        spec = Spec.load(specs[0])
+        click.echo(f"Using latest spec: {specs[0]}")
+        click.echo("")
+
+    # Create agent from spec
+    agent = Agent.from_new_spec(spec, proj.path)
+
+    click.echo(f"Started run: {agent._run.id if agent._run else 'new'}")
+    click.echo("")
+    click.echo(agent.get_spec_status())
+    click.echo("")
+    click.echo("Use the Agent API in Claude Code:")
+    click.echo("  agent = Agent.resume(project_path)")
+    click.echo("  step = agent.next_step()")
+    click.echo("  # Execute step")
+    click.echo("  if agent.verify_step():")
+    click.echo("      agent.complete_step()")
+
+
+@cli.command("goal-status")
+@click.argument("project")
+def goal_status(project: str):
+    """Show spec execution status for a project.
+
+    Displays progress, current step, and any blockers.
+
+    \b
+    Example:
+        eri-rpg goal-status eritrainer
+    """
+    from erirpg.agent import Agent
+
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    # Try to resume existing run
+    agent = Agent.resume(proj.path)
+
+    if not agent:
+        click.echo(f"No active run for {project}.")
+        click.echo("")
+
+        # Check for specs
+        spec_dir = os.path.join(proj.path, ".eri-rpg", "specs")
+        if os.path.exists(spec_dir):
+            specs = [f for f in os.listdir(spec_dir) if f.endswith(".yaml")]
+            if specs:
+                click.echo(f"Found {len(specs)} spec(s).")
+                click.echo(f"Start with: eri-rpg goal-run {project}")
+            else:
+                click.echo(f"Generate a spec: eri-rpg goal-plan {project} \"<goal>\"")
+        else:
+            click.echo(f"Generate a spec: eri-rpg goal-plan {project} \"<goal>\"")
+        return
+
+    click.echo(agent.get_spec_status())
+
+
+# ============================================================================
+# Quick Fix Commands (Lightweight Mode)
+# ============================================================================
+
+@cli.command("quick")
+@click.argument("project")
+@click.argument("file_path")
+@click.argument("description")
+@click.option("--no-commit", is_flag=True, help="Don't auto-commit after edit")
+@click.option("--dry-run", is_flag=True, help="Show what would happen without doing it")
+def quick_cmd(project: str, file_path: str, description: str, no_commit: bool, dry_run: bool):
+    """Start a quick fix on a single file.
+
+    Lightweight mode for simple, focused changes without full spec ceremony.
+    No run state, no steps - just snapshot, edit, commit.
+
+    \b
+    Examples:
+        eri-rpg quick myproject src/utils.py "Fix off-by-one error"
+        eri-rpg quick eritrainer train.py "Add debug logging"
+
+    After editing, complete with: eri-rpg quick-done <project>
+    Or cancel with: eri-rpg quick-cancel <project>
+    """
+    from erirpg.quick import quick_fix
+
+    try:
+        result = quick_fix(
+            project=project,
+            file_path=file_path,
+            description=description,
+            auto_commit=not no_commit,
+            dry_run=dry_run,
+        )
+        if result == "ready":
+            click.echo("")
+            click.echo("Now edit the file. When done:")
+            click.echo(f"  eri-rpg quick-done {project}")
+            click.echo("")
+            click.echo("To cancel and restore:")
+            click.echo(f"  eri-rpg quick-cancel {project}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+    except FileNotFoundError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command("quick-done")
+@click.argument("project")
+@click.option("--no-commit", is_flag=True, help="Don't commit changes")
+@click.option("-m", "--message", default=None, help="Custom commit message")
+def quick_done_cmd(project: str, no_commit: bool, message: str):
+    """Complete a quick fix and commit changes.
+
+    \b
+    Example:
+        eri-rpg quick-done myproject
+        eri-rpg quick-done myproject -m "Better commit message"
+    """
+    from erirpg.quick import quick_done
+
+    try:
+        result = quick_done(
+            project=project,
+            auto_commit=not no_commit,
+            commit_message=message,
+        )
+        if result:
+            click.echo("")
+            click.echo("Quick fix completed successfully.")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command("quick-cancel")
+@click.argument("project")
+def quick_cancel_cmd(project: str):
+    """Cancel a quick fix and restore the original file.
+
+    \b
+    Example:
+        eri-rpg quick-cancel myproject
+    """
+    from erirpg.quick import quick_cancel
+
+    try:
+        quick_cancel(project)
+        click.echo("")
+        click.echo("Quick fix cancelled.")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command("quick-status")
+@click.argument("project")
+def quick_status_cmd(project: str):
+    """Check if a quick fix is active.
+
+    \b
+    Example:
+        eri-rpg quick-status myproject
+    """
+    from erirpg.quick import load_quick_fix_state
+
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    state = load_quick_fix_state(proj.path)
+
+    if not state or not state.get("quick_fix_active"):
+        click.echo(f"No active quick fix for {project}")
+        return
+
+    click.echo(f"Quick fix active:")
+    click.echo(f"  File: {state.get('target_file')}")
+    click.echo(f"  Description: {state.get('description')}")
+    click.echo(f"  Started: {state.get('timestamp')}")
+    click.echo("")
+    click.echo(f"Complete: eri-rpg quick-done {project}")
+    click.echo(f"Cancel: eri-rpg quick-cancel {project}")
+
+
+# ============================================================================
+# Cleanup Commands (Run Management)
+# ============================================================================
+
+@cli.command("cleanup")
+@click.argument("project")
+@click.option("--prune", is_flag=True, help="Delete stale/abandoned runs")
+@click.option("--days", default=7, help="Consider runs older than N days as stale (default: 7)")
+@click.option("--force", is_flag=True, help="Delete without confirmation")
+def cleanup_cmd(project: str, prune: bool, days: int, force: bool):
+    """List and optionally prune abandoned runs.
+
+    Stale runs are IN_PROGRESS runs that haven't been touched in N days.
+
+    \b
+    Examples:
+        eri-rpg cleanup myproject          # List runs
+        eri-rpg cleanup myproject --prune  # Delete stale runs
+        eri-rpg cleanup myproject --prune --days 1  # Delete runs older than 1 day
+    """
+    from pathlib import Path
+    from datetime import datetime, timedelta
+
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    run_dir = Path(proj.path) / ".eri-rpg" / "runs"
+    if not run_dir.exists():
+        click.echo(f"No runs found for {project}")
+        return
+
+    runs = list(run_dir.glob("*.json"))
+    if not runs:
+        click.echo(f"No runs found for {project}")
+        return
+
+    # Analyze runs
+    now = datetime.now()
+    stale_threshold = now - timedelta(days=days)
+
+    completed = []
+    in_progress = []
+    stale = []
+
+    for run_file in runs:
+        try:
+            with open(run_file) as f:
+                run_data = json.load(f)
+
+            run_id = run_data.get("id", run_file.stem)
+            goal = run_data.get("spec", {}).get("goal", "Unknown")[:40]
+            started = run_data.get("started_at", "")
+            completed_at = run_data.get("completed_at")
+
+            # Parse timestamp
+            try:
+                if started:
+                    started_dt = datetime.fromisoformat(started.replace("Z", "+00:00").split("+")[0])
+                else:
+                    started_dt = datetime.fromtimestamp(run_file.stat().st_mtime)
+            except Exception:
+                started_dt = datetime.fromtimestamp(run_file.stat().st_mtime)
+
+            run_info = {
+                "id": run_id,
+                "goal": goal,
+                "started": started_dt,
+                "file": run_file,
+            }
+
+            if completed_at:
+                completed.append(run_info)
+            elif started_dt < stale_threshold:
+                stale.append(run_info)
+            else:
+                in_progress.append(run_info)
+
+        except Exception as e:
+            click.echo(f"Warning: Could not parse {run_file.name}: {e}", err=True)
+
+    # Show summary
+    click.echo(f"Runs for {project}:")
+    click.echo(f"  Completed: {len(completed)}")
+    click.echo(f"  In Progress: {len(in_progress)}")
+    click.echo(f"  Stale (>{days} days): {len(stale)}")
+    click.echo("")
+
+    if stale:
+        click.echo("Stale runs:")
+        for run in stale:
+            age = (now - run["started"]).days
+            click.echo(f"  {run['id']}: {run['goal']}... ({age} days old)")
+        click.echo("")
+
+    if in_progress:
+        click.echo("Active runs:")
+        for run in in_progress:
+            age = (now - run["started"]).days
+            click.echo(f"  {run['id']}: {run['goal']}... ({age} days old)")
+        click.echo("")
+
+    if prune and stale:
+        if not force:
+            click.confirm(f"Delete {len(stale)} stale run(s)?", abort=True)
+
+        for run in stale:
+            run["file"].unlink()
+            click.echo(f"Deleted: {run['id']}")
+
+        click.echo(f"\nPruned {len(stale)} stale run(s).")
+
+        # Also clean up preflight state if no active runs
+        if not in_progress:
+            preflight_file = Path(proj.path) / ".eri-rpg" / "preflight_state.json"
+            if preflight_file.exists():
+                preflight_file.unlink()
+                click.echo("Cleared stale preflight state.")
+    elif prune:
+        click.echo("No stale runs to prune.")
+
+
+@cli.command("runs")
+@click.argument("project")
+@click.option("--all", "show_all", is_flag=True, help="Show all runs including completed")
+def runs_cmd(project: str, show_all: bool):
+    """List runs for a project.
+
+    \b
+    Example:
+        eri-rpg runs myproject
+        eri-rpg runs myproject --all
+    """
+    from pathlib import Path
+    from datetime import datetime
+
+    registry = Registry.get_instance()
+    proj = registry.get(project)
+
+    if not proj:
+        click.echo(f"Error: Project '{project}' not found", err=True)
+        sys.exit(1)
+
+    run_dir = Path(proj.path) / ".eri-rpg" / "runs"
+    if not run_dir.exists():
+        click.echo(f"No runs found for {project}")
+        return
+
+    runs = sorted(run_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not runs:
+        click.echo(f"No runs found for {project}")
+        return
+
+    click.echo(f"Runs for {project}:")
+    click.echo("")
+
+    for run_file in runs:
+        try:
+            with open(run_file) as f:
+                run_data = json.load(f)
+
+            run_id = run_data.get("id", run_file.stem)
+            goal = run_data.get("spec", {}).get("goal", "Unknown")[:50]
+            completed_at = run_data.get("completed_at")
+
+            if completed_at and not show_all:
+                continue
+
+            status = "COMPLETED" if completed_at else "IN_PROGRESS"
+            status_icon = "✓" if completed_at else "○"
+
+            # Get progress
+            plan = run_data.get("plan", {})
+            steps = plan.get("steps", [])
+            completed_steps = sum(1 for s in steps if s.get("status") == "completed")
+            total_steps = len(steps)
+
+            click.echo(f"  {status_icon} {run_id}")
+            click.echo(f"    Goal: {goal}...")
+            click.echo(f"    Status: {status} ({completed_steps}/{total_steps} steps)")
+            click.echo("")
+
+        except Exception as e:
+            click.echo(f"  ? {run_file.name} (error: {e})")
+
+    click.echo("")
+    click.echo("Resume a run: eri-rpg goal-status <project>")
+    click.echo("Cleanup stale: eri-rpg cleanup <project> --prune")
 
 
 # ============================================================================
