@@ -608,6 +608,212 @@ def get_default_node_config() -> VerificationConfig:
 
 
 # =============================================================================
+# Smart Test Selection
+# =============================================================================
+
+def find_relevant_tests(
+    changed_files: List[str],
+    project_path: str,
+    test_dirs: Optional[List[str]] = None,
+) -> Optional[List[str]]:
+    """Find test files that import any of the changed files.
+
+    This enables running only relevant tests instead of the full suite,
+    significantly speeding up verification on large projects.
+
+    Args:
+        changed_files: List of changed file paths (relative to project)
+        project_path: Root path of the project
+        test_dirs: Optional list of test directories to search.
+                   Defaults to ["tests", "test", "spec"]
+
+    Returns:
+        List of relevant test file paths, or None to run all tests
+        (None means no relevant tests found OR couldn't determine)
+    """
+    from pathlib import Path
+    import re
+
+    if not changed_files:
+        return None  # Run all tests
+
+    if test_dirs is None:
+        test_dirs = ["tests", "test", "spec"]
+
+    project = Path(project_path)
+    relevant_tests = set()
+
+    # Extract module names from changed files
+    # e.g., "src/auth/login.py" -> ["login", "auth.login", "auth"]
+    module_patterns = []
+    for changed in changed_files:
+        changed_path = Path(changed)
+        stem = changed_path.stem  # filename without extension
+
+        # Skip __init__ files
+        if stem == "__init__":
+            continue
+
+        # Add the base module name
+        module_patterns.append(stem)
+
+        # Add parent.module pattern (e.g., auth.login)
+        if len(changed_path.parts) > 1:
+            parent = changed_path.parts[-2]
+            if parent not in ("src", "lib", "app"):
+                module_patterns.append(f"{parent}.{stem}")
+                module_patterns.append(parent)
+
+    if not module_patterns:
+        return None  # Can't determine relevant tests
+
+    # Build regex pattern for import detection
+    # Matches: import X, from X import, from X.Y import
+    import_patterns = []
+    for mod in module_patterns:
+        escaped = re.escape(mod)
+        import_patterns.extend([
+            rf'\bimport\s+{escaped}\b',
+            rf'\bfrom\s+{escaped}\b',
+            rf'\bfrom\s+\w+\.{escaped}\b',
+            rf'["\']\.?\/?{escaped}["\']',  # JS/TS imports
+        ])
+
+    combined_pattern = re.compile('|'.join(import_patterns), re.IGNORECASE)
+
+    # Search test directories
+    for test_dir_name in test_dirs:
+        test_dir = project / test_dir_name
+        if not test_dir.exists():
+            continue
+
+        # Find test files (Python, JS, TS, Rust)
+        test_patterns = [
+            "test_*.py", "*_test.py",
+            "*.test.js", "*.test.ts", "*.test.tsx",
+            "*.spec.js", "*.spec.ts", "*.spec.tsx",
+            "*_test.rs",
+        ]
+
+        for pattern in test_patterns:
+            for test_file in test_dir.rglob(pattern):
+                try:
+                    content = test_file.read_text(errors='replace')
+                    if combined_pattern.search(content):
+                        # Convert to relative path
+                        rel_path = str(test_file.relative_to(project))
+                        relevant_tests.add(rel_path)
+                except Exception:
+                    continue  # Skip unreadable files
+
+    if not relevant_tests:
+        return None  # No relevant tests found, run all
+
+    return sorted(relevant_tests)
+
+
+def build_smart_test_command(
+    changed_files: List[str],
+    project_path: str,
+    base_command: str = "pytest",
+    fallback_to_all: bool = True,
+) -> str:
+    """Build a test command that runs only relevant tests.
+
+    Args:
+        changed_files: List of changed file paths
+        project_path: Root path of the project
+        base_command: Base test command (e.g., "pytest", "npm test")
+        fallback_to_all: If True, run all tests when no relevant tests found
+
+    Returns:
+        Test command string
+    """
+    relevant = find_relevant_tests(changed_files, project_path)
+
+    if relevant is None:
+        # No relevant tests found or couldn't determine
+        return base_command if fallback_to_all else ""
+
+    if not relevant:
+        return base_command if fallback_to_all else ""
+
+    # Build command based on test runner
+    if "pytest" in base_command:
+        # pytest can take multiple file paths
+        test_files = " ".join(relevant)
+        return f"{base_command} {test_files}"
+    elif "npm" in base_command or "yarn" in base_command:
+        # npm/yarn test with file pattern
+        # Most JS test runners support --testPathPattern
+        pattern = "|".join(relevant)
+        return f"{base_command} -- --testPathPattern=\"{pattern}\""
+    elif "cargo" in base_command:
+        # Rust - run specific test modules
+        # This is approximate; Rust test selection is complex
+        return base_command
+    else:
+        # Unknown runner, just append files
+        test_files = " ".join(relevant)
+        return f"{base_command} {test_files}"
+
+
+class SmartVerifier(Verifier):
+    """Verifier with smart test selection support.
+
+    Extends the base Verifier to optionally run only tests that are
+    relevant to the changed files.
+    """
+
+    def __init__(
+        self,
+        config: VerificationConfig,
+        project_path: str,
+        changed_files: Optional[List[str]] = None,
+        smart_testing: bool = True,
+    ):
+        super().__init__(config, project_path)
+        self.changed_files = changed_files or []
+        self.smart_testing = smart_testing
+        self._relevant_tests: Optional[List[str]] = None
+
+    def get_relevant_tests(self) -> Optional[List[str]]:
+        """Get cached relevant tests, computing if needed."""
+        if self._relevant_tests is None and self.changed_files:
+            self._relevant_tests = find_relevant_tests(
+                self.changed_files,
+                self.project_path,
+            )
+        return self._relevant_tests
+
+    def run_command(self, cmd: VerificationCommand) -> CommandResult:
+        """Run command with smart test selection if applicable."""
+        # Only apply smart selection to test commands
+        if self.smart_testing and self.changed_files and cmd.name == "test":
+            relevant = self.get_relevant_tests()
+            if relevant:
+                # Modify the command to run only relevant tests
+                smart_cmd = build_smart_test_command(
+                    self.changed_files,
+                    self.project_path,
+                    cmd.command,
+                )
+                if smart_cmd != cmd.command:
+                    # Create modified command
+                    modified_cmd = VerificationCommand(
+                        name=f"{cmd.name} (smart: {len(relevant)} files)",
+                        command=smart_cmd,
+                        working_dir=cmd.working_dir,
+                        timeout=cmd.timeout,
+                        required=cmd.required,
+                        run_on=cmd.run_on,
+                    )
+                    return super().run_command(modified_cmd)
+
+        return super().run_command(cmd)
+
+
+# =============================================================================
 # Contract Validation
 # =============================================================================
 
