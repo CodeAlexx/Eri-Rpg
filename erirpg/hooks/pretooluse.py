@@ -17,7 +17,7 @@ To install, add to ~/.claude/settings.json:
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/alex/eri-rpg/erirpg/hooks/pretooluse.py",
+            "command": "python3 -m erirpg.hooks.pretooluse",
             "timeout": 5
           }
         ]
@@ -25,6 +25,9 @@ To install, add to ~/.claude/settings.json:
     ]
   }
 }
+
+Or with explicit path (set ERIRPG_ROOT env var):
+  "command": "ERIRPG_ROOT=/path/to/eri-rpg python3 ${ERIRPG_ROOT}/erirpg/hooks/pretooluse.py"
 """
 
 import json
@@ -34,6 +37,9 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
+# Portable path resolution - use Path(__file__).parent
+HOOK_DIR = Path(__file__).parent.resolve()
+ERIRPG_ROOT = os.environ.get('ERIRPG_ROOT', str(HOOK_DIR.parent.parent))
 LOG_FILE = "/tmp/erirpg-hook.log"
 
 

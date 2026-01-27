@@ -610,9 +610,30 @@ class Agent:
         if not skip_verification:
             verification_result = self._run_verification(step)
             if verification_result and not verification_result.passed:
+                # Collect stdout/stderr for run report
+                error_details = []
+                for cmd_result in verification_result.failed_commands:
+                    error_details.append({
+                        "command": cmd_result.name,
+                        "exit_code": cmd_result.exit_code,
+                        "stdout": cmd_result.stdout[:2000] if cmd_result.stdout else "",
+                        "stderr": cmd_result.stderr[:2000] if cmd_result.stderr else "",
+                    })
+
+                # Mark step as FAILED with verification output
+                error_msg = f"Verification failed: {len(verification_result.failed_commands)} command(s)"
+                if self._run:
+                    self._run.fail_step(step, error_msg)
+                    # Store detailed verification output in log
+                    self._run.add_log("verification_failed", {
+                        "step_id": step.id,
+                        "commands": error_details,
+                    })
+                    self._save()
+
                 # Show failure info and rollback command
                 print(f"\n{'═' * 50}")
-                print(f" ⚠️  VERIFICATION FAILED - STEP NOT COMPLETED")
+                print(f" ⚠️  VERIFICATION FAILED - STEP MARKED FAILED")
                 print(f"{'═' * 50}")
                 for cmd_result in verification_result.failed_commands:
                     print(f"  ✗ {cmd_result.name}: exit code {cmd_result.exit_code}")
@@ -624,7 +645,7 @@ class Agent:
                     print(f"  eri-rpg rollback {self._get_project_name()} {file_path} --code")
                 print(f"\nFix the issue and call complete_step() again.")
                 print("")
-                # DO NOT complete the step - return False
+                # Step is FAILED, not completed
                 return False
 
         # Mark step as complete

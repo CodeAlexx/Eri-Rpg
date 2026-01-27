@@ -15,8 +15,9 @@ allowed-tools:
 ---
 
 <setup>
-Always use PYTHONPATH for eri-rpg commands:
-PYTHONPATH=/home/alex/eri-rpg python3 -m erirpg.cli <command>
+export ERI_RPG_PATH=/home/alex/eri-rpg
+PYTHONPATH=$ERI_RPG_PATH python3 -m erirpg.cli <command>
+
 Or install once per session:
 pip install -e /home/alex/eri-rpg --break-system-packages
 </setup>

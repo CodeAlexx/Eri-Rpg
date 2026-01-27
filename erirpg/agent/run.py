@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from erirpg.agent.spec import Spec
+from erirpg.spec import Spec
 from erirpg.agent.plan import Plan, Step, StepStatus
 
 
@@ -30,6 +30,9 @@ class RunState:
 
     # Files learned during this run
     files_learned: List[str] = field(default_factory=list)
+
+    # Files edited during this run (tracked for enforcement)
+    files_edited: List[Dict[str, Any]] = field(default_factory=list)
 
     # Working directory
     work_dir: Optional[str] = None
@@ -96,6 +99,22 @@ class RunState:
         self.files_learned.extend(files)
         self.add_log("files_learned", {"files": files})
 
+    def track_file_edit(
+        self,
+        file_path: str,
+        description: str,
+        step_id: str,
+    ) -> None:
+        """Track a file edit made through agent.edit_file()."""
+        edit_record = {
+            "file_path": file_path,
+            "description": description,
+            "step_id": step_id,
+            "timestamp": datetime.now().isoformat(),
+        }
+        self.files_edited.append(edit_record)
+        self.add_log("file_edited", edit_record)
+
     def get_report(self) -> Dict[str, Any]:
         """Generate a run report."""
         completed, total = self.progress()
@@ -136,6 +155,7 @@ class RunState:
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "log": self.log,
             "files_learned": self.files_learned,
+            "files_edited": self.files_edited,
             "work_dir": self.work_dir,
         }
 
@@ -149,6 +169,7 @@ class RunState:
             completed_at=datetime.fromisoformat(d["completed_at"]) if d.get("completed_at") else None,
             log=d.get("log", []),
             files_learned=d.get("files_learned", []),
+            files_edited=d.get("files_edited", []),
             work_dir=d.get("work_dir"),
         )
 
