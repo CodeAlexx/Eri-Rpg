@@ -212,15 +212,35 @@ def main():
             sys.exit(0)
 
         # Find project root (look for .eri-rpg directory)
+        # IMPORTANT: Find ALL .eri-rpg directories going up, then use the OUTERMOST one
+        # This handles nested .eri-rpg directories (e.g., /project/erirpg/.eri-rpg vs /project/.eri-rpg)
         project_path = cwd
+        found_eri_rpg_paths = []
         check_path = Path(file_path).parent
+        home_dir = os.path.expanduser("~")
         log(f"Looking for .eri-rpg starting from: {check_path}")
         while check_path != check_path.parent:
-            if (check_path / ".eri-rpg").exists():
-                project_path = str(check_path)
-                log(f"Found .eri-rpg at: {project_path}")
+            # Stop at home directory - not a project root
+            if str(check_path) == home_dir:
+                log(f"Reached home dir, stopping search")
                 break
+            if (check_path / ".eri-rpg").exists():
+                found_eri_rpg_paths.append(str(check_path))
+                log(f"Found .eri-rpg at: {check_path}")
             check_path = check_path.parent
+
+        if found_eri_rpg_paths:
+            # First, prefer paths that have quick_fix_state.json (active quick fix)
+            for candidate in reversed(found_eri_rpg_paths):
+                qf_path = Path(candidate) / ".eri-rpg" / "quick_fix_state.json"
+                if qf_path.exists():
+                    project_path = candidate
+                    log(f"Using path with quick_fix_state: {project_path}")
+                    break
+            else:
+                # No quick_fix_state found, use outermost .eri-rpg
+                project_path = found_eri_rpg_paths[-1]
+                log(f"Using outermost project path: {project_path}")
         else:
             log(f"No .eri-rpg found, using cwd: {project_path}")
 
