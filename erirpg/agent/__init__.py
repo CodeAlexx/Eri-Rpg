@@ -53,7 +53,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from erirpg.spec import Spec, SpecStep
 from erirpg.agent.plan import Plan, Step, StepStatus
-from erirpg.agent.run import RunState, save_run, load_run, get_latest_run
+from erirpg.agent.run import RunState, save_run, load_run, get_latest_run, Decision, RunSummary
 from erirpg.agent.learner import auto_learn, get_knowledge, is_stale, update_learning
 from erirpg.memory import load_knowledge as load_knowledge_store, git_head, in_git_repo
 
@@ -1103,6 +1103,54 @@ class Agent:
             "progress": self.progress(),
             "is_complete": self.is_complete(),
         }
+
+    def add_decision(
+        self,
+        decision: str,
+        rationale: str = "",
+        step_id: str = "",
+    ) -> "Decision":
+        """
+        Record a decision made during the run.
+
+        Args:
+            decision: What was decided
+            rationale: Why this decision was made
+            step_id: Which step this relates to (defaults to current)
+
+        Returns:
+            The created Decision
+
+        Example:
+            agent.add_decision(
+                "Use dataclasses for new types",
+                rationale="Consistent with existing code patterns"
+            )
+        """
+        from erirpg.agent.run import Decision
+        if not self._run:
+            raise RuntimeError("Cannot add decision without an active run.")
+        return self._run.add_decision(decision, rationale, step_id)
+
+    def generate_summary(self, one_liner: str = "") -> "RunSummary":
+        """
+        Generate a summary of the completed run.
+
+        Args:
+            one_liner: Brief summary of what was accomplished.
+                      If not provided, generates from spec goal.
+
+        Returns:
+            RunSummary object
+
+        Example:
+            summary = agent.generate_summary("Added run summary support to EriRPG")
+            print(summary.to_dict())
+        """
+        from erirpg.agent.run import RunSummary
+        if not self._run:
+            raise RuntimeError("Cannot generate summary without an active run.")
+        return self._run.generate_summary(one_liner)
 
     # === File Editing API ===
 
