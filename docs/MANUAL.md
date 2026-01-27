@@ -1,6 +1,6 @@
 # EriRPG Complete Manual
 
-**Version 2.0** | Spec-driven development toolkit for AI-assisted coding
+**Version 2.1** | Spec-driven development toolkit for AI-assisted coding
 
 ---
 
@@ -196,6 +196,52 @@ eri-rpg roadmap myproject
 eri-rpg roadmap-next myproject
 ```
 
+### Decisions
+
+**Decisions** are logged choices with context and rationale (GSD-style).
+
+```bash
+# Log a decision with full context
+eri-rpg log-decision myproject "Auth method" "JWT" "Stateless, works with microservices"
+
+# List recent decisions
+eri-rpg list-decisions myproject
+eri-rpg list-decisions myproject --search "auth"
+```
+
+Decisions help future sessions understand why choices were made.
+
+### Deferred Ideas
+
+**Deferred ideas** capture "v2/later" features during discussion.
+
+```bash
+# Capture an idea for later
+eri-rpg defer myproject "Add caching layer" --tags v2,perf
+
+# List deferred ideas
+eri-rpg deferred myproject
+eri-rpg deferred myproject --tag v2
+
+# Promote to a roadmap milestone when ready
+eri-rpg promote myproject IDEA-001 --goal "Build feature X"
+```
+
+### Session State
+
+**Session state** tracks context for handoff between sessions.
+
+```bash
+# View current session state
+eri-rpg session myproject
+
+# Generate handoff summary for next session
+eri-rpg handoff myproject
+
+# View verification gaps
+eri-rpg gaps myproject
+```
+
 ---
 
 ## Workflows
@@ -348,6 +394,48 @@ eri-rpg roadmap-next myproject  # Advance to next phase
 | `eri-rpg roadmap-add <project> "<name>" "<desc>"` | Add milestone |
 | `eri-rpg roadmap-next <project>` | Advance to next phase |
 | `eri-rpg roadmap-edit <project> <index> "<name>" "<desc>"` | Edit milestone |
+
+### Decision Logging (GSD-style)
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg log-decision <project> "<context>" "<choice>" "<rationale>"` | Log a decision with full rationale |
+| `eri-rpg list-decisions <project> [--search "<term>"] [--limit N]` | List recent decisions |
+| `eri-rpg decision <project> "<description>"` | Quick decision record |
+| `eri-rpg decisions <project>` | List all decisions |
+
+### Deferred Ideas
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg defer <project> "<idea>" [--tags v2,perf,ui]` | Capture a deferred idea |
+| `eri-rpg deferred <project> [--tag <tag>] [--all]` | List deferred ideas |
+| `eri-rpg promote <project> <idea_id> [--goal "<goal>"]` | Promote idea to milestone |
+
+### Session Management
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg session <project>` | Show current session state |
+| `eri-rpg handoff <project>` | Generate session handoff summary |
+| `eri-rpg gaps <project>` | View verification gaps |
+
+### Configuration
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg config <project> --show` | Show project configuration |
+| `eri-rpg config <project> --multi-agent on\|off` | Toggle multi-agent mode |
+| `eri-rpg config <project> --concurrency N` | Set concurrency level |
+
+### Project Metadata
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg describe <project> ["<text>"]` | Get/set project description |
+| `eri-rpg todo <project> ["<text>"]` | Add/list TODOs |
+| `eri-rpg notes <project> ["<text>"]` | Add/get notes |
+| `eri-rpg patterns <project>` | List learned patterns |
 
 ### Quick Fix Mode
 
@@ -639,13 +727,26 @@ pytest tests/
 
 ## Version History
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+See [CHANGELOG.md](CHANGELOG.md) and [CHANGES.md](../CHANGES.md) for detailed release notes.
 
-**v2.0** (Current)
+**v2.1** (Current - January 27, 2026)
+- GSD-inspired decision logging and deferred ideas
+- Domain detection and gray area questions
+- Rich session state with handoff support
+- Gap closure for verification failures
+- Performance optimization (O(n^2) -> O(n) graph algorithms)
+- Fixed 46 silent exception handlers
+- Fixed nested .eri-rpg directory detection
+
+**v2.0** (January 26, 2026)
 - Discuss mode for goal clarification
 - Roadmaps for multi-phase projects
 - must_haves for spec verification
 - Run summaries with decision tracking
+- Multi-agent configuration
+- Dart language parser
+- Smart test selection
+- Bash command detection in hooks
 
 **v0.1.0**
 - Initial release
