@@ -17,17 +17,16 @@ Storage structure:
     └── runs/            # Execution history (in knowledge.json)
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Dict, List, Optional, Set
+import hashlib
 import json
 import os
-import hashlib
 import subprocess
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
 
 from erirpg.refs import CodeRef
-
 
 # ============================================================================
 # Helper Functions
@@ -560,9 +559,9 @@ class StoredLearning:
         """
         lines = [
             f"### Stored Understanding (from {self.learned_at.strftime('%Y-%m-%d')})",
-            f"",
+            "",
             f"**Summary**: {self.summary}",
-            f"",
+            "",
             f"**Purpose**: {self.purpose}",
         ]
 
@@ -687,6 +686,315 @@ class StoredDecision:
             alternatives=d.get("alternatives", []),
         )
 
+# ============================================================================
+# GSD-Style Decision Logging
+# ============================================================================
+
+@dataclass
+class Decision:
+    """A decision made during discussion or execution.
+
+    GSD-inspired decision logging for tracking choices with rationale.
+    Auto-logged when users answer discussion questions.
+    """
+    id: str                           # "DEC-001" format
+    timestamp: datetime
+    context: str                      # What was being decided
+    choice: str                       # What was chosen
+    rationale: str                    # Why
+    alternatives: List[str] = field(default_factory=list)  # What was rejected
+    source: str = "manual"            # "discuss", "manual", "auto"
+    run_id: Optional[str] = None      # Link to run if applicable
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat(),
+            "context": self.context,
+            "choice": self.choice,
+            "rationale": self.rationale,
+            "alternatives": self.alternatives,
+            "source": self.source,
+            "run_id": self.run_id,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Decision":
+        return cls(
+            id=d["id"],
+            timestamp=datetime.fromisoformat(d["timestamp"]),
+            context=d["context"],
+            choice=d["choice"],
+            rationale=d.get("rationale", ""),
+            alternatives=d.get("alternatives", []),
+            source=d.get("source", "manual"),
+            run_id=d.get("run_id"),
+        )
+
+
+# ============================================================================
+# Deferred Ideas Capture
+# ============================================================================
+
+@dataclass
+class DeferredIdea:
+    """An idea deferred for later implementation.
+
+    Captured during discussion when user says "v2" or "later".
+    Can be promoted to roadmap milestone.
+    """
+    id: str                           # "IDEA-001" format
+    idea: str                         # The idea description
+    source: str                       # "discuss", "manual", "gap-closure"
+    created: datetime = field(default_factory=datetime.now)
+    tags: List[str] = field(default_factory=list)  # ["ui", "perf", "v2"]
+    promoted_to: Optional[str] = None  # Milestone ID if promoted
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "idea": self.idea,
+            "source": self.source,
+            "created": self.created.isoformat(),
+            "tags": self.tags,
+            "promoted_to": self.promoted_to,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "DeferredIdea":
+        return cls(
+            id=d["id"],
+            idea=d["idea"],
+            source=d.get("source", "manual"),
+            created=datetime.fromisoformat(d["created"]) if d.get("created") else datetime.now(),
+            tags=d.get("tags", []),
+            promoted_to=d.get("promoted_to"),
+        )
+
+# ============================================================================
+# Rich Session State (GSD-inspired)
+# ============================================================================
+
+@dataclass
+class Blocker:
+    """A known blocker or issue."""
+    id: str
+    description: str
+    severity: str = "medium"  # low, medium, high, critical
+    created: datetime = field(default_factory=datetime.now)
+    resolved: bool = False
+    resolution: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "description": self.description,
+            "severity": self.severity,
+            "created": self.created.isoformat(),
+            "resolved": self.resolved,
+            "resolution": self.resolution,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Blocker":
+        return cls(
+            id=d["id"],
+            description=d["description"],
+            severity=d.get("severity", "medium"),
+            created=datetime.fromisoformat(d["created"]) if d.get("created") else datetime.now(),
+            resolved=d.get("resolved", False),
+            resolution=d.get("resolution", ""),
+        )
+
+
+@dataclass
+class SessionState:
+    """Rich session state for handoff between sessions.
+
+    GSD-inspired STATE.md equivalent - tracks decisions, blockers,
+    deferred ideas, and next actions for seamless session continuity.
+    """
+    run_id: str
+    started: datetime
+    last_activity: datetime
+
+    # Position
+    current_phase: str = ""
+    current_step: int = 0
+    total_steps: int = 0
+
+    # Context
+    decision_ids: List[str] = field(default_factory=list)  # Decision IDs made this session
+    blockers: List[Blocker] = field(default_factory=list)  # Known issues
+    deferred_this_session: List[str] = field(default_factory=list)  # Idea IDs punted
+
+    # Handoff
+    next_actions: List[str] = field(default_factory=list)  # What to do next
+    notes: str = ""  # Freeform notes
+
+    def add_decision(self, decision_id: str) -> None:
+        """Track a decision made this session."""
+        if decision_id not in self.decision_ids:
+            self.decision_ids.append(decision_id)
+
+    def add_blocker(self, description: str, severity: str = "medium") -> Blocker:
+        """Add a blocker."""
+        blocker = Blocker(
+            id=f"BLOCK-{len(self.blockers) + 1:03d}",
+            description=description,
+            severity=severity,
+        )
+        self.blockers.append(blocker)
+        return blocker
+
+    def resolve_blocker(self, blocker_id: str, resolution: str) -> bool:
+        """Resolve a blocker."""
+        for b in self.blockers:
+            if b.id == blocker_id:
+                b.resolved = True
+                b.resolution = resolution
+                return True
+        return False
+
+    def add_deferred(self, idea_id: str) -> None:
+        """Track an idea deferred this session."""
+        if idea_id not in self.deferred_this_session:
+            self.deferred_this_session.append(idea_id)
+
+    def add_next_action(self, action: str) -> None:
+        """Add a next action."""
+        self.next_actions.append(action)
+
+    def update_position(self, phase: str, step: int, total: int) -> None:
+        """Update current position."""
+        self.current_phase = phase
+        self.current_step = step
+        self.total_steps = total
+        self.last_activity = datetime.now()
+
+    def touch(self) -> None:
+        """Update last activity timestamp."""
+        self.last_activity = datetime.now()
+
+    def format_handoff(self) -> str:
+        """Generate handoff summary for next session."""
+        lines = [
+            f"## Session {self.run_id}",
+            f"**Started:** {self.started.strftime('%Y-%m-%d %H:%M')}",
+            f"**Last Activity:** {self.last_activity.strftime('%Y-%m-%d %H:%M')}",
+            "",
+        ]
+
+        if self.current_phase:
+            lines.append("### Position")
+            lines.append(f"Phase: {self.current_phase}")
+            lines.append(f"Step: {self.current_step}/{self.total_steps}")
+            lines.append("")
+
+        if self.decision_ids:
+            lines.append(f"### Decisions Made ({len(self.decision_ids)})")
+            for d_id in self.decision_ids[-5:]:  # Last 5
+                lines.append(f"- {d_id}")
+            lines.append("")
+
+        if self.blockers:
+            unresolved = [b for b in self.blockers if not b.resolved]
+            if unresolved:
+                lines.append(f"### Blockers ({len(unresolved)} unresolved)")
+                for b in unresolved:
+                    lines.append(f"- [{b.severity.upper()}] {b.description}")
+                lines.append("")
+
+        if self.deferred_this_session:
+            lines.append(f"### Deferred This Session ({len(self.deferred_this_session)})")
+            for i_id in self.deferred_this_session:
+                lines.append(f"- {i_id}")
+            lines.append("")
+
+        if self.next_actions:
+            lines.append("### Next Actions")
+            for i, action in enumerate(self.next_actions, 1):
+                lines.append(f"{i}. {action}")
+            lines.append("")
+
+        if self.notes:
+            lines.append("### Notes")
+            lines.append(self.notes)
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def to_dict(self) -> dict:
+        return {
+            "run_id": self.run_id,
+            "started": self.started.isoformat(),
+            "last_activity": self.last_activity.isoformat(),
+            "current_phase": self.current_phase,
+            "current_step": self.current_step,
+            "total_steps": self.total_steps,
+            "decision_ids": self.decision_ids,
+            "blockers": [b.to_dict() for b in self.blockers],
+            "deferred_this_session": self.deferred_this_session,
+            "next_actions": self.next_actions,
+            "notes": self.notes,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SessionState":
+        return cls(
+            run_id=d["run_id"],
+            started=datetime.fromisoformat(d["started"]),
+            last_activity=datetime.fromisoformat(d["last_activity"]),
+            current_phase=d.get("current_phase", ""),
+            current_step=d.get("current_step", 0),
+            total_steps=d.get("total_steps", 0),
+            decision_ids=d.get("decision_ids", []),
+            blockers=[Blocker.from_dict(b) for b in d.get("blockers", [])],
+            deferred_this_session=d.get("deferred_this_session", []),
+            next_actions=d.get("next_actions", []),
+            notes=d.get("notes", ""),
+        )
+
+
+# ============================================================================
+# Gap Closure (GSD-inspired)
+# ============================================================================
+
+@dataclass
+class Gap:
+    """A verification gap to be fixed."""
+    id: str
+    source_step: str  # Step that failed
+    failure: str      # What failed
+    suggested_fix: str = ""
+    fixed: bool = False
+    fix_spec_id: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "source_step": self.source_step,
+            "failure": self.failure,
+            "suggested_fix": self.suggested_fix,
+            "fixed": self.fixed,
+            "fix_spec_id": self.fix_spec_id,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Gap":
+        return cls(
+            id=d["id"],
+            source_step=d["source_step"],
+            failure=d["failure"],
+            suggested_fix=d.get("suggested_fix", ""),
+            fixed=d.get("fixed", False),
+            fix_spec_id=d.get("fix_spec_id"),
+        )
+
+
+
+
+
 
 @dataclass
 class Milestone:
@@ -700,16 +1008,16 @@ class Milestone:
     spec_id: Optional[str] = None  # ID of spec generated for this milestone
     run_id: Optional[str] = None   # ID of run executing this milestone
     completed_at: Optional[datetime] = None
-    
+
     @property
     def done(self) -> bool:
         """Check if milestone is completed."""
         return self.completed_at is not None
-    
+
     def complete(self) -> None:
         """Mark milestone as complete."""
         self.completed_at = datetime.now()
-    
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -719,7 +1027,7 @@ class Milestone:
             "run_id": self.run_id,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
-    
+
     @classmethod
     def from_dict(cls, d: dict) -> "Milestone":
         return cls(
@@ -743,12 +1051,12 @@ class Roadmap:
     goal: str
     milestones: List[Milestone] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.now)
-    
+
     @staticmethod
     def make_id(goal: str) -> str:
         """Generate roadmap ID from goal."""
         return hashlib.sha256(goal.encode()).hexdigest()[:12]
-    
+
     @classmethod
     def create(cls, goal: str, milestones: List[Milestone] = None) -> "Roadmap":
         """Create a new roadmap for a goal."""
@@ -757,51 +1065,51 @@ class Roadmap:
             goal=goal,
             milestones=milestones or [],
         )
-    
+
     def add_milestone(self, name: str, description: str) -> Milestone:
         """Add a new milestone to the roadmap."""
         milestone_id = f"m{len(self.milestones) + 1}"
         milestone = Milestone(id=milestone_id, name=name, description=description)
         self.milestones.append(milestone)
         return milestone
-    
+
     def current_milestone(self) -> Optional[Milestone]:
         """Get the current (first incomplete) milestone."""
         for m in self.milestones:
             if not m.done:
                 return m
         return None
-    
+
     def current_index(self) -> int:
         """Get index of current milestone (0-based)."""
         for i, m in enumerate(self.milestones):
             if not m.done:
                 return i
         return len(self.milestones)
-    
+
     def advance(self) -> Optional[Milestone]:
         """Mark current milestone done and return next one."""
         current = self.current_milestone()
         if current:
             current.complete()
         return self.current_milestone()
-    
+
     def progress(self) -> str:
         """Get progress string like '2/4 phases'."""
         done = sum(1 for m in self.milestones if m.done)
         return f"{done}/{len(self.milestones)} phases"
-    
+
     def progress_percent(self) -> int:
         """Get progress as percentage."""
         if not self.milestones:
             return 0
         done = sum(1 for m in self.milestones if m.done)
         return int(done / len(self.milestones) * 100)
-    
+
     def is_complete(self) -> bool:
         """Check if all milestones are complete."""
         return all(m.done for m in self.milestones) if self.milestones else False
-    
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -809,7 +1117,7 @@ class Roadmap:
             "milestones": [m.to_dict() for m in self.milestones],
             "created_at": self.created_at.isoformat(),
         }
-    
+
     @classmethod
     def from_dict(cls, d: dict) -> "Roadmap":
         return cls(
@@ -915,12 +1223,15 @@ class KnowledgeStore:
     independently of the structural graph. Survives reindexing.
     """
     project: str
-    version: str = "2.1.0"  # Bumped for discussions support
+    version: str = "2.2.0"  # Bumped for GSD-style decisions and deferred ideas
     learnings: Dict[str, StoredLearning] = field(default_factory=dict)
     decisions: List[StoredDecision] = field(default_factory=list)
     patterns: Dict[str, str] = field(default_factory=dict)
     discussions: Dict[str, Discussion] = field(default_factory=dict)  # keyed by id
     runs: List[RunRecord] = field(default_factory=list)
+    # GSD-style additions
+    user_decisions: List["Decision"] = field(default_factory=list)  # Decision logging
+    deferred_ideas: List["DeferredIdea"] = field(default_factory=list)  # Deferred ideas
 
     # CRUD for learnings
 
@@ -1067,6 +1378,60 @@ class KnowledgeStore:
         from erirpg.search import search_learnings
         return search_learnings(self.learnings, query, limit)
 
+
+    # ============================================================================
+    # CRUD for user decisions (GSD-style)
+    # ============================================================================
+
+    def add_user_decision(self, decision: "Decision") -> None:
+        """Add a user decision."""
+        self.user_decisions.append(decision)
+
+    def get_user_decisions(self, limit: int = 20) -> List["Decision"]:
+        """Get recent user decisions."""
+        return sorted(self.user_decisions, key=lambda d: d.timestamp, reverse=True)[:limit]
+
+    def search_decisions(self, query: str) -> List["Decision"]:
+        """Search decisions by context or choice."""
+        query_lower = query.lower()
+        return [d for d in self.user_decisions
+                if query_lower in d.context.lower() or query_lower in d.choice.lower()]
+
+    def next_decision_id(self) -> str:
+        """Generate next decision ID."""
+        return f"DEC-{len(self.user_decisions) + 1:03d}"
+
+    # ============================================================================
+    # CRUD for deferred ideas
+    # ============================================================================
+
+    def add_deferred_idea(self, idea: "DeferredIdea") -> None:
+        """Add a deferred idea."""
+        self.deferred_ideas.append(idea)
+
+    def get_deferred_ideas(self, include_promoted: bool = False) -> List["DeferredIdea"]:
+        """Get deferred ideas (excluding promoted by default)."""
+        ideas = self.deferred_ideas
+        if not include_promoted:
+            ideas = [i for i in ideas if i.promoted_to is None]
+        return sorted(ideas, key=lambda i: i.created, reverse=True)
+
+    def get_deferred_by_tag(self, tag: str) -> List["DeferredIdea"]:
+        """Get deferred ideas by tag."""
+        return [i for i in self.deferred_ideas if tag in i.tags]
+
+    def promote_idea(self, idea_id: str, milestone_id: str) -> bool:
+        """Mark an idea as promoted to a milestone."""
+        for idea in self.deferred_ideas:
+            if idea.id == idea_id:
+                idea.promoted_to = milestone_id
+                return True
+        return False
+
+    def next_idea_id(self) -> str:
+        """Generate next idea ID."""
+        return f"IDEA-{len(self.deferred_ideas) + 1:03d}"
+
     # Statistics
 
     def stats(self) -> dict:
@@ -1077,6 +1442,8 @@ class KnowledgeStore:
             "patterns": len(self.patterns),
             "discussions": len(self.discussions),
             "runs": len(self.runs),
+            "user_decisions": len(self.user_decisions),
+            "deferred_ideas": len(self.deferred_ideas),
         }
 
     # Persistence
@@ -1099,6 +1466,8 @@ class KnowledgeStore:
             "patterns": self.patterns,
             "discussions": {k: v.to_dict() for k, v in self.discussions.items()},
             "runs": [r.to_dict() for r in self.runs[-100:]],  # Keep last 100 runs
+            "user_decisions": [d.to_dict() for d in self.user_decisions[-500:]],  # Keep last 500
+            "deferred_ideas": [i.to_dict() for i in self.deferred_ideas],
         }
 
         with open(p, "w") as f:
@@ -1140,6 +1509,14 @@ class KnowledgeStore:
             runs=[
                 RunRecord.from_dict(r)
                 for r in data.get("runs", [])
+            ],
+            user_decisions=[
+                Decision.from_dict(d)
+                for d in data.get("user_decisions", [])
+            ],
+            deferred_ideas=[
+                DeferredIdea.from_dict(i)
+                for i in data.get("deferred_ideas", [])
             ],
         )
 
@@ -1350,3 +1727,146 @@ def update_learning_with_operation(
 
     else:
         raise ValueError(f"Unknown operation: {operation}")
+
+# ============================================================================
+# Session State Persistence
+# ============================================================================
+
+def get_session_path(project_path: str, run_id: str) -> str:
+    """Get path to session state file."""
+    return os.path.join(project_path, ".eri-rpg", "sessions", f"{run_id}.json")
+
+
+def save_session_state(project_path: str, state: "SessionState") -> None:
+    """Save session state to file."""
+    path = get_session_path(project_path, state.run_id)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+    with open(path, "w") as f:
+        json.dump(state.to_dict(), f, indent=2)
+
+
+def load_session_state(project_path: str, run_id: str) -> Optional["SessionState"]:
+    """Load session state from file."""
+    path = get_session_path(project_path, run_id)
+    if not os.path.exists(path):
+        return None
+
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return SessionState.from_dict(data)
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
+
+
+def get_latest_session(project_path: str) -> Optional["SessionState"]:
+    """Get the most recent session state."""
+    sessions_dir = Path(project_path) / ".eri-rpg" / "sessions"
+    if not sessions_dir.exists():
+        return None
+
+    sessions = list(sessions_dir.glob("*.json"))
+    if not sessions:
+        return None
+
+    # Get latest by mtime
+    latest = max(sessions, key=lambda p: p.stat().st_mtime)
+
+    try:
+        with open(latest) as f:
+            data = json.load(f)
+        return SessionState.from_dict(data)
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
+
+
+def create_session(project_path: str, run_id: str) -> "SessionState":
+    """Create a new session state."""
+    state = SessionState(
+        run_id=run_id,
+        started=datetime.now(),
+        last_activity=datetime.now(),
+    )
+    save_session_state(project_path, state)
+    return state
+
+
+# ============================================================================
+# Gap Analysis
+# ============================================================================
+
+def analyze_gaps(project_path: str, run_id: str) -> List["Gap"]:
+    """Analyze verification failures and identify gaps.
+
+    Scans run state for failed steps and creates Gap objects
+    for each failure.
+
+    Returns:
+        List of Gap objects
+    """
+    run_path = Path(project_path) / ".eri-rpg" / "runs" / f"{run_id}.json"
+    if not run_path.exists():
+        return []
+
+    try:
+        with open(run_path) as f:
+            run_state = json.load(f)
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return []
+
+    gaps = []
+    steps = run_state.get("steps", [])
+
+    for i, step in enumerate(steps):
+        if step.get("status") == "failed":
+            gap = Gap(
+                id=f"GAP-{len(gaps) + 1:03d}",
+                source_step=step.get("id", f"step-{i}"),
+                failure=step.get("error", "Unknown failure"),
+                suggested_fix=_generate_fix_suggestion(step),
+            )
+            gaps.append(gap)
+
+    return gaps
+
+
+def _generate_fix_suggestion(step: dict) -> str:
+    """Generate a suggested fix based on step failure."""
+    action = step.get("action", "")
+    error = step.get("error", "")
+
+    if "verification" in error.lower() or "test" in error.lower():
+        return f"Review and fix the verification for {action}"
+    elif "not found" in error.lower():
+        return "Check if target files exist and paths are correct"
+    elif "syntax" in error.lower() or "parse" in error.lower():
+        return "Fix syntax errors in modified files"
+    else:
+        return f"Investigate and fix: {error[:100]}"
+
+
+def save_gaps(project_path: str, run_id: str, gaps: List["Gap"]) -> str:
+    """Save gaps to a file for later processing."""
+    gaps_path = Path(project_path) / ".eri-rpg" / "gaps" / f"{run_id}.json"
+    gaps_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(gaps_path, "w") as f:
+        json.dump([g.to_dict() for g in gaps], f, indent=2)
+
+    return str(gaps_path)
+
+
+def load_gaps(project_path: str, run_id: str) -> List["Gap"]:
+    """Load gaps from file."""
+    gaps_path = Path(project_path) / ".eri-rpg" / "gaps" / f"{run_id}.json"
+    if not gaps_path.exists():
+        return []
+
+    try:
+        with open(gaps_path) as f:
+            data = json.load(f)
+        return [Gap.from_dict(g) for g in data]
+    except Exception as e:
+        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return []
+

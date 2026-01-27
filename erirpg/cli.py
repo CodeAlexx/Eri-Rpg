@@ -3861,6 +3861,347 @@ def main():
     cli()
 
 
+
+
+# ============================================================================
+# GSD-Style Decision Logging Commands
+# ============================================================================
+
+@cli.command(name="log-decision")
+@click.argument("project")
+@click.argument("context")
+@click.argument("choice")
+@click.argument("rationale")
+def log_decision_cmd(project: str, context: str, choice: str, rationale: str):
+    """Log a decision with full rationale (GSD-style).
+
+    Unlike 'decide' (architectural decisions), this logs user decisions
+    made during discussion or execution with detailed context.
+
+    Example:
+        eri-rpg log-decision myproj "Auth method" "JWT" "Stateless, works with microservices"
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.discuss import log_decision
+
+    decision = log_decision(
+        proj.path,
+        project,
+        context,
+        choice,
+        rationale,
+        source="manual",
+    )
+
+    click.echo(f"Logged decision: {decision.id}")
+    click.echo(f"  Context: {context}")
+    click.echo(f"  Choice: {choice}")
+    click.echo(f"  Rationale: {rationale}")
+
+
+@cli.command(name="list-decisions")
+@click.argument("project")
+@click.option("--search", "-s", default=None, help="Search decisions by keyword")
+@click.option("--limit", "-n", default=20, help="Number of decisions to show")
+def list_decisions_cmd(project: str, search: str, limit: int):
+    """List recent decisions (GSD-style).
+
+    Example:
+        eri-rpg list-decisions myproj
+        eri-rpg list-decisions myproj --search "auth"
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.discuss import get_decisions
+
+    decs = get_decisions(proj.path, project, limit, search)
+
+    if not decs:
+        click.echo("No decisions found")
+        return
+
+    click.echo(f"Decisions ({len(decs)} shown):")
+    click.echo("=" * 60)
+
+    for d in decs:
+        click.echo(f"[{d.id}] {d.timestamp.strftime('%Y-%m-%d %H:%M')}")
+        click.echo(f"  Context: {d.context}")
+        click.echo(f"  Choice: {d.choice}")
+        click.echo(f"  Rationale: {d.rationale}")
+        if d.alternatives:
+            click.echo(f"  Alternatives: {', '.join(d.alternatives)}")
+        click.echo(f"  Source: {d.source}")
+        click.echo("")
+
+
+# ============================================================================
+# Deferred Ideas Commands (GSD-style)
+# ============================================================================
+
+@cli.command(name="defer")
+@click.argument("project")
+@click.argument("idea")
+@click.option("--tags", "-t", default="", help="Comma-separated tags (e.g., v2,perf,ui)")
+def defer_cmd(project: str, idea: str, tags: str):
+    """Capture a deferred idea for later implementation.
+
+    Example:
+        eri-rpg defer myproj "Add caching layer" --tags v2,perf
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.discuss import defer_idea
+
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+
+    deferred = defer_idea(
+        proj.path,
+        project,
+        idea,
+        source="manual",
+        tags=tag_list,
+    )
+
+    click.echo(f"Deferred idea: {deferred.id}")
+    click.echo(f"  Idea: {idea}")
+    if tag_list:
+        click.echo(f"  Tags: {', '.join(tag_list)}")
+
+
+@cli.command(name="deferred")
+@click.argument("project")
+@click.option("--tag", "-t", default=None, help="Filter by tag")
+@click.option("--all", "-a", "all_ideas", is_flag=True, help="Include promoted ideas")
+def deferred_cmd(project: str, tag: str, all_ideas: bool):
+    """List deferred ideas.
+
+    Example:
+        eri-rpg deferred myproj
+        eri-rpg deferred myproj --tag v2
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.discuss import get_deferred_ideas
+
+    ideas = get_deferred_ideas(proj.path, project, tag, all_ideas)
+
+    if not ideas:
+        click.echo("No deferred ideas found")
+        return
+
+    click.echo(f"Deferred Ideas ({len(ideas)}):")
+    click.echo("=" * 60)
+
+    for i in ideas:
+        status = "✓ Promoted" if i.promoted_to else "○ Pending"
+        click.echo(f"[{i.id}] {status}")
+        click.echo(f"  {i.idea}")
+        if i.tags:
+            click.echo(f"  Tags: {', '.join(i.tags)}")
+        click.echo(f"  Source: {i.source} | Created: {i.created.strftime('%Y-%m-%d')}")
+        if i.promoted_to:
+            click.echo(f"  Promoted to: {i.promoted_to}")
+        click.echo("")
+
+
+@cli.command(name="promote")
+@click.argument("project")
+@click.argument("idea_id")
+@click.option("--goal", "-g", default=None, help="Goal of roadmap to add to")
+def promote_cmd(project: str, idea_id: str, goal: str):
+    """Promote a deferred idea to a roadmap milestone.
+
+    Example:
+        eri-rpg promote myproj IDEA-001 --goal "Build feature X"
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.discuss import promote_idea_to_milestone, get_active_discussion
+
+    # If no goal specified, use active discussion
+    if not goal:
+        disc = get_active_discussion(proj.path, project)
+        if not disc:
+            click.echo("No active discussion found. Specify --goal")
+            raise SystemExit(1)
+        goal = disc.goal
+
+    milestone = promote_idea_to_milestone(proj.path, project, idea_id, goal)
+
+    if not milestone:
+        click.echo(f"Could not promote idea {idea_id}")
+        click.echo("Check that the idea exists and a discussion/roadmap exists for the goal")
+        raise SystemExit(1)
+
+    click.echo(f"Promoted {idea_id} to milestone: {milestone.id}")
+    click.echo(f"  Name: {milestone.name}")
+    click.echo(f"  Description: {milestone.description}")
+
+
+
+
+
+# ============================================================================
+# Session State Commands (GSD-inspired)
+# ============================================================================
+
+@cli.command(name="session")
+@click.argument("project")
+@click.option("--note", "-n", default=None, help="Add a note to current session")
+@click.option("--action", "-a", default=None, help="Add a next action")
+@click.option("--blocker", "-b", default=None, help="Add a blocker")
+def session_cmd(project: str, note: str, action: str, blocker: str):
+    """Show or update current session state.
+
+    Example:
+        eri-rpg session myproj
+        eri-rpg session myproj --note "Need to revisit auth flow"
+        eri-rpg session myproj --action "Fix failing tests"
+        eri-rpg session myproj --blocker "API rate limiting issue"
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.memory import get_latest_session, save_session_state
+
+    session = get_latest_session(proj.path)
+
+    if not session:
+        click.echo("No active session found")
+        click.echo("Start a run with: eri-rpg goal-run <project>")
+        return
+
+    # Handle updates
+    if note:
+        session.notes = (session.notes + "\n" if session.notes else "") + note
+        session.touch()
+        save_session_state(proj.path, session)
+        click.echo(f"Added note to session {session.run_id}")
+
+    if action:
+        session.add_next_action(action)
+        session.touch()
+        save_session_state(proj.path, session)
+        click.echo(f"Added next action: {action}")
+
+    if blocker:
+        b = session.add_blocker(blocker)
+        session.touch()
+        save_session_state(proj.path, session)
+        click.echo(f"Added blocker: {b.id} - {blocker}")
+
+    # Show session state
+    if not (note or action or blocker):
+        click.echo(session.format_handoff())
+
+
+@cli.command(name="handoff")
+@click.argument("project")
+def handoff_cmd(project: str):
+    """Generate handoff summary for next session.
+
+    Example:
+        eri-rpg handoff myproj
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.memory import get_latest_session
+
+    session = get_latest_session(proj.path)
+
+    if not session:
+        click.echo("No active session found")
+        return
+
+    click.echo(session.format_handoff())
+
+
+# ============================================================================
+# Gap Closure Commands (GSD-inspired)
+# ============================================================================
+
+@cli.command(name="gaps")
+@click.argument("project")
+@click.option("--run", "-r", "run_id", default=None, help="Run ID to analyze (default: latest)")
+def gaps_cmd(project: str, run_id: str):
+    """Show gaps from verification failures.
+
+    Example:
+        eri-rpg gaps myproj
+        eri-rpg gaps myproj --run run-abc123
+    """
+    proj = registry.get(project)
+    if not proj:
+        click.echo(f"Project '{project}' not found")
+        raise SystemExit(1)
+
+    from erirpg.memory import analyze_gaps, load_gaps
+    from pathlib import Path
+
+    # Find run ID if not specified
+    if not run_id:
+        runs_dir = Path(proj.path) / ".eri-rpg" / "runs"
+        if runs_dir.exists():
+            runs = list(runs_dir.glob("*.json"))
+            if runs:
+                latest = max(runs, key=lambda p: p.stat().st_mtime)
+                run_id = latest.stem
+            else:
+                click.echo("No runs found")
+                return
+        else:
+            click.echo("No runs found")
+            return
+
+    # Try loading existing gaps first
+    gaps = load_gaps(proj.path, run_id)
+
+    # If no cached gaps, analyze
+    if not gaps:
+        gaps = analyze_gaps(proj.path, run_id)
+
+    if not gaps:
+        click.echo(f"No gaps found for run {run_id}")
+        click.echo("All steps passed verification!")
+        return
+
+    click.echo(f"Gaps from run {run_id} ({len(gaps)} found):")
+    click.echo("=" * 60)
+
+    for g in gaps:
+        status = "✓ Fixed" if g.fixed else "○ Open"
+        click.echo(f"[{g.id}] {status}")
+        click.echo(f"  Step: {g.source_step}")
+        click.echo(f"  Failure: {g.failure}")
+        click.echo(f"  Suggested fix: {g.suggested_fix}")
+        if g.fix_spec_id:
+            click.echo(f"  Fix spec: {g.fix_spec_id}")
+        click.echo("")
+
+
+
+
 if __name__ == "__main__":
     main()
 

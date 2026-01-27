@@ -14,18 +14,139 @@ Key functions:
 """
 
 import os
-import hashlib
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from erirpg.memory import Decision, DeferredIdea
 
 from erirpg.memory import (
     Discussion,
     Milestone,
     Roadmap,
-    KnowledgeStore,
     load_knowledge,
     save_knowledge,
 )
-from erirpg.registry import Registry
+
+# ============================================================================
+# Domain Detection and Gray Areas (GSD-inspired)
+# ============================================================================
+
+DOMAIN_GRAY_AREAS = {
+    "ui": [
+        "layout and spacing",
+        "user interactions",
+        "empty states",
+        "loading states",
+        "error display",
+        "responsive behavior",
+    ],
+    "api": [
+        "response format",
+        "error codes and messages",
+        "pagination",
+        "rate limiting",
+        "authentication",
+        "versioning",
+    ],
+    "cli": [
+        "output format",
+        "verbosity levels",
+        "flags vs environment vars",
+        "error handling",
+        "progress indication",
+    ],
+    "data": [
+        "validation rules",
+        "edge cases",
+        "null/empty handling",
+        "migrations",
+        "default values",
+    ],
+    "backend": [
+        "error handling",
+        "logging",
+        "caching",
+        "concurrency",
+        "transactions",
+    ],
+    "testing": [
+        "test scope",
+        "mocking strategy",
+        "edge cases to cover",
+        "performance thresholds",
+    ],
+}
+
+# File patterns for domain detection
+DOMAIN_FILE_PATTERNS = {
+    "ui": [".jsx", ".tsx", ".vue", ".svelte", ".css", ".scss", "component", "widget"],
+    "api": ["api/", "routes/", "endpoint", "handler", "controller"],
+    "cli": ["cli", "command", "main.py", "__main__"],
+    "data": ["model", "schema", "migration", "database", "db"],
+    "backend": ["service", "worker", "task", "queue", "cache"],
+    "testing": ["test_", "_test", "spec.", ".test."],
+}
+
+# Keywords for domain detection
+DOMAIN_KEYWORDS = {
+    "ui": ["component", "button", "form", "modal", "layout", "style", "responsive", "ui", "ux", "frontend"],
+    "api": ["endpoint", "api", "rest", "graphql", "request", "response", "route", "http"],
+    "cli": ["command", "cli", "flag", "argument", "option", "terminal", "console"],
+    "data": ["database", "model", "schema", "migration", "query", "orm", "table"],
+    "backend": ["service", "worker", "queue", "cache", "async", "task", "job", "background"],
+    "testing": ["test", "spec", "mock", "fixture", "assert", "coverage"],
+}
+
+
+def detect_domain(goal: str, project_path: str) -> str:
+    """Detect primary domain from goal text and project structure.
+
+    Returns:
+        Domain string: "ui", "api", "cli", "data", "backend", "testing", or "general"
+    """
+    goal_lower = goal.lower()
+
+    # Score each domain by keyword matches
+    scores = {domain: 0 for domain in DOMAIN_KEYWORDS}
+
+    for domain, keywords in DOMAIN_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in goal_lower:
+                scores[domain] += 1
+
+    # Also check file patterns in goal
+    for domain, patterns in DOMAIN_FILE_PATTERNS.items():
+        for pattern in patterns:
+            if pattern.lower() in goal_lower:
+                scores[domain] += 0.5
+
+    # Get highest scoring domain
+    best_domain = max(scores, key=scores.get)
+    if scores[best_domain] > 0:
+        return best_domain
+
+    return "general"
+
+
+def get_gray_area_questions(goal: str, domain: str) -> List[str]:
+    """Generate questions about common ambiguities for a domain.
+
+    GSD-inspired gray area detection - asks about common decision points
+    that are often left ambiguous.
+
+    Returns:
+        List of gray area questions
+    """
+    gray_areas = DOMAIN_GRAY_AREAS.get(domain, [])
+    if not gray_areas:
+        return []
+
+    questions = []
+    for area in gray_areas[:4]:  # Max 4 gray area questions
+        questions.append(f"How should we handle {area}? (say 'defer' to handle later)")
+
+    return questions
+
 
 
 # ============================================================================
@@ -36,19 +157,19 @@ def count_project_files(project_path: str) -> int:
     """Count source files in project (excluding hidden/build dirs)."""
     count = 0
     skip_dirs = {".git", ".eri-rpg", "__pycache__", "node_modules", "target", "build", "dist", ".venv", "venv"}
-    
+
     for root, dirs, files in os.walk(project_path):
         # Skip hidden and build directories
         dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
-        
+
         for f in files:
             if f.endswith((".py", ".rs", ".c", ".h", ".js", ".ts", ".go", ".dart")):
                 count += 1
-                
+
         # Early exit if we've found enough files
         if count > 100:
             return count
-            
+
     return count
 
 
@@ -66,15 +187,15 @@ def is_vague_goal(goal: str) -> bool:
     - Missing concrete targets (no file names, function names, etc.)
     """
     goal_lower = goal.lower()
-    
+
     # Very short goals are often vague
     if len(goal) < 20:
         return True
-    
+
     # Vague action words without specifics
     vague_words = ["improve", "fix", "refactor", "update", "change", "modify", "enhance", "optimize"]
     has_vague_word = any(word in goal_lower for word in vague_words)
-    
+
     # Check for specifics that make it less vague
     specific_indicators = [
         ".py", ".rs", ".c", ".js", ".ts", ".dart",  # File references
@@ -83,11 +204,11 @@ def is_vague_goal(goal: str) -> bool:
         "add", "create", "implement", "remove",  # Concrete actions
     ]
     has_specifics = any(indicator in goal_lower for indicator in specific_indicators)
-    
+
     # Vague if has vague word but no specifics
     if has_vague_word and not has_specifics:
         return True
-        
+
     return False
 
 
@@ -110,18 +231,18 @@ def needs_discussion(
     """
     if skip:
         return False, "Discussion skipped via --skip flag"
-        
+
     if force:
         return True, "Discussion forced via --discuss flag"
-    
+
     # Check for vague goal
     if is_vague_goal(goal):
         return True, "Goal appears vague - needs clarification"
-    
+
     # Check for new project (few files)
     if is_new_project(project_path):
         return True, "New project - needs to understand structure"
-    
+
     return False, "Goal is specific enough"
 
 
@@ -146,45 +267,45 @@ def generate_questions(
     """
     questions = []
     goal_lower = goal.lower()
-    
+
     # Detect goal type
     is_add = any(w in goal_lower for w in ["add", "create", "implement", "new"])
     is_fix = any(w in goal_lower for w in ["fix", "bug", "error", "crash"])
     is_refactor = any(w in goal_lower for w in ["refactor", "improve", "optimize", "enhance"])
     is_transplant = any(w in goal_lower for w in ["transplant", "from", "copy"])
-    
+
     # Project state questions
     if is_new_project(project_path):
         questions.append("What is the main purpose of this project?")
         questions.append("What language/framework patterns should we follow?")
-    
+
     # Goal-type specific questions
     if is_add:
         questions.append("What specific behavior should this feature have?")
         questions.append("Where should this feature be integrated?")
         questions.append("Are there existing patterns to follow?")
-        
+
     elif is_fix:
         questions.append("What is the expected behavior?")
         questions.append("What is the actual behavior (error message, etc.)?")
         questions.append("Can you provide steps to reproduce?")
-        
+
     elif is_refactor:
         questions.append("What specific aspect should be improved?")
         questions.append("Are there constraints (backwards compatibility, etc.)?")
         questions.append("What's the success criteria for this refactor?")
-        
+
     elif is_transplant:
         questions.append("Which specific functions/classes should be transplanted?")
         questions.append("How should it integrate with existing code?")
         questions.append("Are there configuration changes needed?")
-    
+
     else:
         # Generic questions for unrecognized goal types
         questions.append("Can you provide more details about what you want?")
         questions.append("What's the expected outcome?")
         questions.append("Are there any constraints or requirements?")
-    
+
     # Limit to 3-5 questions
     return questions[:5]
 
@@ -207,12 +328,12 @@ def start_discussion(
     """
     questions = generate_questions(goal, project_path, project_name)
     discussion = Discussion.create(goal, questions, project=project_name)
-    
+
     # Store in KnowledgeStore
     store = load_knowledge(project_path, project_name)
     store.add_discussion(discussion)
     save_knowledge(project_path, store)
-    
+
     return discussion
 
 
@@ -228,10 +349,10 @@ def get_or_start_discussion(
     """
     store = load_knowledge(project_path, project_name)
     existing = store.get_discussion_by_goal(goal)
-    
+
     if existing and not existing.resolved:
         return existing, False
-    
+
     # Start new discussion
     discussion = start_discussion(goal, project_path, project_name)
     return discussion, True
@@ -251,15 +372,82 @@ def answer_question(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion:
         raise ValueError(f"No discussion found for goal: {goal}")
-    
+
     discussion.answer(question, answer)
     store.add_discussion(discussion)
     save_knowledge(project_path, store)
-    
+
     return discussion
+
+
+
+def answer_question_with_logging(
+    goal: str,
+    project_path: str,
+    project_name: str,
+    question: str,
+    answer: str,
+) -> Tuple["Discussion", Optional["Decision"], Optional["DeferredIdea"]]:
+    """Record an answer to a question with decision logging and defer detection.
+
+    If answer contains "defer" or "v2" or "later", captures as deferred idea.
+    Otherwise logs as a decision.
+
+    Returns:
+        (Updated Discussion, Decision if logged, DeferredIdea if deferred)
+    """
+    from datetime import datetime
+
+    from erirpg.memory import Decision, DeferredIdea, load_knowledge, save_knowledge
+
+    store = load_knowledge(project_path, project_name)
+    discussion = store.get_discussion_by_goal(goal)
+
+    if not discussion:
+        raise ValueError(f"No discussion found for goal: {goal}")
+
+    # Record the answer
+    discussion.answer(question, answer)
+
+    decision = None
+    deferred = None
+    answer_lower = answer.lower()
+
+    # Check for defer keywords
+    defer_keywords = ["defer", "v2", "later", "future", "skip", "not now", "backlog"]
+    is_deferred = any(kw in answer_lower for kw in defer_keywords)
+
+    if is_deferred:
+        # Capture as deferred idea
+        deferred = DeferredIdea(
+            id=store.next_idea_id(),
+            idea=f"{question}: {answer}",
+            source="discuss",
+            created=datetime.now(),
+            tags=["v2"] if "v2" in answer_lower else ["deferred"],
+        )
+        store.add_deferred_idea(deferred)
+    else:
+        # Log as decision
+        decision = Decision(
+            id=store.next_decision_id(),
+            timestamp=datetime.now(),
+            context=question,
+            choice=answer,
+            rationale="User specified during discussion",
+            alternatives=[],
+            source="discuss",
+        )
+        store.add_user_decision(decision)
+
+    store.add_discussion(discussion)
+    save_knowledge(project_path, store)
+
+    return discussion, decision, deferred
+
 
 
 def resolve_discussion(
@@ -274,14 +462,14 @@ def resolve_discussion(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion:
         raise ValueError(f"No discussion found for goal: {goal}")
-    
+
     discussion.resolve()
     store.add_discussion(discussion)
     save_knowledge(project_path, store)
-    
+
     return discussion
 
 
@@ -304,17 +492,17 @@ def enrich_goal(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion or not discussion.answers:
         return goal
-    
+
     # Build enriched goal
     lines = [f"Goal: {goal}", "", "Context from discussion:"]
-    
+
     for question, answer in discussion.answers.items():
         lines.append(f"- {question}")
         lines.append(f"  Answer: {answer}")
-    
+
     return "\n".join(lines)
 
 
@@ -330,10 +518,201 @@ def get_enriched_goal(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     enriched = enrich_goal(goal, project_path, project_name)
-    
+
     return enriched, discussion
+
+
+
+# ============================================================================
+# Decision Logging Helpers
+# ============================================================================
+
+def log_decision(
+    project_path: str,
+    project_name: str,
+    context: str,
+    choice: str,
+    rationale: str,
+    alternatives: List[str] = None,
+    source: str = "manual",
+    run_id: Optional[str] = None,
+) -> "Decision":
+    """Log a decision with rationale.
+
+    Args:
+        project_path: Path to project
+        project_name: Project name
+        context: What was being decided
+        choice: What was chosen
+        rationale: Why this choice
+        alternatives: What was rejected
+        source: "discuss", "manual", "auto"
+        run_id: Optional run ID
+
+    Returns:
+        The created Decision
+    """
+    from datetime import datetime
+
+    from erirpg.memory import Decision, load_knowledge, save_knowledge
+
+    store = load_knowledge(project_path, project_name)
+
+    decision = Decision(
+        id=store.next_decision_id(),
+        timestamp=datetime.now(),
+        context=context,
+        choice=choice,
+        rationale=rationale,
+        alternatives=alternatives or [],
+        source=source,
+        run_id=run_id,
+    )
+
+    store.add_user_decision(decision)
+    save_knowledge(project_path, store)
+
+    return decision
+
+
+def get_decisions(
+    project_path: str,
+    project_name: str,
+    limit: int = 20,
+    search: Optional[str] = None,
+) -> List["Decision"]:
+    """Get recent decisions, optionally filtered by search.
+
+    Returns:
+        List of Decision objects
+    """
+    from erirpg.memory import load_knowledge
+
+    store = load_knowledge(project_path, project_name)
+
+    if search:
+        return store.search_decisions(search)[:limit]
+    return store.get_user_decisions(limit)
+
+
+# ============================================================================
+# Deferred Ideas Helpers
+# ============================================================================
+
+def defer_idea(
+    project_path: str,
+    project_name: str,
+    idea: str,
+    source: str = "manual",
+    tags: List[str] = None,
+) -> "DeferredIdea":
+    """Capture a deferred idea.
+
+    Args:
+        project_path: Path to project
+        project_name: Project name
+        idea: The idea description
+        source: "discuss", "manual", "gap-closure"
+        tags: Optional tags like ["ui", "v2", "perf"]
+
+    Returns:
+        The created DeferredIdea
+    """
+    from datetime import datetime
+
+    from erirpg.memory import DeferredIdea, load_knowledge, save_knowledge
+
+    store = load_knowledge(project_path, project_name)
+
+    deferred = DeferredIdea(
+        id=store.next_idea_id(),
+        idea=idea,
+        source=source,
+        created=datetime.now(),
+        tags=tags or [],
+    )
+
+    store.add_deferred_idea(deferred)
+    save_knowledge(project_path, store)
+
+    return deferred
+
+
+def get_deferred_ideas(
+    project_path: str,
+    project_name: str,
+    tag: Optional[str] = None,
+    include_promoted: bool = False,
+) -> List["DeferredIdea"]:
+    """Get deferred ideas, optionally filtered by tag.
+
+    Returns:
+        List of DeferredIdea objects
+    """
+    from erirpg.memory import load_knowledge
+
+    store = load_knowledge(project_path, project_name)
+
+    if tag:
+        return store.get_deferred_by_tag(tag)
+    return store.get_deferred_ideas(include_promoted)
+
+
+def promote_idea_to_milestone(
+    project_path: str,
+    project_name: str,
+    idea_id: str,
+    goal: str,
+) -> Optional["Milestone"]:
+    """Promote a deferred idea to a roadmap milestone.
+
+    Args:
+        project_path: Path to project
+        project_name: Project name
+        idea_id: ID of idea to promote
+        goal: Goal of the discussion with the roadmap
+
+    Returns:
+        The created Milestone, or None if idea not found
+    """
+    from erirpg.memory import load_knowledge, save_knowledge
+
+    store = load_knowledge(project_path, project_name)
+
+    # Find the idea
+    idea = None
+    for i in store.deferred_ideas:
+        if i.id == idea_id:
+            idea = i
+            break
+
+    if not idea:
+        return None
+
+    # Get or create discussion/roadmap
+    discussion = store.get_discussion_by_goal(goal)
+    if not discussion:
+        return None
+
+    if not discussion.roadmap:
+        discussion.roadmap = Roadmap.create(goal)
+
+    # Add milestone
+    milestone = discussion.roadmap.add_milestone(
+        name=f"Deferred: {idea.idea[:30]}",
+        description=idea.idea,
+    )
+
+    # Mark idea as promoted
+    store.promote_idea(idea_id, milestone.id)
+
+    store.add_discussion(discussion)
+    save_knowledge(project_path, store)
+
+    return milestone
+
 
 
 # ============================================================================
@@ -353,7 +732,7 @@ def format_discussion(discussion: Discussion) -> str:
     # Remove empty lines from missing project
     lines = [l for l in lines if l != ""]
     lines.append("")
-    
+
     if discussion.questions:
         lines.append("Questions:")
         for i, q in enumerate(discussion.questions, 1):
@@ -362,12 +741,12 @@ def format_discussion(discussion: Discussion) -> str:
             lines.append(f"  {status} {i}. {q}")
             if q in discussion.answers:
                 lines.append(f"      → {answer}")
-    
+
     # Show roadmap if exists
     if discussion.roadmap:
         lines.append("")
         lines.append(format_roadmap(discussion.roadmap))
-    
+
     unanswered = discussion.unanswered()
     if unanswered:
         lines.append(f"\nNext: Answer question #{discussion.questions.index(unanswered[0]) + 1}")
@@ -375,7 +754,7 @@ def format_discussion(discussion: Discussion) -> str:
         lines.append("\nQuestions done. Add roadmap with: eri-rpg roadmap-add <project> \"Phase Name\" \"Description\"")
     elif not discussion.resolved:
         lines.append("\nReady. Run 'eri-rpg discuss-resolve' to finalize.")
-    
+
     return "\n".join(lines)
 
 
@@ -398,18 +777,18 @@ def create_roadmap(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion:
         raise ValueError(f"No discussion found for goal: {goal}")
-    
+
     if discussion.roadmap:
         return discussion.roadmap
-    
+
     roadmap = Roadmap.create(goal)
     discussion.roadmap = roadmap
     store.add_discussion(discussion)
     save_knowledge(project_path, store)
-    
+
     return roadmap
 
 
@@ -429,18 +808,18 @@ def add_milestone(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion:
         raise ValueError(f"No discussion found for goal: {goal}")
-    
+
     # Create roadmap if needed
     if not discussion.roadmap:
         discussion.roadmap = Roadmap.create(goal)
-    
+
     milestone = discussion.roadmap.add_milestone(name, description)
     store.add_discussion(discussion)
     save_knowledge(project_path, store)
-    
+
     return milestone
 
 
@@ -456,17 +835,17 @@ def advance_roadmap(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion:
         raise ValueError(f"No discussion found for goal: {goal}")
-    
+
     if not discussion.roadmap:
         raise ValueError(f"No roadmap found for goal: {goal}")
-    
+
     next_milestone = discussion.roadmap.advance()
     store.add_discussion(discussion)
     save_knowledge(project_path, store)
-    
+
     return next_milestone
 
 
@@ -482,10 +861,10 @@ def get_roadmap(
     """
     store = load_knowledge(project_path, project_name)
     discussion = store.get_discussion_by_goal(goal)
-    
+
     if not discussion:
         return None
-    
+
     return discussion.roadmap
 
 
@@ -502,11 +881,11 @@ def get_active_discussion(
     """
     store = load_knowledge(project_path, project_name)
     discussions = store.list_discussions()
-    
+
     for disc in discussions:
         if not disc.resolved:
             return disc
-    
+
     return None
 
 
@@ -518,9 +897,9 @@ def format_roadmap(roadmap: Roadmap) -> str:
         "═" * 40,
         "",
     ]
-    
+
     current_idx = roadmap.current_index()
-    
+
     for i, m in enumerate(roadmap.milestones):
         if m.done:
             status = "✓"
@@ -531,7 +910,7 @@ def format_roadmap(roadmap: Roadmap) -> str:
         else:
             status = "○"
             marker = ""
-        
+
         lines.append(f"  {status} Phase {i + 1}: {m.name}{marker}")
         if m.description:
             lines.append(f"      {m.description}")
@@ -539,16 +918,16 @@ def format_roadmap(roadmap: Roadmap) -> str:
             lines.append(f"      Spec: {m.spec_id}")
         if m.run_id:
             lines.append(f"      Run: {m.run_id}")
-    
+
     lines.append("")
     lines.append(f"Progress: {roadmap.progress()} ({roadmap.progress_percent()}%)")
-    
+
     current = roadmap.current_milestone()
     if current:
         lines.append(f"Current: Phase {current_idx + 1} - {current.name}")
     elif roadmap.is_complete():
         lines.append("Status: All phases complete!")
-    
+
     return "\n".join(lines)
 
 
@@ -566,10 +945,10 @@ def get_current_milestone_goal(
     disc = get_active_discussion(project_path, project_name)
     if not disc or not disc.roadmap:
         return None
-    
+
     current = disc.roadmap.current_milestone()
     if not current:
         return None
-    
+
     # Build milestone-specific goal
     return f"{current.name}: {current.description}"
