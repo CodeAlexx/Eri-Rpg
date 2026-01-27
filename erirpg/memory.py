@@ -689,17 +689,92 @@ class StoredDecision:
 
 
 @dataclass
+class Discussion:
+    """A goal clarification discussion.
+
+    Stores questions asked and answers given before generating a spec.
+    Keyed by goal hash for multiple discussions per project.
+    """
+    id: str  # hash of goal
+    goal: str
+    questions: List[str] = field(default_factory=list)
+    answers: Dict[str, str] = field(default_factory=dict)
+    resolved: bool = False
+    created_at: datetime = field(default_factory=datetime.now)
+
+    @staticmethod
+    def make_id(goal: str) -> str:
+        """Generate discussion ID from goal."""
+        import hashlib
+        return hashlib.sha256(goal.encode()).hexdigest()[:12]
+
+    @classmethod
+    def create(cls, goal: str, questions: List[str]) -> "Discussion":
+        """Create a new discussion for a goal."""
+        return cls(
+            id=cls.make_id(goal),
+            goal=goal,
+            questions=questions,
+        )
+
+    def answer(self, question: str, answer: str) -> None:
+        """Record an answer to a question."""
+        self.answers[question] = answer
+
+    def unanswered(self) -> List[str]:
+        """Get questions that haven't been answered yet."""
+        return [q for q in self.questions if q not in self.answers]
+
+    def is_complete(self) -> bool:
+        """Check if all questions have been answered."""
+        return len(self.unanswered()) == 0
+
+    def resolve(self) -> None:
+        """Mark discussion as resolved."""
+        self.resolved = True
+
+    def summary(self) -> str:
+        """Get a summary of the discussion for enriching goals."""
+        lines = [f"Goal: {self.goal}", "Decisions:"]
+        for q, a in self.answers.items():
+            lines.append(f"  - {q}: {a}")
+        return "\n".join(lines)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "goal": self.goal,
+            "questions": self.questions,
+            "answers": self.answers,
+            "resolved": self.resolved,
+            "created_at": self.created_at.isoformat(),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Discussion":
+        return cls(
+            id=d["id"],
+            goal=d["goal"],
+            questions=d.get("questions", []),
+            answers=d.get("answers", {}),
+            resolved=d.get("resolved", False),
+            created_at=datetime.fromisoformat(d["created_at"]) if d.get("created_at") else datetime.now(),
+        )
+
+
+@dataclass
 class KnowledgeStore:
     """Persistent semantic knowledge store.
 
-    Stores learnings, decisions, patterns, and run history
+    Stores learnings, decisions, patterns, discussions, and run history
     independently of the structural graph. Survives reindexing.
     """
     project: str
-    version: str = "2.0.0"
+    version: str = "2.1.0"  # Bumped for discussions support
     learnings: Dict[str, StoredLearning] = field(default_factory=dict)
     decisions: List[StoredDecision] = field(default_factory=list)
     patterns: Dict[str, str] = field(default_factory=dict)
+    discussions: Dict[str, Discussion] = field(default_factory=dict)  # keyed by id
     runs: List[RunRecord] = field(default_factory=list)
 
     # CRUD for learnings
@@ -746,6 +821,42 @@ class KnowledgeStore:
     def get_pattern(self, name: str) -> Optional[str]:
         """Get a pattern by name."""
         return self.patterns.get(name)
+
+    # CRUD for discussions
+
+    def add_discussion(self, discussion: Discussion) -> None:
+        """Add or update a discussion."""
+        self.discussions[discussion.id] = discussion
+
+    def get_discussion(self, discussion_id: str) -> Optional[Discussion]:
+        """Get a discussion by ID."""
+        return self.discussions.get(discussion_id)
+
+    def get_discussion_by_goal(self, goal: str) -> Optional[Discussion]:
+        """Get a discussion by goal text."""
+        disc_id = Discussion.make_id(goal)
+        return self.discussions.get(disc_id)
+
+    def remove_discussion(self, discussion_id: str) -> bool:
+        """Remove a discussion. Returns True if it existed."""
+        if discussion_id in self.discussions:
+            del self.discussions[discussion_id]
+            return True
+        return False
+
+    def clear_discussions(self) -> int:
+        """Clear all discussions. Returns count removed."""
+        count = len(self.discussions)
+        self.discussions.clear()
+        return count
+
+    def list_discussions(self) -> List[Discussion]:
+        """List all discussions, most recent first."""
+        return sorted(
+            self.discussions.values(),
+            key=lambda d: d.created_at,
+            reverse=True,
+        )
 
     # Run tracking
 
@@ -819,6 +930,7 @@ class KnowledgeStore:
             "learnings": len(self.learnings),
             "decisions": len(self.decisions),
             "patterns": len(self.patterns),
+            "discussions": len(self.discussions),
             "runs": len(self.runs),
         }
 
@@ -840,6 +952,7 @@ class KnowledgeStore:
             "learnings": {k: v.to_dict() for k, v in self.learnings.items()},
             "decisions": [d.to_dict() for d in self.decisions],
             "patterns": self.patterns,
+            "discussions": {k: v.to_dict() for k, v in self.discussions.items()},
             "runs": [r.to_dict() for r in self.runs[-100:]],  # Keep last 100 runs
         }
 
@@ -865,7 +978,7 @@ class KnowledgeStore:
 
         return cls(
             project=data.get("project", "unknown"),
-            version=data.get("version", "2.0.0"),
+            version=data.get("version", "2.1.0"),
             learnings={
                 k: StoredLearning.from_dict(v)
                 for k, v in data.get("learnings", {}).items()
@@ -875,6 +988,10 @@ class KnowledgeStore:
                 for d in data.get("decisions", [])
             ],
             patterns=data.get("patterns", {}),
+            discussions={
+                k: Discussion.from_dict(v)
+                for k, v in data.get("discussions", {}).items()
+            },
             runs=[
                 RunRecord.from_dict(r)
                 for r in data.get("runs", [])
