@@ -16,6 +16,70 @@ from erirpg.agent.plan import Plan, Step, StepStatus
 
 
 @dataclass
+class Decision:
+    """A decision made during run execution."""
+    id: str
+    decision: str  # What was decided
+    rationale: str = ""  # Why this decision was made
+    step_id: str = ""  # Which step this relates to
+    timestamp: datetime = field(default_factory=datetime.now)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "decision": self.decision,
+            "rationale": self.rationale,
+            "step_id": self.step_id,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "Decision":
+        return cls(
+            id=d["id"],
+            decision=d["decision"],
+            rationale=d.get("rationale", ""),
+            step_id=d.get("step_id", ""),
+            timestamp=datetime.fromisoformat(d["timestamp"]) if d.get("timestamp") else datetime.now(),
+        )
+
+
+@dataclass
+class RunSummary:
+    """Summary of a completed run."""
+    run_id: str
+    spec_id: str
+    one_liner: str  # Brief summary of what was accomplished
+    decisions: List[Decision] = field(default_factory=list)
+    artifacts_created: List[Dict[str, Any]] = field(default_factory=list)  # {path, lines_added, description}
+    duration_seconds: Optional[float] = None
+    completed_at: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "spec_id": self.spec_id,
+            "one_liner": self.one_liner,
+            "decisions": [d.to_dict() for d in self.decisions],
+            "artifacts_created": self.artifacts_created,
+            "duration_seconds": self.duration_seconds,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "RunSummary":
+        return cls(
+            run_id=d["run_id"],
+            spec_id=d["spec_id"],
+            one_liner=d["one_liner"],
+            decisions=[Decision.from_dict(dec) for dec in d.get("decisions", [])],
+            artifacts_created=d.get("artifacts_created", []),
+            duration_seconds=d.get("duration_seconds"),
+            completed_at=datetime.fromisoformat(d["completed_at"]) if d.get("completed_at") else None,
+        )
+
+
+@dataclass
 class RunState:
     """Persistent state for an agent run."""
 
@@ -33,6 +97,9 @@ class RunState:
 
     # Files edited during this run (tracked for enforcement)
     files_edited: List[Dict[str, Any]] = field(default_factory=list)
+
+    # Decisions made during this run
+    decisions: List[Decision] = field(default_factory=list)
 
     # Working directory
     work_dir: Optional[str] = None
@@ -115,6 +182,75 @@ class RunState:
         self.files_edited.append(edit_record)
         self.add_log("file_edited", edit_record)
 
+    def add_decision(
+        self,
+        decision: str,
+        rationale: str = "",
+        step_id: str = "",
+    ) -> Decision:
+        """Record a decision made during the run.
+        
+        Args:
+            decision: What was decided
+            rationale: Why this decision was made
+            step_id: Which step this relates to (defaults to current)
+        
+        Returns:
+            The created Decision
+        """
+        import uuid
+        dec = Decision(
+            id=uuid.uuid4().hex[:8],
+            decision=decision,
+            rationale=rationale,
+            step_id=step_id or (self.current_step().id if self.current_step() else ""),
+        )
+        self.decisions.append(dec)
+        self.add_log("decision_made", dec.to_dict())
+        return dec
+
+    def generate_summary(self, one_liner: str = "") -> RunSummary:
+        """Generate a summary of the completed run.
+        
+        Args:
+            one_liner: Brief summary of what was accomplished.
+                      If not provided, generates from spec goal.
+        
+        Returns:
+            RunSummary object
+        """
+        # Calculate duration
+        duration = None
+        if self.completed_at:
+            duration = (self.completed_at - self.started_at).total_seconds()
+        
+        # Build artifacts_created from files_edited
+        artifacts = []
+        for edit in self.files_edited:
+            artifacts.append({
+                "path": edit["file_path"],
+                "description": edit.get("description", ""),
+                "step_id": edit.get("step_id", ""),
+            })
+        
+        # Generate one_liner if not provided
+        if not one_liner:
+            goal = self.spec.goal
+            if len(goal) > 100:
+                one_liner = goal[:97] + "..."
+            else:
+                one_liner = goal
+        
+        return RunSummary(
+            run_id=self.id,
+            spec_id=self.spec.id,
+            one_liner=one_liner,
+            decisions=list(self.decisions),
+            artifacts_created=artifacts,
+            duration_seconds=duration,
+            completed_at=self.completed_at,
+        )
+
     def get_report(self) -> Dict[str, Any]:
         """Generate a run report."""
         completed, total = self.progress()
@@ -156,6 +292,7 @@ class RunState:
             "log": self.log,
             "files_learned": self.files_learned,
             "files_edited": self.files_edited,
+            "decisions": [d.to_dict() for d in self.decisions],
             "work_dir": self.work_dir,
         }
 
@@ -170,6 +307,7 @@ class RunState:
             log=d.get("log", []),
             files_learned=d.get("files_learned", []),
             files_edited=d.get("files_edited", []),
+            decisions=[Decision.from_dict(dec) for dec in d.get("decisions", [])],
             work_dir=d.get("work_dir"),
         )
 
