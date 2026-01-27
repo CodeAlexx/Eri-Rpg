@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import yaml
 import hashlib
+import re
 
 if TYPE_CHECKING:
     from erirpg.graph import Graph
@@ -93,6 +94,90 @@ class Step:
 
 
 @dataclass
+class Artifact:
+    """Expected output artifact from a spec execution.
+    
+    Used for verification after run completion.
+    """
+    path: str                    # File path relative to project
+    provides: str = ""           # Description of what this file provides
+    exports: List[str] = field(default_factory=list)  # Expected exports (functions, classes)
+    contains: List[str] = field(default_factory=list)  # Strings that must be present
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "path": self.path,
+            "provides": self.provides,
+            "exports": self.exports,
+            "contains": self.contains,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "Artifact":
+        return cls(
+            path=d.get("path", ""),
+            provides=d.get("provides", ""),
+            exports=d.get("exports", []),
+            contains=d.get("contains", []),
+        )
+
+
+@dataclass
+class KeyLink:
+    """Expected import/dependency link between files.
+    
+    Used to verify integration after run completion.
+    """
+    from_file: str              # Source file
+    to_file: str                # Target file being imported
+    pattern: str                # Regex pattern to match (e.g., "from erirpg.memory import.*Roadmap")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "from": self.from_file,
+            "to": self.to_file,
+            "pattern": self.pattern,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "KeyLink":
+        return cls(
+            from_file=d.get("from", ""),
+            to_file=d.get("to", ""),
+            pattern=d.get("pattern", ""),
+        )
+
+
+@dataclass
+class MustHaves:
+    """Verification requirements for a spec.
+    
+    Checked after run completion:
+    - truths: assertions to verify (grep/test)
+    - artifacts: expected files with exports
+    - key_links: import patterns between files
+    """
+    truths: List[str] = field(default_factory=list)        # Verification assertions
+    artifacts: List[Artifact] = field(default_factory=list) # Expected outputs
+    key_links: List[KeyLink] = field(default_factory=list)  # Integration links
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "truths": self.truths,
+            "artifacts": [a.to_dict() for a in self.artifacts],
+            "key_links": [k.to_dict() for k in self.key_links],
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "MustHaves":
+        return cls(
+            truths=d.get("truths", []),
+            artifacts=[Artifact.from_dict(a) for a in d.get("artifacts", [])],
+            key_links=[KeyLink.from_dict(k) for k in d.get("key_links", [])],
+        )
+
+
+@dataclass
 class SpecStep:
     """A goal-based step (legacy/compatibility format).
 
@@ -155,6 +240,7 @@ class Spec:
     created_at: datetime = field(default_factory=datetime.now)
     verification: List[str] = field(default_factory=list)  # global verification commands
     constraints: List[str] = field(default_factory=list)
+    must_haves: Optional[MustHaves] = None  # v2: Verification requirements
 
     # Legacy/compatibility fields from agent/spec.py
     source_project: Optional[str] = None
@@ -197,6 +283,9 @@ class Spec:
 
         steps = [Step.from_dict(s) for s in data.get("steps", [])]
 
+        must_haves = None
+        if data.get("must_haves"):
+            must_haves = MustHaves.from_dict(data["must_haves"])
         spec = cls(
             id=data.get("id", ""),
             goal=data.get("goal", ""),
@@ -205,6 +294,7 @@ class Spec:
             created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(),
             verification=data.get("verification", []),
             constraints=data.get("constraints", []),
+            must_haves=must_haves,
             source_project=data.get("source_project"),
             target_project=data.get("target_project"),
             context_hints=data.get("context", []),
@@ -224,6 +314,9 @@ class Spec:
     def from_dict(cls, data: Dict[str, Any]) -> "Spec":
         """Create spec from dictionary."""
         steps = [Step.from_dict(s) for s in data.get("steps", [])]
+        must_haves = None
+        if data.get("must_haves"):
+            must_haves = MustHaves.from_dict(data["must_haves"])
         return cls(
             id=data.get("id", generate_spec_id(data.get("goal", ""))),
             goal=data.get("goal", ""),
@@ -231,6 +324,7 @@ class Spec:
             steps=steps,
             verification=data.get("verification", []),
             constraints=data.get("constraints", []),
+            must_haves=must_haves,
             source_project=data.get("source_project"),
             target_project=data.get("target_project"),
             context_hints=data.get("context", []),
@@ -257,6 +351,7 @@ class Spec:
             "created_at": self.created_at.isoformat(),
             "verification": self.verification,
             "constraints": self.constraints,
+            "must_haves": self.must_haves.to_dict() if self.must_haves else None,
             "source_project": self.source_project,
             "target_project": self.target_project,
             "context": self.context_hints,
@@ -278,6 +373,7 @@ class Spec:
             "created_at": self.created_at.isoformat(),
             "verification": self.verification,
             "constraints": self.constraints,
+            "must_haves": self.must_haves.to_dict() if self.must_haves else None,
             "current_step_id": self.current_step_id,
         }
 
@@ -391,6 +487,113 @@ class Spec:
                 lines.append(f"✗ BLOCKED - {len(failed)} step(s) failed")
 
         return "\n".join(lines)
+
+    def verify_must_haves(self, project_path: str) -> tuple:
+        """Verify must_haves requirements after run completion.
+        
+        Returns:
+            (passed: bool, results: List[Dict]) - overall pass and detailed results
+        """
+        if not self.must_haves:
+            return True, []
+        
+        results = []
+        all_passed = True
+        base = Path(project_path)
+        
+        # Check truths (grep for patterns in codebase)
+        for truth in self.must_haves.truths:
+            # Truths are human-readable assertions - we check if related code exists
+            # For now, mark as manual verification needed
+            results.append({
+                "type": "truth",
+                "assertion": truth,
+                "status": "manual",
+                "message": "Requires manual verification",
+            })
+        
+        # Check artifacts (file exists, has exports)
+        for artifact in self.must_haves.artifacts:
+            artifact_path = base / artifact.path
+            if not artifact_path.exists():
+                results.append({
+                    "type": "artifact",
+                    "path": artifact.path,
+                    "status": "failed",
+                    "message": f"File not found: {artifact.path}",
+                })
+                all_passed = False
+                continue
+            
+            content = artifact_path.read_text()
+            missing_exports = []
+            for export in artifact.exports:
+                # Check for function/class definition
+                patterns = [
+                    rf"^def {export}\(",
+                    rf"^class {export}[:\(]",
+                    rf"^{export}\s*=",
+                ]
+                found = any(re.search(p, content, re.MULTILINE) for p in patterns)
+                if not found:
+                    missing_exports.append(export)
+            
+            missing_contains = []
+            for contain in artifact.contains:
+                if contain not in content:
+                    missing_contains.append(contain)
+            
+            if missing_exports or missing_contains:
+                results.append({
+                    "type": "artifact",
+                    "path": artifact.path,
+                    "status": "failed",
+                    "missing_exports": missing_exports,
+                    "missing_contains": missing_contains,
+                })
+                all_passed = False
+            else:
+                results.append({
+                    "type": "artifact",
+                    "path": artifact.path,
+                    "status": "passed",
+                    "message": f"Found {len(artifact.exports)} exports, {len(artifact.contains)} patterns",
+                })
+        
+        # Check key_links (import patterns between files)
+        for link in self.must_haves.key_links:
+            from_path = base / link.from_file
+            if not from_path.exists():
+                results.append({
+                    "type": "key_link",
+                    "from": link.from_file,
+                    "to": link.to_file,
+                    "status": "failed",
+                    "message": f"Source file not found: {link.from_file}",
+                })
+                all_passed = False
+                continue
+            
+            content = from_path.read_text()
+            if re.search(link.pattern, content):
+                results.append({
+                    "type": "key_link",
+                    "from": link.from_file,
+                    "to": link.to_file,
+                    "status": "passed",
+                    "message": f"Pattern matched: {link.pattern}",
+                })
+            else:
+                results.append({
+                    "type": "key_link",
+                    "from": link.from_file,
+                    "to": link.to_file,
+                    "status": "failed",
+                    "message": f"Pattern not found: {link.pattern}",
+                })
+                all_passed = False
+        
+        return all_passed, results
 
 
 def generate_spec_id(goal: str) -> str:
