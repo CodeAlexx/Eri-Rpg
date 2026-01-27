@@ -16,12 +16,16 @@ This is working software but has rough edges. See [Known Issues](#known-issues) 
 4. **Run Tracking** - Track multi-step changes with rollback capability
 5. **Quick Fix Mode** - Lightweight single-file edits without full ceremony
 6. **Claude Code Integration** - Hooks enforce workflow in AI coding sessions
+7. **One-Command Install** - `eri-rpg install` sets up Claude Code integration
 
 ## Quick Start
 
 ```bash
 # Install
 pip install -e /path/to/eri-rpg
+
+# Set up Claude Code integration (optional)
+eri-rpg install
 
 # Register a project
 eri-rpg add myproject /path/to/project
@@ -80,6 +84,13 @@ eri-rpg cleanup <project> --prune # Delete stale runs
 eri-rpg rollback <project> <file> # Rollback changes
 ```
 
+### Installation Management
+```bash
+eri-rpg install          # Install Claude Code commands and hooks
+eri-rpg uninstall        # Remove from Claude Code
+eri-rpg install-status   # Check installation status
+```
+
 ## Real Example Output
 
 ```
@@ -98,37 +109,49 @@ Matching modules in erirpg:
   agent/run.py (0.11)
     Run state management.
 
-$ eri-rpg cleanup ai-toolkit --days 0
-Runs for ai-toolkit:
-  Completed: 1
-  In Progress: 0
-  Stale (>0 days): 17
-
-Stale runs:
-  819a7182f8cd: Create test config for flux2_klein_9b: 2... (0 days old)
-  ...
+$ eri-rpg install-status
+EriRPG Installation Status:
+  Commands: /eri:execute, /eri:quick, /eri:status
+  Hooks: PreToolUse, PreCompact, SessionStart
 ```
 
 ## Claude Code Integration
 
 EriRPG includes hooks for Claude Code that:
 
-1. **PreToolUse** - Blocks Edit/Write without active preflight
+1. **PreToolUse** - Blocks Edit/Write without active preflight or quick fix
 2. **PreCompact** - Saves state before context compaction
 3. **SessionStart** - Reminds about incomplete runs
 
-See [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) for setup.
+### Quick Setup
+
+```bash
+eri-rpg install
+```
+
+This automatically:
+- Installs `/eri:*` slash commands
+- Configures hooks in `~/.claude/settings.json`
+- Sets up enforcement for Edit/Write/MultiEdit tools
+
+To remove:
+```bash
+eri-rpg uninstall
+```
+
+See [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) for manual setup.
 
 ## Known Issues
 
 ### Working
 - ✅ Project registration and indexing
 - ✅ Module search (`find`)
-- ✅ Learning storage and recall
+- ✅ Learning storage and recall (v2 knowledge)
 - ✅ Quick fix mode (single-file edits)
 - ✅ Cleanup command (list/prune stale runs)
 - ✅ Basic rollback functionality
 - ✅ PreToolUse hook enforcement
+- ✅ One-command installer (`eri-rpg install`)
 - ✅ Python parser
 - ✅ Rust parser (basic)
 - ✅ C parser (basic)
@@ -149,7 +172,6 @@ See [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) for setup.
 ### Known Bugs
 - Path normalization issues with nested `.eri-rpg` directories
 - Preflight state can get stale if session crashes
-- 17 abandoned runs in ai-toolkit from development
 
 ## Architecture
 
@@ -163,6 +185,7 @@ erirpg/
 ├── preflight.py     # Preflight checks
 ├── verification.py  # Test running
 ├── quick.py         # Quick fix mode
+├── install.py       # Claude Code installer
 ├── agent/           # Agent API
 │   ├── __init__.py  # Main Agent class
 │   ├── run.py       # Run state
