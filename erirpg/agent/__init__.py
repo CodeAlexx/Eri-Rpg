@@ -566,6 +566,28 @@ class Agent:
         """Return (completed, total) step counts."""
         return self.plan.progress()
 
+    def needs_discussion(
+        self,
+        goal: str,
+        force: bool = False,
+        skip: bool = False,
+    ) -> tuple:
+        """Check if a goal needs discussion before spec generation.
+        
+        This is a convenience method that wraps discuss.needs_discussion()
+        for use in the agent workflow.
+        
+        Args:
+            goal: The user's goal
+            force: Force discussion even if not needed
+            skip: Skip discussion even if needed
+            
+        Returns:
+            (needs_discussion, reason) tuple
+        """
+        from erirpg.discuss import needs_discussion as check_needs_discussion
+        return check_needs_discussion(goal, self.project_path, force, skip)
+
     def start_step(self) -> Optional[Step]:
         """Start the next pending step."""
         step = self.plan.next_step()
