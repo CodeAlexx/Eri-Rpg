@@ -30,7 +30,7 @@ from erirpg.context import generate_context, estimate_tokens
 from erirpg.state import State
 from erirpg.knowledge import Learning, Decision, HistoryEntry
 from erirpg.modes import run_take, run_work, run_new, run_next, QUESTIONS
-from erirpg.memory import StoredLearning, load_knowledge, save_knowledge
+from erirpg.memory import StoredLearning, StoredDecision, KnowledgeStore, load_knowledge, save_knowledge
 from erirpg.refs import CodeRef
 
 
@@ -403,8 +403,10 @@ def show(project: str):
     try:
         graph = get_or_load_graph(proj)
         stats = graph.stats()
-        knowledge = graph.knowledge
-        k_stats = knowledge.stats()
+
+        # Use v2 knowledge storage for stats
+        store = load_knowledge(proj.path, project)
+        k_stats = store.stats()
 
         click.echo(f"Modules: {stats['modules']}")
         click.echo(f"Lines: {stats['total_lines']:,}")
@@ -1283,14 +1285,10 @@ def pattern(project: str, name: str, description: str):
         click.echo(f"Error: Project '{project}' not found", err=True)
         sys.exit(1)
 
-    try:
-        graph = get_or_load_graph(proj)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-    graph.knowledge.add_pattern(name, description)
-    graph.save(proj.graph_path)
+    # Use v2 knowledge storage
+    store = load_knowledge(proj.path, project)
+    store.add_pattern(name, description)
+    save_knowledge(proj.path, store)
 
     click.echo(f"✓ Stored pattern: {name}")
     click.echo(f"  {description}")
@@ -1311,13 +1309,10 @@ def list_patterns(project: str):
         click.echo(f"Error: Project '{project}' not found", err=True)
         sys.exit(1)
 
-    try:
-        graph = get_or_load_graph(proj)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+    # Use v2 knowledge storage
+    store = load_knowledge(proj.path, project)
+    patterns = store.patterns
 
-    patterns = graph.knowledge.patterns
     if not patterns:
         click.echo("No patterns stored.")
         click.echo(f"\nAdd one: eri-rpg pattern {project} <name> \"<description>\"")
@@ -1480,20 +1475,17 @@ def add_decision(project: str, title: str, reason: str, affects: str, alternativ
         click.echo(f"Error: Project '{project}' not found", err=True)
         sys.exit(1)
 
-    try:
-        graph = get_or_load_graph(proj)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+    # Use v2 knowledge storage
+    store = load_knowledge(proj.path, project)
 
     # Parse comma-separated lists
     affects_list = [a.strip() for a in affects.split(",")] if affects else []
     alternatives_list = [a.strip() for a in alternatives.split(",")] if alternatives else []
 
     # Create decision ID
-    decision_id = f"dec-{len(graph.knowledge.decisions) + 1:03d}"
+    decision_id = f"dec-{len(store.decisions) + 1:03d}"
 
-    decision = Decision(
+    decision = StoredDecision(
         id=decision_id,
         date=datetime.now(),
         title=title,
@@ -1502,8 +1494,8 @@ def add_decision(project: str, title: str, reason: str, affects: str, alternativ
         alternatives=alternatives_list,
     )
 
-    graph.knowledge.add_decision(decision)
-    graph.save(proj.graph_path)
+    store.add_decision(decision)
+    save_knowledge(proj.path, store)
 
     click.echo(f"✓ Recorded decision: {decision_id}")
     click.echo(f"  Title: {title}")
@@ -1529,13 +1521,10 @@ def list_decisions(project: str):
         click.echo(f"Error: Project '{project}' not found", err=True)
         sys.exit(1)
 
-    try:
-        graph = get_or_load_graph(proj)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+    # Use v2 knowledge storage
+    store = load_knowledge(proj.path, project)
+    decisions = store.decisions
 
-    decisions = graph.knowledge.decisions
     if not decisions:
         click.echo("No decisions recorded.")
         click.echo(f"\nAdd one: eri-rpg decision {project} \"<title>\" --reason \"<why>\"")
@@ -1595,7 +1584,7 @@ def log(action: str, feature: str, from_proj: str, to_path: str):
 def show_knowledge(project: str):
     """Show all stored knowledge for a project.
 
-    Displays learnings, patterns, and statistics.
+    Displays learnings, patterns, decisions, and statistics.
     """
     registry = Registry.get_instance()
     proj = registry.get(project)
@@ -1604,22 +1593,17 @@ def show_knowledge(project: str):
         click.echo(f"Error: Project '{project}' not found", err=True)
         sys.exit(1)
 
-    try:
-        graph = get_or_load_graph(proj)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-    knowledge = graph.knowledge
-    stats = knowledge.stats()
+    # Use v2 knowledge storage
+    store = load_knowledge(proj.path, project)
+    stats = store.stats()
 
     click.echo(f"Knowledge for {project}")
     click.echo("=" * 40)
     click.echo("")
 
     click.echo(f"Learnings: {stats['learnings']}")
-    if knowledge.learnings:
-        for path, learning in sorted(knowledge.learnings.items()):
+    if store.learnings:
+        for path, learning in sorted(store.learnings.items()):
             age_days = (datetime.now() - learning.learned_at).days
             age_str = "today" if age_days == 0 else f"{age_days}d ago"
             click.echo(f"  • {path} ({age_str})")
@@ -1627,17 +1611,20 @@ def show_knowledge(project: str):
 
     click.echo("")
     click.echo(f"Patterns: {stats['patterns']}")
-    if knowledge.patterns:
-        for name, desc in sorted(knowledge.patterns.items()):
-            click.echo(f"  • {name}: {desc[:60]}...")
+    if store.patterns:
+        for name, desc in sorted(store.patterns.items()):
+            click.echo(f"  • {name}: {desc[:60]}{'...' if len(desc) > 60 else ''}")
 
     click.echo("")
-    click.echo(f"History entries: {stats['history_entries']}")
-    recent = knowledge.get_recent_history(5)
-    if recent:
-        click.echo("  Recent:")
-        for h in recent:
-            click.echo(f"  • [{h.date.strftime('%m/%d')}] {h.action}: {h.description[:40]}...")
+    click.echo(f"Decisions: {stats['decisions']}")
+    if store.decisions:
+        for d in store.decisions[:5]:  # Show first 5
+            click.echo(f"  • [{d.id}] {d.title}")
+        if len(store.decisions) > 5:
+            click.echo(f"  ... and {len(store.decisions) - 5} more")
+
+    click.echo("")
+    click.echo(f"Runs: {stats['runs']}")
 
     # Token savings estimate
     if stats['learnings'] > 0:
