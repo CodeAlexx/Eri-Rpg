@@ -75,6 +75,11 @@ class Project:
     indexed_at: Optional[datetime] = None
     graph_path: str = ""  # Path to graph.json
 
+    # Project metadata
+    description: str = ""
+    todos: List[str] = field(default_factory=list)
+    notes: str = ""
+
     def __post_init__(self):
         if not self.graph_path:
             self.graph_path = os.path.join(self.path, ".eri-rpg", "graph.json")
@@ -86,6 +91,9 @@ class Project:
             "lang": self.lang,
             "indexed_at": self.indexed_at.isoformat() if self.indexed_at else None,
             "graph_path": self.graph_path,
+            "description": self.description,
+            "todos": self.todos,
+            "notes": self.notes,
         }
 
     @classmethod
@@ -99,6 +107,9 @@ class Project:
             lang=d["lang"],
             indexed_at=indexed_at,
             graph_path=d.get("graph_path", ""),
+            description=d.get("description", ""),
+            todos=d.get("todos", []),
+            notes=d.get("notes", ""),
         )
 
     def is_indexed(self) -> bool:
