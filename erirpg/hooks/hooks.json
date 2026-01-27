@@ -1,0 +1,18 @@
+{
+  "description": "EriRPG enforcement hooks - blocks Edit/Write without active preflight",
+  "setup": "Set ERI_RPG_PATH env var to your erirpg installation root, or edit the command path below",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'python3 \"${ERI_RPG_PATH}/erirpg/hooks/pretooluse.py\"'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
