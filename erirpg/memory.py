@@ -689,16 +689,151 @@ class StoredDecision:
 
 
 @dataclass
+class Milestone:
+    """A phase/milestone in a roadmap.
+    
+    Tracks progress for one phase of a multi-phase goal.
+    """
+    id: str
+    name: str
+    description: str
+    spec_id: Optional[str] = None  # ID of spec generated for this milestone
+    run_id: Optional[str] = None   # ID of run executing this milestone
+    completed_at: Optional[datetime] = None
+    
+    @property
+    def done(self) -> bool:
+        """Check if milestone is completed."""
+        return self.completed_at is not None
+    
+    def complete(self) -> None:
+        """Mark milestone as complete."""
+        self.completed_at = datetime.now()
+    
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "spec_id": self.spec_id,
+            "run_id": self.run_id,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+    
+    @classmethod
+    def from_dict(cls, d: dict) -> "Milestone":
+        return cls(
+            id=d["id"],
+            name=d["name"],
+            description=d.get("description", ""),
+            spec_id=d.get("spec_id"),
+            run_id=d.get("run_id"),
+            completed_at=datetime.fromisoformat(d["completed_at"]) if d.get("completed_at") else None,
+        )
+
+
+@dataclass
+class Roadmap:
+    """A multi-phase roadmap for achieving a goal.
+    
+    Contains milestones that represent major phases.
+    Each milestone can be linked to a spec and run.
+    """
+    id: str  # hash of goal (same as discussion id)
+    goal: str
+    milestones: List[Milestone] = field(default_factory=list)
+    created_at: datetime = field(default_factory=datetime.now)
+    
+    @staticmethod
+    def make_id(goal: str) -> str:
+        """Generate roadmap ID from goal."""
+        return hashlib.sha256(goal.encode()).hexdigest()[:12]
+    
+    @classmethod
+    def create(cls, goal: str, milestones: List[Milestone] = None) -> "Roadmap":
+        """Create a new roadmap for a goal."""
+        return cls(
+            id=cls.make_id(goal),
+            goal=goal,
+            milestones=milestones or [],
+        )
+    
+    def add_milestone(self, name: str, description: str) -> Milestone:
+        """Add a new milestone to the roadmap."""
+        milestone_id = f"m{len(self.milestones) + 1}"
+        milestone = Milestone(id=milestone_id, name=name, description=description)
+        self.milestones.append(milestone)
+        return milestone
+    
+    def current_milestone(self) -> Optional[Milestone]:
+        """Get the current (first incomplete) milestone."""
+        for m in self.milestones:
+            if not m.done:
+                return m
+        return None
+    
+    def current_index(self) -> int:
+        """Get index of current milestone (0-based)."""
+        for i, m in enumerate(self.milestones):
+            if not m.done:
+                return i
+        return len(self.milestones)
+    
+    def advance(self) -> Optional[Milestone]:
+        """Mark current milestone done and return next one."""
+        current = self.current_milestone()
+        if current:
+            current.complete()
+        return self.current_milestone()
+    
+    def progress(self) -> str:
+        """Get progress string like '2/4 phases'."""
+        done = sum(1 for m in self.milestones if m.done)
+        return f"{done}/{len(self.milestones)} phases"
+    
+    def progress_percent(self) -> int:
+        """Get progress as percentage."""
+        if not self.milestones:
+            return 0
+        done = sum(1 for m in self.milestones if m.done)
+        return int(done / len(self.milestones) * 100)
+    
+    def is_complete(self) -> bool:
+        """Check if all milestones are complete."""
+        return all(m.done for m in self.milestones) if self.milestones else False
+    
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "goal": self.goal,
+            "milestones": [m.to_dict() for m in self.milestones],
+            "created_at": self.created_at.isoformat(),
+        }
+    
+    @classmethod
+    def from_dict(cls, d: dict) -> "Roadmap":
+        return cls(
+            id=d["id"],
+            goal=d["goal"],
+            milestones=[Milestone.from_dict(m) for m in d.get("milestones", [])],
+            created_at=datetime.fromisoformat(d["created_at"]) if d.get("created_at") else datetime.now(),
+        )
+
+
+@dataclass
 class Discussion:
-    """A goal clarification discussion.
+    """A goal clarification discussion with optional roadmap.
 
     Stores questions asked and answers given before generating a spec.
     Keyed by goal hash for multiple discussions per project.
+    Now includes optional roadmap for multi-phase goals.
     """
     id: str  # hash of goal
     goal: str
+    project: str = ""  # Project name
     questions: List[str] = field(default_factory=list)
     answers: Dict[str, str] = field(default_factory=dict)
+    roadmap: Optional[Roadmap] = None  # Embedded roadmap
     resolved: bool = False
     created_at: datetime = field(default_factory=datetime.now)
 
@@ -709,11 +844,12 @@ class Discussion:
         return hashlib.sha256(goal.encode()).hexdigest()[:12]
 
     @classmethod
-    def create(cls, goal: str, questions: List[str]) -> "Discussion":
+    def create(cls, goal: str, questions: List[str], project: str = "") -> "Discussion":
         """Create a new discussion for a goal."""
         return cls(
             id=cls.make_id(goal),
             goal=goal,
+            project=project,
             questions=questions,
         )
 
@@ -741,22 +877,31 @@ class Discussion:
         return "\n".join(lines)
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "id": self.id,
             "goal": self.goal,
+            "project": self.project,
             "questions": self.questions,
             "answers": self.answers,
             "resolved": self.resolved,
             "created_at": self.created_at.isoformat(),
         }
+        if self.roadmap:
+            d["roadmap"] = self.roadmap.to_dict()
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> "Discussion":
+        roadmap = None
+        if d.get("roadmap"):
+            roadmap = Roadmap.from_dict(d["roadmap"])
         return cls(
             id=d["id"],
             goal=d["goal"],
+            project=d.get("project", ""),
             questions=d.get("questions", []),
             answers=d.get("answers", {}),
+            roadmap=roadmap,
             resolved=d.get("resolved", False),
             created_at=datetime.fromisoformat(d["created_at"]) if d.get("created_at") else datetime.now(),
         )

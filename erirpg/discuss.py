@@ -19,6 +19,8 @@ from typing import List, Optional, Tuple
 
 from erirpg.memory import (
     Discussion,
+    Milestone,
+    Roadmap,
     KnowledgeStore,
     load_knowledge,
     save_knowledge,
@@ -204,7 +206,7 @@ def start_discussion(
         The created Discussion
     """
     questions = generate_questions(goal, project_path, project_name)
-    discussion = Discussion.create(goal, questions)
+    discussion = Discussion.create(goal, questions, project=project_name)
     
     # Store in KnowledgeStore
     store = load_knowledge(project_path, project_name)
@@ -343,10 +345,14 @@ def format_discussion(discussion: Discussion) -> str:
     lines = [
         f"Discussion: {discussion.id[:8]}",
         f"Goal: {discussion.goal}",
+        f"Project: {discussion.project}" if discussion.project else "",
         f"Status: {'Resolved' if discussion.resolved else 'In Progress'}",
         f"Created: {discussion.created_at.strftime('%Y-%m-%d %H:%M')}",
         "",
     ]
+    # Remove empty lines from missing project
+    lines = [l for l in lines if l != ""]
+    lines.append("")
     
     if discussion.questions:
         lines.append("Questions:")
@@ -357,10 +363,213 @@ def format_discussion(discussion: Discussion) -> str:
             if q in discussion.answers:
                 lines.append(f"      → {answer}")
     
+    # Show roadmap if exists
+    if discussion.roadmap:
+        lines.append("")
+        lines.append(format_roadmap(discussion.roadmap))
+    
     unanswered = discussion.unanswered()
     if unanswered:
         lines.append(f"\nNext: Answer question #{discussion.questions.index(unanswered[0]) + 1}")
+    elif discussion.roadmap is None and not discussion.resolved:
+        lines.append("\nQuestions done. Add roadmap with: eri-rpg roadmap-add <project> \"Phase Name\" \"Description\"")
     elif not discussion.resolved:
-        lines.append("\nAll questions answered. Run 'eri-rpg discuss-resolve' to complete.")
+        lines.append("\nReady. Run 'eri-rpg discuss-resolve' to finalize.")
     
     return "\n".join(lines)
+
+
+# ============================================================================
+# Roadmap Functions
+# ============================================================================
+
+def create_roadmap(
+    goal: str,
+    project_path: str,
+    project_name: str,
+) -> Roadmap:
+    """Create a roadmap for a discussion.
+    
+    Creates empty roadmap linked to discussion.
+    Add milestones with add_milestone().
+    
+    Returns:
+        The created Roadmap
+    """
+    store = load_knowledge(project_path, project_name)
+    discussion = store.get_discussion_by_goal(goal)
+    
+    if not discussion:
+        raise ValueError(f"No discussion found for goal: {goal}")
+    
+    if discussion.roadmap:
+        return discussion.roadmap
+    
+    roadmap = Roadmap.create(goal)
+    discussion.roadmap = roadmap
+    store.add_discussion(discussion)
+    save_knowledge(project_path, store)
+    
+    return roadmap
+
+
+def add_milestone(
+    goal: str,
+    project_path: str,
+    project_name: str,
+    name: str,
+    description: str,
+) -> Milestone:
+    """Add a milestone to a discussion's roadmap.
+    
+    Creates roadmap if it doesn't exist.
+    
+    Returns:
+        The created Milestone
+    """
+    store = load_knowledge(project_path, project_name)
+    discussion = store.get_discussion_by_goal(goal)
+    
+    if not discussion:
+        raise ValueError(f"No discussion found for goal: {goal}")
+    
+    # Create roadmap if needed
+    if not discussion.roadmap:
+        discussion.roadmap = Roadmap.create(goal)
+    
+    milestone = discussion.roadmap.add_milestone(name, description)
+    store.add_discussion(discussion)
+    save_knowledge(project_path, store)
+    
+    return milestone
+
+
+def advance_roadmap(
+    goal: str,
+    project_path: str,
+    project_name: str,
+) -> Optional[Milestone]:
+    """Mark current milestone done and return next one.
+    
+    Returns:
+        Next milestone, or None if roadmap complete
+    """
+    store = load_knowledge(project_path, project_name)
+    discussion = store.get_discussion_by_goal(goal)
+    
+    if not discussion:
+        raise ValueError(f"No discussion found for goal: {goal}")
+    
+    if not discussion.roadmap:
+        raise ValueError(f"No roadmap found for goal: {goal}")
+    
+    next_milestone = discussion.roadmap.advance()
+    store.add_discussion(discussion)
+    save_knowledge(project_path, store)
+    
+    return next_milestone
+
+
+def get_roadmap(
+    goal: str,
+    project_path: str,
+    project_name: str,
+) -> Optional[Roadmap]:
+    """Get roadmap for a goal.
+    
+    Returns:
+        Roadmap or None if no discussion/roadmap exists
+    """
+    store = load_knowledge(project_path, project_name)
+    discussion = store.get_discussion_by_goal(goal)
+    
+    if not discussion:
+        return None
+    
+    return discussion.roadmap
+
+
+def get_active_discussion(
+    project_path: str,
+    project_name: str,
+) -> Optional[Discussion]:
+    """Get the active (unresolved) discussion for a project.
+    
+    Returns most recent unresolved discussion.
+    
+    Returns:
+        Discussion or None if no active discussion
+    """
+    store = load_knowledge(project_path, project_name)
+    discussions = store.list_discussions()
+    
+    for disc in discussions:
+        if not disc.resolved:
+            return disc
+    
+    return None
+
+
+def format_roadmap(roadmap: Roadmap) -> str:
+    """Format roadmap for CLI display."""
+    lines = [
+        "═" * 40,
+        f" ROADMAP: {roadmap.goal[:30]}{'...' if len(roadmap.goal) > 30 else ''}",
+        "═" * 40,
+        "",
+    ]
+    
+    current_idx = roadmap.current_index()
+    
+    for i, m in enumerate(roadmap.milestones):
+        if m.done:
+            status = "✓"
+            marker = ""
+        elif i == current_idx:
+            status = "◐"
+            marker = " [current]"
+        else:
+            status = "○"
+            marker = ""
+        
+        lines.append(f"  {status} Phase {i + 1}: {m.name}{marker}")
+        if m.description:
+            lines.append(f"      {m.description}")
+        if m.spec_id:
+            lines.append(f"      Spec: {m.spec_id}")
+        if m.run_id:
+            lines.append(f"      Run: {m.run_id}")
+    
+    lines.append("")
+    lines.append(f"Progress: {roadmap.progress()} ({roadmap.progress_percent()}%)")
+    
+    current = roadmap.current_milestone()
+    if current:
+        lines.append(f"Current: Phase {current_idx + 1} - {current.name}")
+    elif roadmap.is_complete():
+        lines.append("Status: All phases complete!")
+    
+    return "\n".join(lines)
+
+
+def get_current_milestone_goal(
+    project_path: str,
+    project_name: str,
+) -> Optional[str]:
+    """Get the goal string for the current milestone.
+    
+    Used to generate specs for the current phase.
+    
+    Returns:
+        Goal string for current milestone, or None
+    """
+    disc = get_active_discussion(project_path, project_name)
+    if not disc or not disc.roadmap:
+        return None
+    
+    current = disc.roadmap.current_milestone()
+    if not current:
+        return None
+    
+    # Build milestone-specific goal
+    return f"{current.name}: {current.description}"
