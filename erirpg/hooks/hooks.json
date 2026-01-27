@@ -1,11 +1,11 @@
 {
-  "description": "EriRPG enforcement hooks - blocks Edit/Write without active preflight",
+  "description": "EriRPG enforcement hooks - blocks Edit/Write/Bash file writes without active preflight",
   "install": "Copy to ~/.claude/settings.json or merge with existing hooks config",
   "note": "Set ERIRPG_ROOT env var or use full path to pretooluse.py",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write|MultiEdit|Bash",
         "hooks": [
           {
             "type": "command",
