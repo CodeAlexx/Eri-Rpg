@@ -2,8 +2,11 @@
 """
 EriRPG PreToolUse Hook - HARD ENFORCEMENT
 
-This hook is called by Claude Code BEFORE any Edit/Write tool executes.
+This hook is called by Claude Code BEFORE any Edit/Write/Bash tool executes.
 It checks if there's an active EriRPG run with preflight completed.
+
+For Edit/Write/MultiEdit: Blocks without preflight.
+For Bash: Detects file-writing commands (cat >, echo >, tee, etc.) and enforces same rules.
 
 If not: BLOCKS the operation.
 If yes: Allows but only for preflighted files.
@@ -13,7 +16,7 @@ To install, add to ~/.claude/settings.json:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write|MultiEdit|Bash",
         "hooks": [
           {
             "type": "command",
@@ -105,6 +108,38 @@ def get_quick_fix_state(project_path: str) -> dict:
         return None
 
 
+def detect_bash_file_write(command: str) -> str:
+    """Detect if a Bash command writes to a file. Returns the file path or None."""
+    import re
+
+    # Patterns that indicate file writing
+    patterns = [
+        # cat/echo with redirection: cat > file, echo "x" > file, cat >> file
+        r'(?:cat|echo|printf)\s+.*?[>]{1,2}\s*["\']?([^"\'>\s|&;]+)',
+        # Here-doc: cat > file << 'EOF', cat << EOF > file
+        r'cat\s+[>]{1,2}\s*([^\s<]+)\s*<<',
+        r'cat\s+<<.*?[>]{1,2}\s*([^\s]+)',
+        # tee command: tee file, tee -a file
+        r'tee\s+(?:-a\s+)?["\']?([^"\'>\s|&;]+)',
+        # cp/mv to specific file (not dir)
+        r'(?:cp|mv)\s+\S+\s+([^/\s]+\.[a-zA-Z]+)$',
+        # Python/ruby one-liners writing files
+        r'python[3]?\s+.*?open\s*\(\s*["\']([^"\']+)["\'].*?["\']w',
+        r'python[3]?\s+-c\s+.*?[>]{1,2}\s*([^\s]+)',
+        # sed -i (in-place edit)
+        r'sed\s+-i[^\s]*\s+.*?\s+([^\s]+)$',
+        # Direct write via dd
+        r'dd\s+.*?of=([^\s]+)',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, command, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+    return None
+
+
 def main():
     """Main hook entry point."""
     log("=" * 50)
@@ -120,6 +155,23 @@ def main():
         tool_input = input_data.get("tool_input", {})
         cwd = input_data.get("cwd", os.getcwd())
         log(f"tool_name={tool_name}, cwd={cwd}")
+
+        # Check for Bash commands that write files
+        if tool_name == "Bash":
+            command = tool_input.get("command", "")
+            log(f"Bash command: {command[:200]}")
+
+            detected_file = detect_bash_file_write(command)
+            if detected_file:
+                log(f"Detected Bash file write to: {detected_file}")
+                # Treat this like an Edit/Write - set file_path and continue checks
+                tool_input["file_path"] = detected_file
+                tool_name = "Write"  # Treat as Write for enforcement
+            else:
+                # No file write detected, allow
+                log(f"Bash command does not write files, allowing")
+                print(json.dumps({}))
+                sys.exit(0)
 
         # Only check Edit/Write/MultiEdit
         if tool_name not in ["Edit", "Write", "MultiEdit"]:
