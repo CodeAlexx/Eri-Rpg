@@ -169,7 +169,7 @@ class Agent:
         # Register as active agent (hard enforcement)
 
         # Install write hooks (opt-in when Agent is created)
-        from erirpg.hooks import install_hooks
+        from erirpg.write_guard import install_hooks
         install_hooks()
         _set_active_agent(self)
 
@@ -1027,7 +1027,7 @@ class Agent:
             _set_preflight_done(True)
 
             # Enable writes via Python hooks (HARD ENFORCEMENT)
-            from erirpg.hooks import enable_writes
+            from erirpg.write_guard import enable_writes
             enable_writes(files, self.project_path)
 
             # Save preflight state for Claude Code hooks to read
@@ -1086,7 +1086,7 @@ class Agent:
         _set_preflight_done(False)
 
         # Disable writes via hooks (HARD ENFORCEMENT)
-        from erirpg.hooks import disable_writes
+        from erirpg.write_guard import disable_writes
         disable_writes()
 
         # Clear preflight state file for Claude Code hooks
@@ -1353,7 +1353,7 @@ class Agent:
             load_knowledge, save_knowledge, RollbackResult
         )
         from erirpg.registry import Registry
-        from erirpg.hooks import enable_writes, disable_writes
+        from erirpg.write_guard import enable_writes, disable_writes
 
         # Find project name
         project_name = "unknown"
