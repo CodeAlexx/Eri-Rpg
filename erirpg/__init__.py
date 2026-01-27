@@ -11,21 +11,16 @@ A lean CLI tool for:
 
 No LLM calls. Pure Python. Claude Code is the LLM.
 
-HARD ENFORCEMENT:
-When EriRPG is imported, file write hooks are automatically installed.
-Any attempt to write files without going through EriRPG will be BLOCKED.
-This ensures all code changes follow the EriRPG workflow:
-    1. Create an Agent
-    2. Run preflight()
-    3. Use agent.edit_file() or agent.write_file()
+ENFORCEMENT:
+File write hooks are installed when an Agent is created (opt-in).
+Claude Code hooks (pretooluse.py) enforce workflow at the tool level.
 """
 
 __version__ = "0.1.0"
 __author__ = "Alex"
 
-# Install hard enforcement hooks FIRST
-from erirpg.hooks import install_hooks
-install_hooks()
+# NOTE: Hooks are NOT auto-installed on import anymore.
+# They are installed when Agent is created, or manually via install_hooks().
 
 from erirpg.graph import Graph, Module, Interface, Edge
 from erirpg.registry import Registry, Project

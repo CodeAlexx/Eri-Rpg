@@ -35,7 +35,6 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 from erirpg.registry import Registry
-from erirpg.memory import git_head, in_git_repo
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -68,6 +67,41 @@ def _set_quick_fix_active(active: bool, file_path: Optional[str] = None, project
     _QUICK_FIX_ACTIVE = active
     _QUICK_FIX_FILE = file_path if active else None
     _QUICK_FIX_PROJECT = project if active else None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GIT HELPERS - Local to quick.py to avoid circular imports
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _is_git_repo(path: str) -> bool:
+    """Check if path is inside a git repository."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--git-dir'],
+            capture_output=True,
+            cwd=path,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def _git_head(path: str) -> Optional[str]:
+    """Get current git HEAD commit hash."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            cwd=path,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -236,7 +270,7 @@ def quick_done(
     commit_hash = None
 
     # Git commit if enabled
-    if auto_commit and in_git_repo(project_path):
+    if auto_commit and _is_git_repo(project_path):
         commit_hash = _git_commit(
             project_path,
             [file_path],
@@ -374,7 +408,7 @@ class QuickAgent:
 
         commit_hash = None
 
-        if auto_commit and in_git_repo(self.project_path):
+        if auto_commit and _is_git_repo(self.project_path):
             commit_hash = _git_commit(
                 self.project_path,
                 [self._active_file],
@@ -486,7 +520,7 @@ def _git_commit(project_path: str, files: List[str], message: str) -> Optional[s
         )
 
         # Get commit hash
-        return git_head()
+        return _git_head(project_path)
     except subprocess.CalledProcessError:
         return None
 

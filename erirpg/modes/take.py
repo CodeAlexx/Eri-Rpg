@@ -28,6 +28,43 @@ from erirpg.graph import Graph
 from erirpg.ops import find_modules, extract_feature, plan_transplant, Feature, TransplantPlan
 from erirpg.context import generate_context, estimate_tokens
 from erirpg.state import State
+from erirpg.memory import load_knowledge
+
+
+def get_module_info(project_path: str, module_path: str, graph: "Graph") -> Optional[dict]:
+    """
+    Get module info, checking v2 knowledge first then v1 graph.
+    
+    Returns:
+        Dict with module info or None if unknown.
+    """
+    # Check v2 knowledge first (memory.py)
+    try:
+        knowledge = load_knowledge(project_path)
+        if module_path in knowledge.learnings:
+            learning = knowledge.learnings[module_path]
+            return {
+                'summary': learning.summary,
+                'purpose': learning.purpose,
+                'key_functions': learning.key_functions,
+                'gotchas': learning.gotchas,
+                'source': 'v2_knowledge'
+            }
+    except Exception:
+        pass
+    
+    # Fall back to v1 graph knowledge
+    learning = graph.knowledge.get_learning(module_path)
+    if learning:
+        return {
+            'summary': learning.summary,
+            'purpose': getattr(learning, 'purpose', ''),
+            'key_functions': getattr(learning, 'key_functions', {}),
+            'gotchas': getattr(learning, 'gotchas', []),
+            'source': 'v1_graph'
+        }
+    
+    return None
 
 
 @dataclass

@@ -167,6 +167,10 @@ class Agent:
         self._files_modified: List[str] = []
 
         # Register as active agent (hard enforcement)
+
+        # Install write hooks (opt-in when Agent is created)
+        from erirpg.hooks import install_hooks
+        install_hooks()
         _set_active_agent(self)
 
     @classmethod
