@@ -4,15 +4,260 @@ Run state management.
 Tracks execution state across sessions, allowing resume.
 """
 
+import asyncio
 import json
 import os
-from dataclasses import dataclass, field
+import time
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from erirpg.spec import Spec
 from erirpg.agent.plan import Plan, Step, StepStatus
+
+
+# ============================================================================
+# Wave Execution Data Classes
+# ============================================================================
+
+@dataclass
+class StepResult:
+    """Result of executing a single step."""
+    step_id: str
+    success: bool
+    error: Optional[str] = None
+    artifacts: List[str] = field(default_factory=list)  # Files created/modified
+    duration_ms: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "StepResult":
+        return cls(**d)
+
+
+@dataclass
+class WaveResult:
+    """Result of executing a wave of steps."""
+    wave_num: int
+    steps: List[str]  # step IDs
+    results: List[StepResult] = field(default_factory=list)
+    success: bool = True  # All steps succeeded
+
+    @property
+    def errors(self) -> List[str]:
+        return [r.error for r in self.results if r.error]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "wave_num": self.wave_num,
+            "steps": self.steps,
+            "results": [r.to_dict() for r in self.results],
+            "success": self.success,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "WaveResult":
+        return cls(
+            wave_num=d["wave_num"],
+            steps=d["steps"],
+            results=[StepResult.from_dict(r) for r in d.get("results", [])],
+            success=d.get("success", True),
+        )
+
+
+@dataclass
+class WaveCheckpoint:
+    """Checkpoint for resumable wave execution."""
+    plan_id: str
+    completed_waves: List[int] = field(default_factory=list)
+    current_wave: int = 1
+    step_results: Dict[str, StepResult] = field(default_factory=dict)
+    started_at: str = ""
+    updated_at: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "plan_id": self.plan_id,
+            "completed_waves": self.completed_waves,
+            "current_wave": self.current_wave,
+            "step_results": {k: v.to_dict() for k, v in self.step_results.items()},
+            "started_at": self.started_at,
+            "updated_at": self.updated_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "WaveCheckpoint":
+        return cls(
+            plan_id=d["plan_id"],
+            completed_waves=d.get("completed_waves", []),
+            current_wave=d.get("current_wave", 1),
+            step_results={k: StepResult.from_dict(v) for k, v in d.get("step_results", {}).items()},
+            started_at=d.get("started_at", ""),
+            updated_at=d.get("updated_at", ""),
+        )
+
+
+@dataclass
+class ExecutionResult:
+    """Final result of wave execution."""
+    success: bool
+    message: str
+    wave_results: List[WaveResult] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "message": self.message,
+            "wave_results": [w.to_dict() for w in self.wave_results],
+        }
+
+
+class WaveExecutor:
+    """Executes plan steps in waves with checkpoint support."""
+
+    def __init__(self, plan: Plan, project_path: str):
+        self.plan = plan
+        self.project_path = Path(project_path)
+        self.checkpoint_file = self.project_path / ".eri-rpg" / "wave_checkpoint.json"
+        self.started_at = datetime.utcnow().isoformat()
+        self.wave_results: List[WaveResult] = []
+
+    async def execute(self, resume: bool = True) -> ExecutionResult:
+        """
+        Execute all waves in the plan.
+
+        Args:
+            resume: Whether to resume from checkpoint if available
+
+        Returns:
+            ExecutionResult with success status and wave results
+        """
+        waves = self.plan.waves
+        if not waves:
+            return ExecutionResult(True, "No steps to execute", [])
+
+        checkpoint = self.load_checkpoint() if resume else None
+        start_wave = checkpoint.current_wave if checkpoint else min(waves.keys())
+
+        for wave_num in sorted(waves.keys()):
+            if wave_num < start_wave:
+                continue  # Already completed
+
+            steps = waves[wave_num]
+            print(f"\n=== Wave {wave_num}/{max(waves.keys())} ===")
+            print(f"Steps: {[s.id for s in steps]}")
+
+            # Show avoid patterns before execution
+            for step in steps:
+                print(f"  [{step.id}] {step.goal}")
+                for avoid in step.avoid:
+                    print(f"    ⚠ Avoid: {avoid.pattern} ({avoid.reason})")
+                if step.done_criteria:
+                    print(f"    ✓ Done when: {step.done_criteria}")
+
+            result = await self.execute_wave(wave_num, steps)
+            self.wave_results.append(result)
+            self.save_checkpoint(wave_num, result)
+
+            if not result.success:
+                return ExecutionResult(
+                    False,
+                    f"Wave {wave_num} failed: {', '.join(result.errors)}",
+                    self.wave_results
+                )
+
+            print(f"\nWave {wave_num} complete ✓")
+            print("Checkpoint saved.")
+
+        self.clear_checkpoint()
+        return ExecutionResult(True, "All waves complete", self.wave_results)
+
+    async def execute_wave(self, num: int, steps: List[Step]) -> WaveResult:
+        """Execute all steps in a wave."""
+        results = []
+
+        if len(steps) == 1:
+            results.append(await self.execute_step(steps[0]))
+        elif all(s.parallelizable for s in steps):
+            # Run in parallel
+            results = await asyncio.gather(*[self.execute_step(s) for s in steps])
+        else:
+            # Run sequentially
+            for s in steps:
+                results.append(await self.execute_step(s))
+
+        success = all(r.success for r in results)
+        return WaveResult(num, [s.id for s in steps], list(results), success)
+
+    async def execute_step(self, step: Step) -> StepResult:
+        """Execute a single step."""
+        start_time = time.time()
+
+        try:
+            # Mark step in progress
+            step.status = StepStatus.IN_PROGRESS
+            step.started_at = datetime.now()
+
+            # The actual execution would be done by the agent
+            # This is a placeholder that returns success
+            # In practice, this would invoke CC to execute the step.action
+
+            artifacts = step.context_files.copy()
+
+            # Mark complete
+            step.status = StepStatus.COMPLETED
+            step.completed_at = datetime.now()
+
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            return StepResult(step.id, True, None, artifacts, elapsed_ms)
+
+        except Exception as e:
+            step.status = StepStatus.FAILED
+            step.error = str(e)
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            return StepResult(step.id, False, str(e), [], elapsed_ms)
+
+    def save_checkpoint(self, wave_num: int, result: WaveResult):
+        """Save execution checkpoint."""
+        completed = list(range(1, wave_num + 1)) if result.success else list(range(1, wave_num))
+
+        checkpoint = WaveCheckpoint(
+            plan_id=self.plan.id,
+            completed_waves=completed,
+            current_wave=wave_num if not result.success else wave_num + 1,
+            step_results={r.step_id: r for r in result.results},
+            started_at=self.started_at,
+            updated_at=datetime.utcnow().isoformat(),
+        )
+
+        self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_file.write_text(json.dumps(checkpoint.to_dict(), indent=2))
+
+    def load_checkpoint(self) -> Optional[WaveCheckpoint]:
+        """Load execution checkpoint if exists."""
+        if not self.checkpoint_file.exists():
+            return None
+
+        try:
+            data = json.loads(self.checkpoint_file.read_text())
+            if data.get("plan_id") != self.plan.id:
+                return None  # Different plan, ignore
+            return WaveCheckpoint.from_dict(data)
+        except (json.JSONDecodeError, IOError):
+            return None
+
+    def clear_checkpoint(self):
+        """Clear checkpoint file after successful completion."""
+        if self.checkpoint_file.exists():
+            self.checkpoint_file.unlink()
+
+
+# ============================================================================
+# Original Run State Classes
+# ============================================================================
 
 
 @dataclass

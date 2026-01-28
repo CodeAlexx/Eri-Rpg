@@ -9,5 +9,14 @@ EriRPG Modes - Three ways to work.
 from erirpg.modes.take import run_take
 from erirpg.modes.work import run_work
 from erirpg.modes.new import run_new, run_next, QUESTIONS
+from erirpg.modes.discuss import DiscussionContext, build_discussion_context
 
-__all__ = ["run_take", "run_work", "run_new", "run_next", "QUESTIONS"]
+__all__ = [
+    "run_take",
+    "run_work",
+    "run_new",
+    "run_next",
+    "QUESTIONS",
+    "DiscussionContext",
+    "build_discussion_context",
+]

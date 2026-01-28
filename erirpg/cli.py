@@ -32,6 +32,10 @@ from erirpg.knowledge import Learning, Decision, HistoryEntry
 from erirpg.modes import run_take, run_work, run_new, run_next, QUESTIONS
 from erirpg.memory import StoredLearning, StoredDecision, KnowledgeStore, load_knowledge, save_knowledge
 from erirpg.refs import CodeRef
+from erirpg.discovery import detect_discovery_level
+from erirpg.research import ResearchPhase
+from erirpg.agent.plan import Plan
+from erirpg.agent.run import WaveExecutor
 
 
 @click.group()
@@ -250,6 +254,176 @@ def done():
     click.echo("")
     click.echo("If you learned something new, store it:")
     click.echo("  eri-rpg learn <project> <module>")
+
+
+@cli.command()
+@click.argument("name")
+@click.option("--goal", default=None, help="Goal to research (loads from state if not provided)")
+@click.option("--level", type=int, default=None, help="Force discovery level (0-3)")
+@click.option("-v", "--verbose", is_flag=True, help="Show detailed progress")
+def research(name: str, goal: str, level: int, verbose: bool):
+    """Run research phase for a goal.
+
+    Analyzes external libraries, pitfalls, and best practices.
+    Generates RESEARCH.md with findings.
+
+    \b
+    Examples:
+        eri-rpg research myproj --goal "add oauth login"
+        eri-rpg research myproj --level 2
+    """
+    registry = Registry.get_instance()
+    project = registry.get(name)
+
+    if not project:
+        click.echo(f"Error: Project '{name}' not found", err=True)
+        sys.exit(1)
+
+    # Get goal from state if not provided
+    if not goal:
+        state = State.load()
+        goal = state.current_task
+        if not goal:
+            click.echo("Error: No goal specified and no active task", err=True)
+            click.echo("Use: eri-rpg research myproj --goal \"your goal\"")
+            sys.exit(1)
+
+    # Detect discovery level if not forced
+    if level is None:
+        level, reason = detect_discovery_level(goal)
+        if verbose:
+            click.echo(f"Discovery level: {level} ({reason})")
+    else:
+        reason = "forced"
+
+    if level == 0:
+        click.echo("Discovery level 0 - no research needed")
+        return
+
+    # Run research phase
+    if verbose:
+        click.echo(f"Running research for: {goal}")
+        click.echo(f"Level: {level}")
+
+    phase = ResearchPhase(project.path, goal, level)
+    findings = phase.execute()
+
+    if findings:
+        # Save to project
+        output_dir = os.path.join(project.path, ".eri-rpg", "research")
+        os.makedirs(output_dir, exist_ok=True)
+
+        md_path = os.path.join(output_dir, "RESEARCH.md")
+        with open(md_path, "w") as f:
+            f.write(findings.to_markdown())
+
+        json_path = os.path.join(output_dir, "research.json")
+        with open(json_path, "w") as f:
+            json.dump(findings.to_dict(), f, indent=2)
+
+        click.echo(f"Research saved to: {md_path}")
+        click.echo(f"  Confidence: {findings.confidence}")
+        click.echo(f"  Stack: {len(findings.stack)} choices")
+        click.echo(f"  Pitfalls: {len(findings.pitfalls)}")
+        click.echo(f"  Anti-patterns: {len(findings.anti_patterns)}")
+    else:
+        click.echo("No research findings generated")
+
+
+@cli.command()
+@click.argument("name")
+@click.option("--plan-id", default=None, help="Plan ID to execute (loads latest if not provided)")
+@click.option("--wave", type=int, default=None, help="Start from specific wave")
+@click.option("--no-resume", is_flag=True, help="Don't resume from checkpoint")
+@click.option("-v", "--verbose", is_flag=True, help="Show detailed progress")
+def execute(name: str, plan_id: str, wave: int, no_resume: bool, verbose: bool):
+    """Execute a plan in waves.
+
+    Runs plan steps with parallel support and checkpointing.
+    Resumes from checkpoint if interrupted.
+
+    \b
+    Examples:
+        eri-rpg execute myproj
+        eri-rpg execute myproj --plan-id abc123
+        eri-rpg execute myproj --no-resume
+    """
+    import asyncio
+
+    registry = Registry.get_instance()
+    project = registry.get(name)
+
+    if not project:
+        click.echo(f"Error: Project '{name}' not found", err=True)
+        sys.exit(1)
+
+    # Find plan
+    plans_dir = os.path.join(project.path, ".eri-rpg", "plans")
+    if not os.path.exists(plans_dir):
+        click.echo(f"Error: No plans found for {name}", err=True)
+        click.echo("Create a plan first with: eri-rpg work <project> \"goal\"")
+        sys.exit(1)
+
+    if plan_id:
+        plan_file = os.path.join(plans_dir, f"{plan_id}.json")
+        if not os.path.exists(plan_file):
+            click.echo(f"Error: Plan {plan_id} not found", err=True)
+            sys.exit(1)
+    else:
+        # Find most recent plan
+        plans = sorted(
+            [f for f in os.listdir(plans_dir) if f.endswith(".json")],
+            key=lambda x: os.path.getmtime(os.path.join(plans_dir, x)),
+            reverse=True
+        )
+        if not plans:
+            click.echo(f"Error: No plans found for {name}", err=True)
+            sys.exit(1)
+        plan_file = os.path.join(plans_dir, plans[0])
+        if verbose:
+            click.echo(f"Using latest plan: {plans[0]}")
+
+    # Load plan
+    plan = Plan.load(plan_file)
+    click.echo(f"Plan: {plan.goal}")
+    click.echo(f"Steps: {len(plan.steps)}")
+
+    # Show wave structure
+    waves = plan.waves
+    click.echo(f"Waves: {len(waves)}")
+    for w_num, steps in sorted(waves.items()):
+        step_ids = [s.id for s in steps]
+        parallel = "parallel" if all(s.parallelizable for s in steps) else "sequential"
+        click.echo(f"  Wave {w_num}: {step_ids} ({parallel})")
+
+    # Execute
+    executor = WaveExecutor(plan, project.path)
+    resume = not no_resume
+
+    if wave is not None and resume:
+        # Modify checkpoint to start from specific wave
+        checkpoint = executor.load_checkpoint()
+        if checkpoint:
+            checkpoint.current_wave = wave
+            executor.save_checkpoint(wave - 1, checkpoint)
+
+    click.echo("")
+    click.echo("Starting execution...")
+
+    result = asyncio.run(executor.execute(resume=resume))
+
+    click.echo("")
+    if result.success:
+        click.echo("=" * 40)
+        click.echo("Execution complete!")
+        click.echo(f"Waves: {len(result.wave_results)}")
+        for wr in result.wave_results:
+            status = "✓" if wr.success else "✗"
+            click.echo(f"  Wave {wr.wave_num}: {status}")
+    else:
+        click.echo("=" * 40)
+        click.echo(f"Execution failed: {result.message}")
+        sys.exit(1)
 
 
 @cli.command("new")

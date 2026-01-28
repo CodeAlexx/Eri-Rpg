@@ -20,6 +20,36 @@ class StepStatus(Enum):
     SKIPPED = "skipped"
 
 
+class CircularDependencyError(Exception):
+    """Raised when circular dependencies are detected in step graph."""
+    def __init__(self, step_id: str):
+        self.step_id = step_id
+        super().__init__(f"Circular dependency detected at step: {step_id}")
+
+
+@dataclass
+class AvoidPattern:
+    """A pattern to avoid during step execution."""
+    pattern: str   # "Don't use raw SQL"
+    reason: str    # "Use repository for testability"
+    source: str    # "RESEARCH.md" | "previous_failure"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "pattern": self.pattern,
+            "reason": self.reason,
+            "source": self.source,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "AvoidPattern":
+        return cls(
+            pattern=d["pattern"],
+            reason=d["reason"],
+            source=d["source"],
+        )
+
+
 @dataclass
 class Step:
     """A single executable step in a plan."""
@@ -51,6 +81,13 @@ class Step:
     parallelizable: bool = False  # Can run in parallel with other parallelizable steps
     depends_on: List[str] = field(default_factory=list)  # Step IDs this depends on
 
+    # Research pipeline additions
+    action: str = ""  # Specific instruction for this step
+    avoid: List[AvoidPattern] = field(default_factory=list)  # Patterns to avoid
+    done_criteria: str = ""  # Human-observable acceptance criteria
+    checkpoint_type: Optional[str] = None  # "human-verify" | "decision" | None
+    wave: int = 0  # Execution wave (set by compute_waves)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -69,6 +106,11 @@ class Step:
             "verification_passed": self.verification_passed,
             "parallelizable": self.parallelizable,
             "depends_on": self.depends_on,
+            "action": self.action,
+            "avoid": [a.to_dict() for a in self.avoid],
+            "done_criteria": self.done_criteria,
+            "checkpoint_type": self.checkpoint_type,
+            "wave": self.wave,
         }
 
     @classmethod
@@ -90,6 +132,11 @@ class Step:
             verification_passed=d.get("verification_passed"),
             parallelizable=d.get("parallelizable", False),
             depends_on=d.get("depends_on", []),
+            action=d.get("action", ""),
+            avoid=[AvoidPattern.from_dict(a) for a in d.get("avoid", [])],
+            done_criteria=d.get("done_criteria", ""),
+            checkpoint_type=d.get("checkpoint_type"),
+            wave=d.get("wave", 0),
         )
 
 
@@ -188,3 +235,77 @@ class Plan:
         """Load plan from JSON file."""
         with open(path) as f:
             return cls.from_dict(json.load(f))
+
+    @property
+    def waves(self) -> Dict[int, List[Step]]:
+        """Get steps grouped by wave number."""
+        return compute_waves(self.steps)
+
+
+def compute_waves(steps: List[Step]) -> Dict[int, List[Step]]:
+    """
+    Compute execution waves based on step dependencies.
+
+    Steps with no dependencies go in wave 1.
+    Steps depending on wave N steps go in wave N+1.
+
+    Args:
+        steps: List of steps with depends_on field
+
+    Returns:
+        Dict mapping wave number to list of steps
+
+    Raises:
+        CircularDependencyError: If circular dependencies detected
+    """
+    if not steps:
+        return {}
+
+    # Build lookup
+    steps_by_id = {s.id: s for s in steps}
+    step_to_wave: Dict[str, int] = {}
+    visiting: set = set()  # Currently being visited (for cycle detection)
+    visited: set = set()   # Fully processed
+
+    def get_wave(step_id: str) -> int:
+        """Recursively compute wave for a step."""
+        if step_id in step_to_wave:
+            return step_to_wave[step_id]
+
+        if step_id in visiting:
+            raise CircularDependencyError(step_id)
+
+        if step_id not in steps_by_id:
+            # Dependency not in step list, treat as resolved
+            return 0
+
+        visiting.add(step_id)
+        step = steps_by_id[step_id]
+
+        if not step.depends_on:
+            wave = 1
+        else:
+            # Wave is max of dependency waves + 1
+            dep_waves = [get_wave(dep_id) for dep_id in step.depends_on]
+            wave = max(dep_waves) + 1
+
+        visiting.remove(step_id)
+        visited.add(step_id)
+        step_to_wave[step_id] = wave
+        step.wave = wave
+
+        return wave
+
+    # Compute waves for all steps
+    for step in steps:
+        get_wave(step.id)
+
+    # Group by wave
+    waves: Dict[int, List[Step]] = {}
+    for step in steps:
+        wave_num = step.wave
+        if wave_num not in waves:
+            waves[wave_num] = []
+        waves[wave_num].append(step)
+
+    return waves
