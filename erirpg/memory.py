@@ -298,6 +298,13 @@ class StoredLearning:
     hooks_into: List[str] = field(default_factory=list)  # ["trainer.on_step_end"] - what it hooks
     public_interface: List[str] = field(default_factory=list)  # What other code should call
 
+    # Drift integration fields (from drift_bridge)
+    drift_pattern_id: Optional[str] = None      # "api-rest-controller" - Drift pattern ID
+    drift_confidence: float = 0.0               # 0.0-1.0 confidence score from Drift
+    is_outlier: bool = False                    # Deviates from established patterns
+    outlier_reason: Optional[str] = None        # Why it's an outlier (if applicable)
+    validated_by_drift: bool = False            # Has Drift verified this learning
+
     # Version history for rollback
     versions: List[LearningVersion] = field(default_factory=list)
     current_version: int = 0
@@ -554,6 +561,75 @@ class StoredLearning:
                 lines.append(f"    {v.change_description[:60]}...")
         return "\n".join(lines)
 
+    def enrich_with_drift(self, project_path: str) -> bool:
+        """
+        Enrich this learning with Drift pattern data.
+
+        Queries Drift for pattern matches and outlier status for
+        the file this learning is about.
+
+        Args:
+            project_path: Root path of the project
+
+        Returns:
+            True if enrichment succeeded, False if Drift unavailable
+        """
+        try:
+            from erirpg.drift_bridge import DriftBridge
+        except ImportError:
+            return False
+
+        bridge = DriftBridge(project_path)
+        if not bridge.is_available():
+            return False
+
+        # Get patterns for this file
+        file_data = bridge.get_file_patterns(self.module_path)
+
+        # Check if this learning matches any detected pattern
+        for pattern in file_data.patterns:
+            if self._matches_drift_pattern(pattern):
+                self.drift_pattern_id = pattern.id
+                self.drift_confidence = pattern.confidence
+                break
+
+        # Check if it's an outlier
+        for outlier in file_data.outliers:
+            if self._is_about_outlier(outlier):
+                self.is_outlier = True
+                self.outlier_reason = outlier.description
+                break
+
+        self.validated_by_drift = True
+        return True
+
+    def _matches_drift_pattern(self, pattern) -> bool:
+        """Check if this learning is about a Drift pattern."""
+        pattern_name = pattern.name.lower()
+        pattern_category = pattern.category.lower()
+
+        # Match by tags
+        for tag in (self.gotchas + list(self.key_functions.keys())):
+            tag_lower = tag.lower()
+            if tag_lower in pattern_name or tag_lower in pattern_category:
+                return True
+
+        # Match by summary/purpose content
+        content = (self.summary + " " + self.purpose).lower()
+        if pattern_category in content:
+            return True
+
+        # Match by implements (base class)
+        if self.implements and self.implements.lower() in pattern_name:
+            return True
+
+        return False
+
+    def _is_about_outlier(self, outlier) -> bool:
+        """Check if this learning documents an outlier."""
+        # Same file
+        return outlier.file == self.module_path
+
     def format_for_context(self, project_path: str = None) -> str:
         """Format learning for inclusion in context file.
 
@@ -621,6 +697,17 @@ class StoredLearning:
             "transplanted_from": self.transplanted_from,
             "transplanted_to_list": self.transplanted_to_list,
             "current_version": self.current_version,
+            # Drift integration fields
+            "drift_pattern_id": self.drift_pattern_id,
+            "drift_confidence": self.drift_confidence,
+            "is_outlier": self.is_outlier,
+            "outlier_reason": self.outlier_reason,
+            "validated_by_drift": self.validated_by_drift,
+            # Pattern-aware fields
+            "implements": self.implements,
+            "registered_in": self.registered_in,
+            "hooks_into": self.hooks_into,
+            "public_interface": self.public_interface,
         }
         if self.source_ref:
             d["source_ref"] = self.source_ref.to_dict()
@@ -658,6 +745,17 @@ class StoredLearning:
             transplanted_to_list=d.get("transplanted_to_list", []),
             versions=versions,
             current_version=d.get("current_version", 0),
+            # Drift integration fields
+            drift_pattern_id=d.get("drift_pattern_id"),
+            drift_confidence=d.get("drift_confidence", 0.0),
+            is_outlier=d.get("is_outlier", False),
+            outlier_reason=d.get("outlier_reason"),
+            validated_by_drift=d.get("validated_by_drift", False),
+            # Pattern-aware fields
+            implements=d.get("implements"),
+            registered_in=d.get("registered_in"),
+            hooks_into=d.get("hooks_into", []),
+            public_interface=d.get("public_interface", []),
         )
 
 
@@ -1875,4 +1973,113 @@ def load_gaps(project_path: str, run_id: str) -> List["Gap"]:
         return [Gap.from_dict(g) for g in data]
     except Exception as e:
         import sys; print(f"[EriRPG] {e}", file=sys.stderr); return []
+
+
+# ============================================================================
+# Drift Integration Functions
+# ============================================================================
+
+def enrich_learnings_batch(project_path: str, force: bool = False) -> dict:
+    """
+    Batch enrich all stored learnings with Drift pattern data.
+
+    Efficiently queries Drift once for file patterns and outliers,
+    then enriches all learnings that haven't been validated yet.
+
+    Args:
+        project_path: Root path of the project
+        force: Re-enrich even if already validated
+
+    Returns:
+        Dict with stats: {"enriched": n, "skipped": n, "failed": n, "drift_available": bool}
+    """
+    try:
+        from erirpg.drift_bridge import DriftBridge
+    except ImportError:
+        return {"enriched": 0, "skipped": 0, "failed": 0, "drift_available": False}
+
+    bridge = DriftBridge(project_path)
+    if not bridge.is_available():
+        return {"enriched": 0, "skipped": 0, "failed": 0, "drift_available": False}
+
+    # Load knowledge store
+    store = load_knowledge(project_path, Path(project_path).name)
+
+    stats = {"enriched": 0, "skipped": 0, "failed": 0, "drift_available": True}
+
+    # Get all unique files from learnings
+    files_to_check = set()
+    for learning in store.learnings.values():
+        if force or not learning.validated_by_drift:
+            files_to_check.add(learning.module_path)
+
+    if not files_to_check:
+        return stats
+
+    # Batch get outliers once (more efficient than per-file)
+    all_outliers = bridge.find_outliers()
+    outliers_by_file = {}
+    for outlier in all_outliers:
+        if outlier.file not in outliers_by_file:
+            outliers_by_file[outlier.file] = []
+        outliers_by_file[outlier.file].append(outlier)
+
+    # Enrich each learning
+    for module_path, learning in store.learnings.items():
+        if not force and learning.validated_by_drift:
+            stats["skipped"] += 1
+            continue
+
+        try:
+            # Get file patterns
+            file_data = bridge.get_file_patterns(module_path)
+
+            # Check pattern match
+            for pattern in file_data.patterns:
+                if learning._matches_drift_pattern(pattern):
+                    learning.drift_pattern_id = pattern.id
+                    learning.drift_confidence = pattern.confidence
+                    break
+
+            # Check outlier status
+            file_outliers = outliers_by_file.get(module_path, [])
+            for outlier in file_outliers:
+                learning.is_outlier = True
+                learning.outlier_reason = outlier.description
+                break
+
+            learning.validated_by_drift = True
+            stats["enriched"] += 1
+
+        except Exception as e:
+            import sys
+            print(f"[EriRPG] Failed to enrich {module_path}: {e}", file=sys.stderr)
+            stats["failed"] += 1
+
+    # Save updated store
+    save_knowledge(project_path, store)
+
+    return stats
+
+
+def get_drift_status(project_path: str) -> dict:
+    """
+    Get Drift integration status for a project.
+
+    Args:
+        project_path: Root path of the project
+
+    Returns:
+        Dict with status info: available, patterns, last_scan, etc.
+    """
+    try:
+        from erirpg.drift_bridge import DriftBridge
+        bridge = DriftBridge(project_path)
+        return bridge.get_status()
+    except ImportError:
+        return {
+            "available": False,
+            "error": "drift_bridge module not found",
+            "project_path": project_path
+        }
 

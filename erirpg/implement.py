@@ -37,6 +37,10 @@ class FilePlan:
     path: str                    # "training/scheduler/rank_scheduler.py"
     extends: Optional[str] = None  # "BaseScheduler"
     reason: str = ""             # "Schedulers live in training/scheduler/, inherit BaseScheduler"
+    # Drift integration fields
+    risk: str = "unknown"        # "low" | "medium" | "high" - from impact analysis
+    notes: List[str] = field(default_factory=list)  # Impact analysis notes
+    affected_by_this: List[str] = field(default_factory=list)  # Files affected by changing this
 
 
 @dataclass
@@ -57,6 +61,8 @@ class ImplementationPlan:
     registrations: List[str]     # ["SchedulerFactory.register('rank', RankScheduler)"]
     hooks: List[str]             # ["trainer.on_step_end"]
     phases: List[Phase]
+    pre_checks: List[str] = field(default_factory=list)  # Pre-implementation checks
+    drift_enriched: bool = False  # Whether Drift impact analysis was applied
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dict."""
@@ -68,7 +74,8 @@ class ImplementationPlan:
             ],
             "file_plan": [
                 {"component": f.component, "action": f.action, "path": f.path,
-                 "extends": f.extends, "reason": f.reason}
+                 "extends": f.extends, "reason": f.reason, "risk": f.risk,
+                 "notes": f.notes, "affected_by_this": f.affected_by_this}
                 for f in self.file_plan
             ],
             "registrations": self.registrations,
@@ -78,6 +85,8 @@ class ImplementationPlan:
                  "depends_on": p.depends_on}
                 for p in self.phases
             ],
+            "pre_checks": self.pre_checks,
+            "drift_enriched": self.drift_enriched,
         }
 
 
@@ -378,8 +387,22 @@ def create_phases(
     return phases
 
 
-def plan_implementation(project_path: str, feature: str) -> ImplementationPlan:
-    """Generate implementation plan for a feature."""
+def plan_implementation(
+    project_path: str,
+    feature: str,
+    use_drift: bool = True
+) -> ImplementationPlan:
+    """
+    Generate implementation plan for a feature.
+
+    Args:
+        project_path: Path to project root
+        feature: Feature description
+        use_drift: Whether to enrich with Drift impact analysis (default True)
+
+    Returns:
+        ImplementationPlan with file plans, registrations, hooks, and phases
+    """
     patterns = load_patterns(project_path)
     if not patterns:
         # Create minimal patterns
@@ -416,7 +439,7 @@ def plan_implementation(project_path: str, feature: str) -> ImplementationPlan:
     # 6. Order into phases
     phases = create_phases(file_plan, registrations, hooks)
 
-    return ImplementationPlan(
+    plan = ImplementationPlan(
         feature=feature,
         components=components,
         file_plan=file_plan,
@@ -424,6 +447,104 @@ def plan_implementation(project_path: str, feature: str) -> ImplementationPlan:
         hooks=hooks,
         phases=phases,
     )
+
+    # 7. Enrich with Drift impact analysis (if available)
+    if use_drift:
+        plan = _enrich_with_drift_impact(plan, project_path)
+
+    return plan
+
+
+def _enrich_with_drift_impact(
+    plan: ImplementationPlan,
+    project_path: str
+) -> ImplementationPlan:
+    """
+    Enrich implementation plan with Drift impact analysis.
+
+    Adds:
+    - Risk level for each file plan
+    - Affected files that will be impacted by changes
+    - Notes about coupling and outliers
+    - Pre-implementation checks
+
+    Args:
+        plan: Implementation plan to enrich
+        project_path: Path to project root
+
+    Returns:
+        Enriched ImplementationPlan
+    """
+    try:
+        from erirpg.drift_bridge import DriftBridge
+    except ImportError:
+        return plan
+
+    bridge = DriftBridge(project_path)
+    if not bridge.is_available():
+        return plan
+
+    # Track all affected files to detect overlap
+    all_affected: Dict[str, List[str]] = {}
+
+    for file_plan in plan.file_plan:
+        # Skip test files for impact analysis
+        if "test" in file_plan.path.lower():
+            continue
+
+        # Get impact analysis for this file
+        impact = bridge.impact_analysis(file_plan.path)
+
+        # Set risk level
+        file_plan.risk = impact.risk_level
+
+        # Track affected files
+        file_plan.affected_by_this = impact.affected_files
+        for affected in impact.affected_files:
+            if affected not in all_affected:
+                all_affected[affected] = []
+            all_affected[affected].append(file_plan.path)
+
+        # Add notes about affected files not in our plan
+        plan_paths = {fp.path for fp in plan.file_plan}
+        for affected in impact.affected_files:
+            if affected not in plan_paths:
+                file_plan.notes.append(f"Also affects: {affected}")
+
+        # Warn about high coupling
+        if impact.coupling_score > 0.7:
+            file_plan.notes.append(
+                f"High coupling ({impact.coupling_score:.2f}) - changes may ripple"
+            )
+
+        # Check for existing outliers in this file
+        outliers = bridge.find_outliers(file_plan.path)
+        if outliers:
+            file_plan.notes.append(
+                f"File has {len(outliers)} existing outliers - consider fixing"
+            )
+
+    # Add pre-checks for high-risk files
+    high_risk_files = [fp for fp in plan.file_plan if fp.risk == "high"]
+    if high_risk_files:
+        plan.pre_checks.append(
+            f"Review {len(high_risk_files)} high-risk files before proceeding"
+        )
+
+    # Check for files affected by multiple changes
+    overlap_files = [f for f, sources in all_affected.items() if len(sources) > 1]
+    if overlap_files:
+        plan.pre_checks.append(
+            f"{len(overlap_files)} files are affected by multiple changes - coordinate carefully"
+        )
+
+    # Add call graph visualization suggestion
+    if plan.file_plan:
+        entry_file = plan.file_plan[0].path
+        plan.pre_checks.append(f"Run: drift callgraph show --focus {entry_file}")
+
+    plan.drift_enriched = True
+    return plan
 
 
 def describe_feature(project_path: str, file_path: str) -> str:
