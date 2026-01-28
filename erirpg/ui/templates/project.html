@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project_name }} - EriRPG{% endblock %}
+
+{% block content %}
+<div data-current-project="{{ project_name }}">
+    <div class="breadcrumb">
+        <a href="/">Dashboard</a>
+        <span class="breadcrumb-sep">→</span>
+        <span class="breadcrumb-current">{{ project_name }}</span>
+        {% if project.description %}
+        <span style="color: var(--text-muted); margin-left: 12px;">{{ project.description }}</span>
+        {% endif %}
+    </div>
+
+    <div class="card-header" style="margin-bottom: 8px;">
+        <span class="project-stats">
+            <span class="project-stat"><span class="num">{{ modules }}</span> modules</span>
+            <span class="project-stat"><span class="num">{{ learned }}</span> learned</span>
+        </span>
+    </div>
+
+    <div class="tabs">
+        <div class="tab {% if tab == 'runs' %}active{% endif %}" data-tab="runs">
+            <kbd>1</kbd> Runs
+        </div>
+        <div class="tab {% if tab == 'learnings' %}active{% endif %}" data-tab="learnings">
+            <kbd>2</kbd> Learnings
+        </div>
+        <div class="tab {% if tab == 'roadmap' %}active{% endif %}" data-tab="roadmap">
+            <kbd>3</kbd> Roadmap
+        </div>
+        <div class="tab {% if tab == 'decisions' %}active{% endif %}" data-tab="decisions">
+            <kbd>4</kbd> Decisions
+        </div>
+        <div class="tab {% if tab == 'git' %}active{% endif %}" data-tab="git">
+            <kbd>5</kbd> Git
+        </div>
+        <div class="tab {% if tab == 'graph' %}active{% endif %}" data-tab="graph">
+            <kbd>6</kbd> Graph
+        </div>
+        <div class="tab {% if tab == 'drift' %}active{% endif %}" data-tab="drift">
+            <kbd>7</kbd> Drift
+        </div>
+    </div>
+
+    <div id="tab-content">
+        <div class="empty">Loading...</div>
+    </div>
+</div>
+{% endblock %}

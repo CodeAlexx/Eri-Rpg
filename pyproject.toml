@@ -44,6 +44,12 @@ typescript = [
     "tree-sitter>=0.20",
     "tree-sitter-typescript",
 ]
+ui = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "jinja2>=3.1.0",
+    "sse-starlette>=1.6.0",
+]
 
 [project.scripts]
 eri-rpg = "erirpg.cli:main"

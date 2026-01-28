@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}EriRPG Dashboard{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="section-title">Projects</div>
+    <div class="project-list">
+        {% for project in projects %}
+        <a href="/project/{{ project.name }}" class="project-item" data-project="{{ project.name }}">
+            <div class="project-info">
+                <div class="project-name">{{ project.name }}</div>
+                {% if project.description %}
+                <div class="project-desc">{{ project.description }}</div>
+                {% endif %}
+            </div>
+            <div class="project-stats">
+                <span class="project-stat"><span class="num">{{ project.modules }}</span> mod</span>
+                <span class="project-stat"><span class="num">{{ project.learned }}</span> learned</span>
+            </div>
+            <span class="project-time">{{ project.last_active or '' }}</span>
+            <span class="project-arrow">→</span>
+        </a>
+        {% else %}
+        <div class="empty">
+            <div class="empty-icon">📂</div>
+            No projects registered
+            <br><small>Run: eri-rpg init &lt;project&gt;</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="section" id="active-task">
+    {% if active %}
+    <div class="section-title">Current Activity</div>
+    <div class="card active-card">
+        <div class="active-header">
+            <a href="/project/{{ active.project }}" class="active-project">{{ active.project }}</a>
+            <span class="status status-active">{{ active.phase }}</span>
+        </div>
+        <div class="active-task">"{{ active.task }}"</div>
+        <div class="active-meta">
+            <div class="active-meta-item">
+                <span class="active-meta-label">Phase:</span>
+                <span>{{ active.phase }}</span>
+            </div>
+            <div class="active-meta-item">
+                <span class="active-meta-label">Waiting on:</span>
+                <span>{{ active.waiting_on or 'none' }}</span>
+            </div>
+        </div>
+        {% if active.history %}
+        <div class="history">
+            <div class="history-title">History</div>
+            <div class="history-list">
+                {% for h in active.history[-10:] %}
+                <div class="history-item">
+                    <span class="history-time">{{ h.timestamp|relative_time }}</span>
+                    <span class="history-action">{{ h.action or '' }}</span>
+                    <span class="history-target">{{ h.file or h.details or '' }}</span>
+                    <span class="history-result {% if h.result == 'pass' %}pass{% elif h.result == 'failed' %}fail{% endif %}">
+                        {{ h.result or '' }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="card" style="border-color: var(--error);">
+    <div style="color: var(--error);">{{ error }}</div>
+</div>
+{% endif %}
+{% endblock %}
