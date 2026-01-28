@@ -245,6 +245,106 @@ while not agent.is_complete():
 print(agent.get_report())
 ```
 
+
+## 8. Research Phase
+
+Run research before implementing complex features:
+
+```bash
+# Auto-detect discovery level
+eri-rpg research myproject --goal "add oauth login"
+
+# Force deep research
+eri-rpg research myproject --goal "redesign auth" --level 3
+```
+
+Discovery levels:
+- **0 (skip)**: Internal work, typos, simple fixes
+- **1 (quick)**: Single library lookup
+- **2 (standard)**: Choosing between options
+- **3 (deep)**: Architectural decisions
+
+Output saved to `.eri-rpg/research/RESEARCH.md` with:
+- Stack choices (library, version, why, alternatives)
+- Pitfalls to avoid
+- Anti-patterns
+- Code examples
+
+## 9. Wave Execution
+
+Execute plans with parallel support and checkpointing:
+
+```bash
+# Execute latest plan
+eri-rpg execute myproject
+
+# Execute specific plan
+eri-rpg execute myproject --plan-id abc123
+
+# Start fresh (ignore checkpoint)
+eri-rpg execute myproject --no-resume
+
+# Start from specific wave
+eri-rpg execute myproject --wave 2
+```
+
+Features:
+- Steps grouped into waves by dependencies
+- Parallel execution within waves (if steps are parallelizable)
+- Checkpoint after each wave
+- Resume from interruption automatically
+- Avoid patterns shown before each step
+
+
+## 8. Research Phase
+
+Run research before implementing complex features:
+
+```bash
+# Auto-detect discovery level
+eri-rpg research myproject --goal "add oauth login"
+
+# Force deep research
+eri-rpg research myproject --goal "redesign auth" --level 3
+```
+
+Discovery levels:
+- **0 (skip)**: Internal work, typos, simple fixes
+- **1 (quick)**: Single library lookup
+- **2 (standard)**: Choosing between options
+- **3 (deep)**: Architectural decisions
+
+Output saved to `.eri-rpg/research/RESEARCH.md` with:
+- Stack choices (library, version, why, alternatives)
+- Pitfalls to avoid
+- Anti-patterns
+- Code examples
+
+## 9. Wave Execution
+
+Execute plans with parallel support and checkpointing:
+
+```bash
+# Execute latest plan
+eri-rpg execute myproject
+
+# Execute specific plan
+eri-rpg execute myproject --plan-id abc123
+
+# Start fresh (ignore checkpoint)
+eri-rpg execute myproject --no-resume
+
+# Start from specific wave
+eri-rpg execute myproject --wave 2
+```
+
+Features:
+- Steps grouped into waves by dependencies
+- Parallel execution within waves (if steps are parallelizable)
+- Checkpoint after each wave
+- Resume from interruption automatically
+- Avoid patterns shown before each step
+
 ## Tips
 
 1. **Start small** - Use quick fix mode for single files
