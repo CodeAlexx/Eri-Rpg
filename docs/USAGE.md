@@ -10,13 +10,22 @@ EriRPG supports three main workflows:
 
 ## 1. Project Setup
 
-### Register a Project
+### Initialize a New Project (Recommended)
+
+```bash
+eri-rpg init myproject --path /path/to/project
+```
+
+This creates the `.eri-rpg/` directory and starts in **bootstrap mode** (no enforcement).
+Build freely until you're ready to lock down patterns.
+
+### Register an Existing Project
 
 ```bash
 eri-rpg add myproject /path/to/project
 ```
 
-Language is auto-detected (Python, Rust, C supported).
+Language is auto-detected (Python, Rust, C, Mojo supported).
 
 ### Index the Project
 
@@ -34,7 +43,89 @@ eri-rpg list
 
 Output:
 ```
-myproject: /path/to/project (python, indexed (today))
+myproject [BOOTSTRAP]: /path/to/project (python, indexed (today))
+otherproj [MAINTAIN]: /path/to/other (rust, indexed (3 days ago))
+```
+
+## 2. Bootstrap vs Maintain Mode
+
+EriRPG has two operational modes:
+
+| Mode | Enforcement | Learning | Use Case |
+|------|-------------|----------|----------|
+| **bootstrap** | OFF | OFF | New project, major refactor |
+| **maintain** | ON | ON | Stable project, protect patterns |
+
+### Check Current Mode
+
+```bash
+eri-rpg mode myproject
+```
+
+Output:
+```
+Project: myproject
+Mode: bootstrap (not graduated)
+Enforcement: disabled
+```
+
+### Graduate to Maintain Mode
+
+When your project structure is stable and you want enforcement:
+
+```bash
+eri-rpg graduate myproject
+```
+
+This:
+1. Indexes the project (if not already done)
+2. Learns all files
+3. Enables maintain mode (full enforcement)
+
+### Toggle Mode Manually
+
+```bash
+# Disable enforcement temporarily
+eri-rpg mode myproject --bootstrap
+
+# Re-enable enforcement
+eri-rpg mode myproject --maintain
+```
+
+### Project Info
+
+```bash
+eri-rpg info myproject
+```
+
+Output:
+```
+Project: myproject
+Path: /path/to/project
+Language: python
+Mode: maintain
+Graduated: 2026-01-28 (by user)
+Indexed: today
+Learned: 47
+Preflight: enabled
+Auto-learn: enabled
+```
+
+### Workflow Example
+
+```bash
+# Start a new project
+eri-rpg init my-app --path ~/projects/my-app
+cd ~/projects/my-app
+
+# Build freely - no enforcement, no blocks
+# ... days/weeks of development ...
+
+# Ready to lock it down? Graduate!
+eri-rpg graduate my-app
+
+# Now enforcement is active
+# Quick fixes, runs, preflight all required
 ```
 
 ## 2. Knowledge Management
@@ -357,9 +448,26 @@ Features:
 
 ### "No active run" error
 
-The hook is blocking edits. Either:
-- Start a quick fix: `eri-rpg quick project file "desc"`
-- Or use the full agent workflow with preflight
+The hook is blocking edits. Options:
+1. **Use bootstrap mode** (easiest for new projects):
+   ```bash
+   eri-rpg mode myproject --bootstrap
+   ```
+2. Start a quick fix: `eri-rpg quick project file "desc"`
+3. Use the full agent workflow with preflight
+
+### Getting blocked on a new project
+
+For new projects under active development, use bootstrap mode:
+```bash
+eri-rpg init myproject --path /path/to/project
+# Now you can edit freely without enforcement
+```
+
+When ready to lock down patterns:
+```bash
+eri-rpg graduate myproject
+```
 
 ### Stale preflight state
 

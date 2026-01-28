@@ -1,5 +1,50 @@
 # Changelog
 
+## v2.3.0 (2026-01-28)
+
+Bootstrap/Maintain mode system.
+
+### New Features
+
+**Bootstrap/Maintain Mode**
+- Two-mode system for project lifecycle management
+- **Bootstrap mode**: No enforcement, hooks pass through (for new/developing projects)
+- **Maintain mode**: Full enforcement, requires preflight/runs (for stable projects)
+- Migration: existing projects with learnings → maintain, empty → bootstrap
+
+**New CLI Commands**
+- `eri-rpg init <name> --path <path>` - Initialize project in bootstrap mode
+- `eri-rpg graduate <project>` - Learn all files and enable maintain mode
+- `eri-rpg mode <project> [--bootstrap|--maintain]` - Show/toggle mode
+- `eri-rpg info <project>` - Show detailed project status with mode
+- `eri-rpg list` now shows mode badges: `[BOOTSTRAP]` or `[MAINTAIN]`
+
+**Hook Integration**
+- pretooluse hook checks mode before enforcing
+- Bootstrap mode: immediate pass-through, no blocking
+- Maintain mode: full enforcement (existing behavior)
+
+**UI Updates**
+- Mode badges in sidebar (B=bootstrap yellow, M=maintain green)
+- Mode badge and enforcement status in project header
+- Mode info in runs partial
+
+### Workflow
+
+```bash
+# New project workflow
+eri-rpg init my-app --path ~/my-app   # bootstrap, no enforcement
+# ... build freely ...
+eri-rpg graduate my-app               # learn + enable enforcement
+
+# Temporary disable for refactoring
+eri-rpg mode my-app --bootstrap
+# ... major refactor ...
+eri-rpg graduate my-app               # re-learn everything
+```
+
+---
+
 ## v2.2.0 (2026-01-27)
 
 Mojo language support.
