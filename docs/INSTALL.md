@@ -140,3 +140,52 @@ python3 /path/to/erirpg/hooks/pretooluse.py
 # This does NOT work:
 python3 -m erirpg.hooks.pretooluse
 ```
+
+## Disabling Hooks
+
+Sometimes you need to temporarily disable EriRPG enforcement (e.g., for documentation updates, quick fixes outside tracked projects).
+
+### Method 1: File Flag (Recommended)
+
+Create a disable flag file:
+```bash
+mkdir -p ~/.eri-rpg && touch ~/.eri-rpg/.hooks_disabled
+```
+
+Re-enable hooks:
+```bash
+rm ~/.eri-rpg/.hooks_disabled
+```
+
+### Method 2: Environment Variable (Session Only)
+
+```bash
+export ERIRPG_HOOKS_DISABLED=1
+# ... do work ...
+unset ERIRPG_HOOKS_DISABLED
+```
+
+### Method 3: Temporarily Remove Hook Script
+
+```bash
+# Disable
+mv /path/to/eri-rpg/erirpg/hooks/pretooluse.py /path/to/eri-rpg/erirpg/hooks/pretooluse.py.off
+
+# Re-enable
+mv /path/to/eri-rpg/erirpg/hooks/pretooluse.py.off /path/to/eri-rpg/erirpg/hooks/pretooluse.py
+```
+
+### Method 4: Pass-through Hook
+
+Create a temporary pass-through that approves everything:
+```bash
+echo '#!/usr/bin/env python3
+import json, sys
+print(json.dumps({}))
+sys.exit(0)' > /path/to/eri-rpg/erirpg/hooks/pretooluse.py
+```
+
+Restore from backup later:
+```bash
+git checkout erirpg/hooks/pretooluse.py
+```

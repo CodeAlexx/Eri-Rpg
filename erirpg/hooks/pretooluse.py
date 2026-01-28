@@ -142,6 +142,17 @@ def detect_bash_file_write(command: str) -> str:
 
 def main():
     """Main hook entry point."""
+    # Toggle check - allow disabling hooks via env var or file flag
+    # See docs/INSTALL.md for usage
+    if os.environ.get("ERIRPG_HOOKS_DISABLED"):
+        print(json.dumps({}))
+        sys.exit(0)
+
+    hooks_disabled_file = Path.home() / ".eri-rpg" / ".hooks_disabled"
+    if hooks_disabled_file.exists():
+        print(json.dumps({}))
+        sys.exit(0)
+
     log("=" * 50)
     log("HOOK INVOKED")
     try:
