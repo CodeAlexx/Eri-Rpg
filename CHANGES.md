@@ -6,6 +6,46 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ## January 27, 2026
 
+### Enhanced Learning and Implementation System (latest)
+
+Major feature addition for pattern-aware implementation:
+
+**New Module (analyze.py):**
+- `ProjectPatterns` dataclass - Stores detected project patterns
+- `ExtensionPoint` dataclass - Hook/callback locations
+- `Registry` dataclass - Factory/registry patterns
+- `analyze_project()` - Detect patterns, conventions, extension points
+- `detect_structure_patterns()` - Where different file types live
+- `find_base_classes()` - Abstract/base classes for inheritance
+- `find_extension_points()` - Hooks, callbacks, overridable methods
+- `find_registries()` - Factory and registry patterns
+
+**New Module (implement.py):**
+- `FeatureComponent` dataclass - A component of a feature
+- `FilePlan` dataclass - Plan for a single file
+- `ImplementationPlan` dataclass - Complete feature plan
+- `plan_implementation()` - Generate plan from feature description
+- `map_component_to_target()` - Use patterns to determine file locations
+- `describe_feature()` - Extract feature description from source
+- `plan_to_spec()` - Convert plan to EriRPG spec
+
+**Enhanced StoredLearning (memory.py):**
+- `implements` - What base class it extends
+- `registered_in` - Where it's registered
+- `hooks_into` - What hooks it uses
+- `public_interface` - What other code should call
+
+**New CLI Commands:**
+| Command | Description |
+|---------|-------------|
+| `analyze <project>` | Detect project patterns, save to patterns.json |
+| `implement <project> "<feature>"` | Plan implementation using patterns |
+| `transplant --from X --to Y` | Extract feature and implement in target |
+| `describe-feature <project> <path>` | Extract feature description |
+
+**New Storage:**
+- `.eri-rpg/patterns.json` - Project-level patterns (from analyze)
+
 ### GSD-Inspired Features (commit `269b019`)
 
 Major feature addition inspired by GSD (Get Shit Done) tool:

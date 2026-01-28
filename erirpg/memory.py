@@ -292,6 +292,12 @@ class StoredLearning:
     transplanted_from: Optional[str] = None  # "project:path" if this was transplanted
     transplanted_to_list: List[str] = field(default_factory=list)  # ["project:path", ...]
 
+    # Pattern-aware fields (from analyze)
+    implements: Optional[str] = None       # "BaseScheduler" - what base class it extends
+    registered_in: Optional[str] = None    # "SchedulerFactory" - where it's registered
+    hooks_into: List[str] = field(default_factory=list)  # ["trainer.on_step_end"] - what it hooks
+    public_interface: List[str] = field(default_factory=list)  # What other code should call
+
     # Version history for rollback
     versions: List[LearningVersion] = field(default_factory=list)
     current_version: int = 0

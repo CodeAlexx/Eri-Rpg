@@ -437,6 +437,18 @@ eri-rpg roadmap-next myproject  # Advance to next phase
 | `eri-rpg notes <project> ["<text>"]` | Add/get notes |
 | `eri-rpg patterns <project>` | List learned patterns |
 
+### Pattern Analysis & Implementation
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg analyze <project>` | Detect project patterns, conventions, extension points |
+| `eri-rpg analyze <project> --force` | Re-analyze even if patterns exist |
+| `eri-rpg implement <project> "<feature>"` | Plan implementation using patterns |
+| `eri-rpg implement <project> "<feature>" --plan-only` | Show plan without executing |
+| `eri-rpg transplant --from project:path --to target` | Extract feature and implement in target |
+| `eri-rpg transplant --from file.md --to target` | Implement from description file |
+| `eri-rpg describe-feature <project> <path>` | Extract feature description from source |
+
 ### Quick Fix Mode
 
 | Command | Description |
