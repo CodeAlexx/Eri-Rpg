@@ -1,0 +1,56 @@
+<div class="content-header">
+    <span class="content-title">Learnings</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+<div class="learnings-header">
+    <div class="learnings-stats">
+        Coverage: {{ learnings|length }}/{{ modules }} files ({{ (learnings|length / modules * 100)|int if modules > 0 else 0 }}%)
+    </div>
+    <div class="search-box">
+        <input type="text" placeholder="Search files..." value="{{ search }}" id="search-input">
+    </div>
+</div>
+
+{% if learnings %}
+<div class="learning-list">
+    {% for l in learnings %}
+    <div class="learning-item {{ 'stale' if l.stale else '' }}">
+        <div class="learning-header">
+            <span class="learning-path">{{ l.path }}</span>
+            <div class="learning-meta">
+                <span>conf: {{ '%.2f'|format(l.confidence) }}</span>
+                <span>v{{ l.version }}</span>
+                {% if l.stale %}<span style="color: var(--warning);">STALE</span>{% endif %}
+            </div>
+        </div>
+        <div class="learning-summary">{{ l.summary }}</div>
+        {% if l.drift_pattern %}
+        <div class="learning-tags">
+            <span class="drift-tag">{{ l.drift_pattern }} ({{ '%.2f'|format(l.drift_confidence or 0) }})</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<div class="pagination">
+    <button {% if page <= 1 %}disabled{% endif %} onclick="loadPage({{ page - 1 }})">Prev</button>
+    <span class="pagination-info">Page {{ page }} of {{ pages }}</span>
+    <button {% if page >= pages %}disabled{% endif %} onclick="loadPage({{ page + 1 }})">Next</button>
+</div>
+{% endif %}
+
+{% else %}
+<div class="roadmap-empty">
+    <p>No learnings yet</p>
+</div>
+{% endif %}
+
+<script>
+function loadPage(p) {
+    const search = document.getElementById('search-input')?.value || '';
+    window.location.href = `/content/{{ project.name }}/learnings?page=${p}&search=${encodeURIComponent(search)}`;
+}
+</script>

@@ -37,36 +37,158 @@ def create_app() -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
-        """Dashboard home page."""
+        """Dashboard home page - IDE Layout."""
         projects = get_all_projects()
         active = get_active_task()
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse("base.html", {
             "request": request,
             "projects": projects,
             "active": active
         })
 
-    @app.get("/project/{name}", response_class=HTMLResponse)
-    async def project_detail(request: Request, name: str, tab: str = "runs"):
-        """Project detail page."""
-        project = get_project(name)
-        if not project:
-            return templates.TemplateResponse("index.html", {
-                "request": request,
-                "projects": get_all_projects(),
-                "active": get_active_task(),
-                "error": f"Project '{name}' not found"
+    # ─────────────────────────────────────────────────────────────
+    # Content partials (loaded into main content area via fetch)
+    # ─────────────────────────────────────────────────────────────
+
+    @app.get("/content/{project}/runs", response_class=HTMLResponse)
+    async def content_runs(request: Request, project: str):
+        """Runs content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        path = proj.get("path", "")
+        runs = load_runs(path)
+        state = load_state(path)
+
+        return templates.TemplateResponse("partials/content/runs.html", {
+            "request": request,
+            "project": proj,
+            "runs": runs,
+            "state": state
+        })
+
+    @app.get("/content/{project}/learnings", response_class=HTMLResponse)
+    async def content_learnings(
+        request: Request,
+        project: str,
+        page: int = Query(default=1, ge=1),
+        search: str = ""
+    ):
+        """Learnings content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        path = proj.get("path", "")
+        knowledge = load_knowledge(path)
+
+        learnings = []
+        for file_path, data in knowledge.get("learnings", {}).items():
+            if search and search.lower() not in file_path.lower():
+                continue
+            learnings.append({
+                "path": file_path,
+                "summary": data.get("summary", ""),
+                "confidence": data.get("confidence", 1.0),
+                "version": data.get("version", 1),
+                "stale": check_staleness(path, file_path, data.get("source_ref", {})),
+                "drift_pattern": data.get("drift_pattern_id"),
+                "drift_confidence": data.get("drift_confidence")
             })
 
-        project_path = project.get("path", "")
-        return templates.TemplateResponse("project.html", {
+        learnings.sort(key=lambda x: (not x["stale"], x["path"]))
+
+        page_size = 50
+        total = len(learnings)
+        start = (page - 1) * page_size
+        end = start + page_size
+
+        return templates.TemplateResponse("partials/content/learnings.html", {
             "request": request,
-            "project": project,
-            "project_name": name,
-            "project_path": project_path,
-            "tab": tab,
-            "modules": count_modules(project_path),
-            "learned": count_learned(project_path)
+            "project": proj,
+            "learnings": learnings[start:end],
+            "total": total,
+            "page": page,
+            "pages": (total + page_size - 1) // page_size if total > 0 else 1,
+            "search": search,
+            "modules": count_modules(path)
+        })
+
+    @app.get("/content/{project}/roadmap", response_class=HTMLResponse)
+    async def content_roadmap(request: Request, project: str):
+        """Roadmap content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        roadmap = load_roadmap(proj.get("path", ""))
+
+        return templates.TemplateResponse("partials/content/roadmap.html", {
+            "request": request,
+            "project": proj,
+            "roadmap": roadmap
+        })
+
+    @app.get("/content/{project}/decisions", response_class=HTMLResponse)
+    async def content_decisions(request: Request, project: str):
+        """Decisions content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        knowledge = load_knowledge(proj.get("path", ""))
+        decisions = knowledge.get("decisions", [])
+
+        return templates.TemplateResponse("partials/content/decisions.html", {
+            "request": request,
+            "project": proj,
+            "decisions": decisions
+        })
+
+    @app.get("/content/{project}/git", response_class=HTMLResponse)
+    async def content_git(request: Request, project: str):
+        """Git content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        commits = get_git_log(proj.get("path", ""))
+
+        return templates.TemplateResponse("partials/content/git.html", {
+            "request": request,
+            "project": proj,
+            "commits": commits
+        })
+
+    @app.get("/content/{project}/graph", response_class=HTMLResponse)
+    async def content_graph(request: Request, project: str):
+        """Graph content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        graph = load_graph(proj.get("path", ""))
+
+        return templates.TemplateResponse("partials/content/graph.html", {
+            "request": request,
+            "project": proj,
+            "graph": graph
+        })
+
+    @app.get("/content/{project}/drift", response_class=HTMLResponse)
+    async def content_drift(request: Request, project: str):
+        """Drift content partial."""
+        proj = get_project(project)
+        if not proj:
+            return "<div class='error'>Project not found</div>"
+
+        drift = get_drift_status(proj.get("path", ""))
+
+        return templates.TemplateResponse("partials/content/drift.html", {
+            "request": request,
+            "project": proj,
+            "drift": drift
         })
 
     @app.get("/api/status")

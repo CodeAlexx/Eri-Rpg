@@ -1,0 +1,17 @@
+<div class="content-header">
+    <span class="content-title">Dependency Graph</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+<div class="graph-stats">
+    <span class="graph-stat">Nodes: <span class="num">{{ graph.modules|length if graph.modules else 0 }}</span></span>
+    <span class="graph-stat">Edges: <span class="num">{{ graph.edges|length if graph.edges else 0 }}</span></span>
+</div>
+
+<div class="graph-container" id="graph-container">
+    {% if graph.modules and graph.modules|length > 0 %}
+    Graph visualization coming in v0.1.0
+    {% else %}
+    No graph data available
+    {% endif %}
+</div>

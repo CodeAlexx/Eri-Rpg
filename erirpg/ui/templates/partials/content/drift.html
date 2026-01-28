@@ -1,0 +1,47 @@
+<div class="content-header">
+    <span class="content-title">Drift Analysis</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+<div class="drift-status">
+    {% if drift.available %}
+    <span class="drift-available">&#10003; Drift Available</span>
+    {% else %}
+    <span class="drift-unavailable">&#9675; Drift Not Configured</span>
+    {% endif %}
+</div>
+
+{% if drift.available %}
+    {% if drift.patterns %}
+    <div class="section-title">Patterns ({{ drift.patterns|length }})</div>
+    <div class="pattern-list">
+        {% for p in drift.patterns %}
+        <div class="pattern-item">
+            <span class="pattern-name">{{ p.name or p.id }}</span>
+            <span class="pattern-category">{{ p.category or 'unknown' }}</span>
+            <span class="pattern-confidence">{{ '%.2f'|format(p.confidence or 0) }}</span>
+            <span class="pattern-status {{ p.status or 'discovered' }}">{{ p.status or 'discovered' }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if drift.outliers %}
+    <div class="section-title">Outliers ({{ drift.outliers|length }})</div>
+    <div class="outlier-list">
+        {% for o in drift.outliers %}
+        <div class="outlier-item">&#9888; {{ o }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not drift.patterns and not drift.outliers %}
+    <div class="roadmap-empty">
+        <p>No drift patterns detected yet</p>
+    </div>
+    {% endif %}
+{% else %}
+<div class="roadmap-empty">
+    <p>Configure .drift/ directory to enable Drift analysis</p>
+</div>
+{% endif %}

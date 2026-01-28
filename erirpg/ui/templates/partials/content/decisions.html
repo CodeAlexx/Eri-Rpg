@@ -1,0 +1,28 @@
+<div class="content-header">
+    <span class="content-title">Decisions</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+{% if decisions %}
+<div class="decision-list">
+    {% for d in decisions %}
+    <div class="decision-item">
+        <div class="decision-header">
+            <span class="decision-id">{{ d.id or '#' ~ loop.index }}</span>
+            <span class="decision-time">{{ d.timestamp[:10] if d.timestamp else '' }}</span>
+        </div>
+        <div class="decision-choice">{{ d.choice }}</div>
+        {% if d.rationale %}
+        <div class="decision-rationale">{{ d.rationale }}</div>
+        {% endif %}
+        {% if d.context %}
+        <div class="decision-context">Context: {{ d.context }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="roadmap-empty">
+    <p>No decisions recorded</p>
+</div>
+{% endif %}

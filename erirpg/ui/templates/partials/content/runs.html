@@ -1,0 +1,53 @@
+<div class="content-header">
+    <span class="content-title">Runs</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+{% if state and state.phase and state.phase != 'idle' %}
+<div class="active-run">
+    <div class="active-run-header">Active</div>
+    <div class="run-title">{{ state.current_task or 'Unknown task' }}</div>
+    <div class="run-meta">
+        <div class="run-meta-item">
+            <span class="run-meta-label">Phase:</span>
+            <span>{{ state.phase }}</span>
+        </div>
+        <div class="run-meta-item">
+            <span class="run-meta-label">Waiting:</span>
+            <span>{{ state.waiting_on or 'none' }}</span>
+        </div>
+    </div>
+    {% if state.step and state.total_steps %}
+    <div class="run-progress">
+        <div class="run-progress-bar" style="width: {{ (state.step / state.total_steps * 100)|int }}%"></div>
+    </div>
+    <div class="run-progress-text">Step {{ state.step }}/{{ state.total_steps }} ({{ (state.step / state.total_steps * 100)|int }}%)</div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if runs %}
+<div class="history-section">
+    <div class="history-section-title">History</div>
+    <div class="run-list">
+        {% for run in runs %}
+        <div class="run-item">
+            <span class="run-icon {{ 'success' if run.completed_at else 'failed' if run.failed_at else '' }}">
+                {% if run.completed_at %}&#10003;{% elif run.failed_at %}&#10007;{% else %}&#9679;{% endif %}
+            </span>
+            <div class="run-info">
+                <div class="run-info-title">{{ run.spec.goal if run.spec else run.plan.goal if run.plan else 'Unknown' }}</div>
+                <div class="run-info-details">
+                    {% if run.completed_at %}Completed{% elif run.failed_at %}Failed{% else %}In progress{% endif %}
+                </div>
+            </div>
+            <span class="run-time">{{ run.started_at[:10] if run.started_at else '' }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% elif not state or not state.phase or state.phase == 'idle' %}
+<div class="roadmap-empty">
+    <p>No runs yet</p>
+</div>
+{% endif %}

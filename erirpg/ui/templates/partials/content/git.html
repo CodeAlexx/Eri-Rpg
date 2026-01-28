@@ -1,0 +1,34 @@
+<div class="content-header">
+    <span class="content-title">Git History</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+{% if commits %}
+<div class="commit-list">
+    {% for c in commits %}
+    <div class="commit-item">
+        <span class="commit-dot {{ 'erirpg' if c.is_erirpg else '' }}"></span>
+        <div class="commit-info">
+            <span class="commit-hash">{{ c.hash }}</span>
+            <div class="commit-message">{{ c.message }}</div>
+        </div>
+        <span class="commit-time">{{ c.ago }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="commit-legend">
+    <div class="legend-item">
+        <span class="legend-dot erirpg"></span>
+        <span>EriRPG commit</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-dot other"></span>
+        <span>Other commit</span>
+    </div>
+</div>
+{% else %}
+<div class="roadmap-empty">
+    <p>No git history available</p>
+</div>
+{% endif %}

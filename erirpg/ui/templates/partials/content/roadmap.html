@@ -1,0 +1,16 @@
+<div class="content-header">
+    <span class="content-title">Roadmap</span>
+    <span class="content-project">{{ project.name }}</span>
+</div>
+
+{% if roadmap %}
+<div class="roadmap-content">{{ roadmap }}</div>
+<div style="margin-top: 12px; font-size: 0.75rem; color: var(--text-dimmed);">
+    Source: .planning/ROADMAP.md
+</div>
+{% else %}
+<div class="roadmap-empty">
+    <p>No roadmap found</p>
+    <p style="font-size: 0.8rem; margin-top: 8px;">Create .planning/ROADMAP.md to add one</p>
+</div>
+{% endif %}

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}EriRPG{% endblock %}</title>
+    <title>EriRPG</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,31 +11,120 @@
 </head>
 <body>
     <div class="app">
+        <!-- Header -->
         <header class="header">
-            <div class="header-title">
-                <a href="/" class="logo">EriRPG</a>
+            <div class="header-left">
+                <span class="logo">EriRPG</span>
                 <span class="version">v0.0.1-alpha</span>
             </div>
-            <div class="header-actions">
-                <div class="connection">
-                    <span class="connection-dot"></span>
-                    <span class="connection-text">Live</span>
+            <div class="header-right">
+                <button class="btn-icon" id="settings-btn" title="Settings">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </button>
+                <div class="live-indicator" id="live-indicator">
+                    <span class="dot"></span>
+                    <span class="text">Live</span>
                 </div>
             </div>
         </header>
 
-        <main class="main">
-            {% block content %}{% endblock %}
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <ul class="tree" id="project-tree">
+                {% for project in projects %}
+                <li class="project collapsed" data-project="{{ project.name }}">
+                    <div class="project-header" onclick="toggleProject('{{ project.name }}')">
+                        <span class="arrow">&#9654;</span>
+                        <span class="project-name">{{ project.name }}</span>
+                    </div>
+                    <ul class="tabs hidden">
+                        <li class="tab" data-project="{{ project.name }}" data-tab="runs" onclick="selectTab('{{ project.name }}', 'runs')">Runs</li>
+                        <li class="tab" data-project="{{ project.name }}" data-tab="learnings" onclick="selectTab('{{ project.name }}', 'learnings')">Learnings</li>
+                        <li class="tab" data-project="{{ project.name }}" data-tab="roadmap" onclick="selectTab('{{ project.name }}', 'roadmap')">Roadmap</li>
+                        <li class="tab" data-project="{{ project.name }}" data-tab="decisions" onclick="selectTab('{{ project.name }}', 'decisions')">Decisions</li>
+                        <li class="tab" data-project="{{ project.name }}" data-tab="git" onclick="selectTab('{{ project.name }}', 'git')">Git</li>
+                        <li class="tab" data-project="{{ project.name }}" data-tab="graph" onclick="selectTab('{{ project.name }}', 'graph')">Graph</li>
+                        <li class="tab" data-project="{{ project.name }}" data-tab="drift" onclick="selectTab('{{ project.name }}', 'drift')">Drift</li>
+                    </ul>
+                </li>
+                {% endfor %}
+                {% if not projects %}
+                <li class="empty-sidebar">No projects registered</li>
+                {% endif %}
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content" id="main-content">
+            <div class="welcome">
+                <h2>Welcome to EriRPG</h2>
+                <p>Select a project and tab from the sidebar to view details.</p>
+                <div class="shortcuts-help">
+                    <div class="shortcut-row"><kbd>&#8593;</kbd><kbd>&#8595;</kbd> Navigate tree</div>
+                    <div class="shortcut-row"><kbd>&#8592;</kbd><kbd>&#8594;</kbd> Collapse / Expand</div>
+                    <div class="shortcut-row"><kbd>Enter</kbd> Select item</div>
+                    <div class="shortcut-row"><kbd>r</kbd> Refresh content</div>
+                </div>
+            </div>
         </main>
 
-        <footer class="shortcuts">
-            <span class="shortcut"><kbd>r</kbd> refresh</span>
-            <span class="shortcut"><kbd>/</kbd> search</span>
-            <span class="shortcut"><kbd>1-7</kbd> tabs</span>
-            <span class="shortcut"><kbd>Esc</kbd> close</span>
+        <!-- Activity Panel -->
+        <aside class="activity-panel" id="activity-panel">
+            <div class="task-header" id="task-header">
+                {% if active %}
+                <div class="task-name">{{ active.task }}</div>
+                <div class="task-meta">
+                    <span class="phase phase-{{ active.phase }}">{{ active.phase }}</span>
+                    <span class="waiting">waiting: {{ active.waiting_on or 'none' }}</span>
+                </div>
+                {% else %}
+                <div class="no-task">No active task</div>
+                {% endif %}
+            </div>
+            <div class="history-log" id="activity-log">
+                {% if active and active.history %}
+                    {% for entry in active.history %}
+                    <div class="log-entry {% if entry.result == 'running' %}active{% endif %}">
+                        <span class="time">{{ entry.timestamp }}</span>
+                        <span class="action action-{{ entry.action }}">{{ entry.action }}</span>
+                        <span class="target">{{ entry.target }}</span>
+                        <span class="result result-{{ entry.result }}">
+                            {% if entry.result == 'pass' %}&#10003;{% elif entry.result == 'fail' %}&#10007;{% elif entry.result == 'running' %}&#9679;{% else %}{{ entry.result }}{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="no-activity">No activity yet</div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Status Bar -->
+        <footer class="status-bar" id="status-bar">
+            <span class="status-project" id="status-project">No project selected</span>
+            <span class="sep">|</span>
+            <span class="status-stat" id="status-modules">0 modules</span>
+            <span class="sep">|</span>
+            <span class="status-stat" id="status-learned">0 learned (0%)</span>
+            <span class="sep">|</span>
+            <span class="status-stat" id="status-stale">0 stale</span>
+            <span class="spacer"></span>
+            <span class="status-shortcuts">
+                <kbd>&#8593;&#8595;</kbd> nav
+                <kbd>Enter</kbd> select
+                <kbd>r</kbd> refresh
+            </span>
         </footer>
     </div>
 
+    <script>
+        // Pass initial data to JS
+        window.INITIAL_PROJECTS = {{ projects | tojson | safe }};
+        window.INITIAL_ACTIVE = {{ active | tojson | safe if active else 'null' }};
+    </script>
     <script src="/static/app.js"></script>
 </body>
 </html>
