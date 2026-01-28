@@ -1,6 +1,12 @@
 <div class="content-header">
     <span class="content-title">Runs</span>
     <span class="content-project">{{ project.name }}</span>
+    <span class="mode-badge {{ 'bootstrap' if mode == 'bootstrap' else 'maintain' }}">{{ mode | upper }}</span>
+    {% if mode == 'bootstrap' %}
+    <span class="enforcement-status" style="color: var(--warning); font-size: 0.8rem; margin-left: 8px;">enforcement: OFF</span>
+    {% else %}
+    <span class="enforcement-status" style="color: var(--success); font-size: 0.8rem; margin-left: 8px;">enforcement: ON</span>
+    {% endif %}
 </div>
 
 {% if state and state.phase and state.phase != 'idle' %}

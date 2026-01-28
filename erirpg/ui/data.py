@@ -103,6 +103,37 @@ def count_modules(project_path: str) -> int:
     return len(nodes) if isinstance(nodes, (list, dict)) else 0
 
 
+def load_config(project_path: str) -> Dict[str, Any]:
+    """Load project config.json."""
+    try:
+        config_file = Path(project_path) / ".eri-rpg" / "config.json"
+        if config_file.exists():
+            return json.loads(config_file.read_text())
+    except (json.JSONDecodeError, IOError):
+        pass
+    return {}
+
+
+def get_project_mode(project_path: str) -> str:
+    """Get project operational mode (bootstrap or maintain).
+
+    Handles migration: projects with learnings default to maintain.
+    """
+    config = load_config(project_path)
+
+    # If mode is explicitly set, use it
+    if "mode" in config:
+        return config["mode"]
+
+    # Migration: check if project has learnings
+    knowledge = load_knowledge(project_path)
+    if knowledge.get("learnings"):
+        return "maintain"
+
+    # Default for new/empty projects
+    return "bootstrap"
+
+
 def count_learned(project_path: str) -> int:
     """Count entries in knowledge.learnings."""
     knowledge = load_knowledge(project_path)
@@ -217,12 +248,16 @@ def get_all_projects() -> List[Dict[str, Any]]:
     projects = []
     for name, data in registry.get("projects", {}).items():
         path = data.get("path", "")
+        config = load_config(path)
+        mode = get_project_mode(path)
         projects.append({
             "name": name, "path": path,
             "description": data.get("description", ""),
             "modules": count_modules(path),
             "learned": count_learned(path),
-            "last_active": get_last_active(path)
+            "last_active": get_last_active(path),
+            "mode": mode,
+            "graduated_at": config.get("graduated_at"),
         })
     projects.sort(key=lambda p: p.get("last_active") or "zzz")
     return projects

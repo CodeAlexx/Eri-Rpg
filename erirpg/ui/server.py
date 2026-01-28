@@ -15,7 +15,8 @@ from fastapi.templating import Jinja2Templates
 from erirpg.ui.data import (
     get_all_projects, get_active_task, get_project, get_project_path,
     load_state, load_knowledge, load_runs, load_roadmap, load_graph,
-    get_git_log, get_drift_status, check_staleness, count_modules, count_learned
+    get_git_log, get_drift_status, check_staleness, count_modules, count_learned,
+    get_project_mode, load_config
 )
 
 
@@ -60,12 +61,16 @@ def create_app() -> FastAPI:
         path = proj.get("path", "")
         runs = load_runs(path)
         state = load_state(path)
+        mode = get_project_mode(path)
+        config = load_config(path)
 
         return templates.TemplateResponse("partials/content/runs.html", {
             "request": request,
             "project": proj,
             "runs": runs,
-            "state": state
+            "state": state,
+            "mode": mode,
+            "graduated_at": config.get("graduated_at")
         })
 
     @app.get("/content/{project}/learnings", response_class=HTMLResponse)

@@ -39,6 +39,7 @@
                     <div class="project-header" onclick="toggleProject('{{ project.name }}')">
                         <span class="arrow">&#9654;</span>
                         <span class="project-name">{{ project.name }}</span>
+                        <span class="mode-badge-sm {{ 'bootstrap' if project.mode == 'bootstrap' else 'maintain' }}" title="{{ project.mode }}">{{ project.mode[0] | upper }}</span>
                     </div>
                     <ul class="tabs hidden">
                         <li class="tab" data-project="{{ project.name }}" data-tab="runs" onclick="selectTab('{{ project.name }}', 'runs')">Runs</li>

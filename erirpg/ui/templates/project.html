@@ -15,8 +15,14 @@
 
     <div class="card-header" style="margin-bottom: 8px;">
         <span class="project-stats">
+            <span class="mode-badge {{ 'bootstrap' if mode == 'bootstrap' else 'maintain' }}">{{ mode | upper }}</span>
             <span class="project-stat"><span class="num">{{ modules }}</span> modules</span>
             <span class="project-stat"><span class="num">{{ learned }}</span> learned</span>
+            {% if mode == 'bootstrap' %}
+            <span class="project-stat" style="color: var(--warning);">enforcement: OFF</span>
+            {% else %}
+            <span class="project-stat" style="color: var(--success);">enforcement: ON</span>
+            {% endif %}
         </span>
     </div>
 

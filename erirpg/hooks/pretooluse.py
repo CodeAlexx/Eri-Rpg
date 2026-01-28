@@ -108,6 +108,43 @@ def get_quick_fix_state(project_path: str) -> dict:
         import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
 
 
+def get_project_mode(project_path: str) -> str:
+    """Get the operational mode for a project.
+
+    Returns "bootstrap" (no enforcement) or "maintain" (full enforcement).
+    Handles migration: projects with learnings default to maintain.
+    """
+    config_file = Path(project_path) / ".eri-rpg" / "config.json"
+
+    if config_file.exists():
+        try:
+            with open(config_file) as f:
+                data = json.load(f)
+
+            # If mode is explicitly set, use it
+            if "mode" in data:
+                return data["mode"]
+
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # Migration: check if project has learnings
+    knowledge_file = Path(project_path) / ".eri-rpg" / "knowledge.json"
+    if knowledge_file.exists():
+        try:
+            with open(knowledge_file) as f:
+                knowledge = json.load(f)
+
+            # Has learnings → assume stable project → maintain
+            if knowledge.get("learnings"):
+                return "maintain"
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # Default for new/empty projects
+    return "bootstrap"
+
+
 def detect_bash_file_write(command: str) -> str:
     """Detect if a Bash command writes to a file. Returns the file path or None."""
     import re
@@ -254,6 +291,22 @@ def main():
                 log(f"Using outermost project path: {project_path}")
         else:
             log(f"No .eri-rpg found, using cwd: {project_path}")
+
+        # ================================================================
+        # BOOTSTRAP MODE CHECK - No enforcement in bootstrap mode
+        # ================================================================
+        mode = get_project_mode(project_path)
+        log(f"Project mode: {mode}")
+
+        if mode == "bootstrap":
+            # Bootstrap mode = pass through, no enforcement
+            log(f"ALLOWING (bootstrap mode): enforcement disabled")
+            print(json.dumps({}))
+            sys.exit(0)
+
+        # ================================================================
+        # MAINTAIN MODE - Full enforcement below
+        # ================================================================
 
         # Check for quick fix mode FIRST (lightweight mode, no full run required)
         log(f"Checking for quick fix in: {project_path}")

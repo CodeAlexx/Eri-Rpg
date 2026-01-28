@@ -1143,6 +1143,56 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   MODE BADGES (Bootstrap/Maintain)
+   ───────────────────────────────────────────────────────────── */
+
+.mode-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 8px;
+}
+
+.mode-badge.bootstrap {
+  background: rgba(249, 226, 175, 0.2);
+  color: var(--warning);
+  border: 1px solid rgba(249, 226, 175, 0.3);
+}
+
+.mode-badge.maintain {
+  background: rgba(166, 227, 161, 0.2);
+  color: var(--success);
+  border: 1px solid rgba(166, 227, 161, 0.3);
+}
+
+/* Small mode badge for sidebar */
+.mode-badge-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.mode-badge-sm.bootstrap {
+  background: rgba(249, 226, 175, 0.2);
+  color: var(--warning);
+}
+
+.mode-badge-sm.maintain {
+  background: rgba(166, 227, 161, 0.2);
+  color: var(--success);
+}
+
+/* ─────────────────────────────────────────────────────────────
    UTILITIES
    ───────────────────────────────────────────────────────────── */
 
