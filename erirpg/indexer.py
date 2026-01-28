@@ -18,6 +18,12 @@ from erirpg.parsers.python import (
 )
 from erirpg.parsers.c import parse_c_file, resolve_include_to_module
 from erirpg.parsers.rust import parse_rust_file, resolve_use_to_module, classify_external_crate
+from erirpg.parsers.mojo import (
+    parse_mojo_file,
+    resolve_import_to_module as resolve_mojo_import,
+    classify_external_package as classify_mojo_package,
+    is_mojo_file,
+)
 from erirpg.parsers import get_parser_for_file, detect_language
 from erirpg.registry import Project
 
@@ -109,6 +115,10 @@ def index_project(project: Project, verbose: bool = False) -> Graph:
         source_files = _find_rust_files(project.path)
         if verbose:
             print(f"Found {len(source_files)} Rust files")
+    elif project.lang == "mojo":
+        source_files = _find_mojo_files(project.path)
+        if verbose:
+            print(f"Found {len(source_files)} Mojo files")
     else:
         raise NotImplementedError(f"Language '{project.lang}' not yet supported")
 
@@ -179,6 +189,16 @@ def index_project(project: Project, verbose: bool = False) -> Graph:
                     crate = classify_external_crate(imp)
                     if crate:
                         deps_external.add(crate)
+            elif project.lang == "mojo":
+                resolved = resolve_mojo_import(
+                    imp, list(module_paths), project.name, rel_path
+                )
+                if resolved:
+                    deps_internal.append(resolved)
+                else:
+                    pkg = classify_mojo_package(imp)
+                    if pkg:
+                        deps_external.add(pkg)
 
         module = Module(
             path=rel_path,
@@ -298,6 +318,36 @@ def _find_rust_files(root: str) -> List[str]:
                 rs_files.append(os.path.join(dirpath, filename))
 
     return rs_files
+
+
+def _find_mojo_files(root: str) -> List[str]:
+    """Find all Mojo files in a directory tree.
+
+    Includes: .mojo and .🔥 files
+    Excludes: .git, .eri-rpg, build directories, etc.
+    """
+    exclude_dirs = {
+        ".git", ".eri-rpg", "target", "node_modules", ".vscode", ".idea",
+        "build", "dist", "__pycache__", ".magic",
+    }
+
+    # Fire emoji for .🔥 extension
+    fire_emoji = "\U0001F525"
+
+    mojo_files = []
+
+    for dirpath, dirnames, filenames in os.walk(root):
+        # Filter out excluded directories
+        dirnames[:] = [
+            d for d in dirnames
+            if d not in exclude_dirs and not d.startswith(".")
+        ]
+
+        for filename in filenames:
+            if filename.endswith(".mojo") or filename.endswith(fire_emoji):
+                mojo_files.append(os.path.join(dirpath, filename))
+
+    return mojo_files
 
 
 def get_or_load_graph(project: Project) -> Graph:

@@ -11,12 +11,19 @@ Supported languages:
 - C/C++ (.c, .h, .cpp, .hpp) - regex-based
 - Rust (.rs) - regex-based
 - Dart (.dart) - regex-based
+- Mojo (.mojo, .🔥) - regex-based
 """
 
 from erirpg.parsers.python import parse_python_file, resolve_import_to_module
 from erirpg.parsers.c import parse_c_file, resolve_include_to_module
 from erirpg.parsers.rust import parse_rust_file, resolve_use_to_module, classify_external_crate
 from erirpg.parsers.dart import parse_dart_file, resolve_import_to_module as resolve_dart_import, classify_external_package
+from erirpg.parsers.mojo import (
+    parse_mojo_file,
+    resolve_import_to_module as resolve_mojo_import,
+    classify_external_package as classify_mojo_package,
+    is_mojo_file,
+)
 
 __all__ = [
     "parse_python_file",
@@ -29,6 +36,10 @@ __all__ = [
     "parse_dart_file",
     "resolve_dart_import",
     "classify_external_package",
+    "parse_mojo_file",
+    "resolve_mojo_import",
+    "classify_mojo_package",
+    "is_mojo_file",
 ]
 
 
@@ -46,6 +57,8 @@ def get_parser_for_file(path: str):
         return parse_rust_file
     elif path.endswith(".dart"):
         return parse_dart_file
+    elif is_mojo_file(path):
+        return parse_mojo_file
     return None
 
 
@@ -53,7 +66,7 @@ def detect_language(path: str) -> str:
     """Detect language from file extension.
 
     Returns:
-        Language string: 'python', 'c', 'rust', 'dart', or 'unknown'
+        Language string: 'python', 'c', 'rust', 'dart', 'mojo', or 'unknown'
     """
     if path.endswith(".py"):
         return "python"
@@ -63,4 +76,6 @@ def detect_language(path: str) -> str:
         return "rust"
     elif path.endswith(".dart"):
         return "dart"
+    elif is_mojo_file(path):
+        return "mojo"
     return "unknown"
