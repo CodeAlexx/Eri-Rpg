@@ -134,6 +134,78 @@ def get_tier_for_command(command: str) -> Optional[Tier]:
 
 
 @dataclass
+class EnvironmentConfig:
+    """Per-project environment and command settings.
+
+    Stores how to run tests, lint, build, etc. for this specific project.
+    Avoids guessing and wasting tokens figuring out the environment.
+    """
+    # Package manager / runner
+    runner: Optional[str] = None  # uv, pip, poetry, cargo, npm, pnpm, yarn, etc.
+
+    # Common commands (full command strings)
+    test: Optional[str] = None      # e.g., "uv run pytest", "cargo test", "npm test"
+    lint: Optional[str] = None      # e.g., "uv run ruff check", "cargo clippy"
+    format: Optional[str] = None    # e.g., "uv run ruff format", "cargo fmt"
+    build: Optional[str] = None     # e.g., "uv build", "cargo build --release"
+    run: Optional[str] = None       # e.g., "uv run python main.py", "cargo run"
+    typecheck: Optional[str] = None # e.g., "uv run mypy", "npx tsc --noEmit"
+
+    # Paths
+    python: Optional[str] = None    # e.g., ".venv/bin/python", "python3.11"
+    venv: Optional[str] = None      # e.g., ".venv", "venv", "conda env"
+
+    # Environment variables (key=value pairs)
+    env_vars: Dict[str, str] = field(default_factory=dict)
+
+    # Project-specific paths
+    src_dir: Optional[str] = None   # e.g., "src", "lib", "erirpg"
+    test_dir: Optional[str] = None  # e.g., "tests", "test", "spec"
+
+    def to_dict(self) -> dict:
+        return {
+            "runner": self.runner,
+            "test": self.test,
+            "lint": self.lint,
+            "format": self.format,
+            "build": self.build,
+            "run": self.run,
+            "typecheck": self.typecheck,
+            "python": self.python,
+            "venv": self.venv,
+            "env_vars": self.env_vars,
+            "src_dir": self.src_dir,
+            "test_dir": self.test_dir,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "EnvironmentConfig":
+        return cls(
+            runner=data.get("runner"),
+            test=data.get("test"),
+            lint=data.get("lint"),
+            format=data.get("format"),
+            build=data.get("build"),
+            run=data.get("run"),
+            typecheck=data.get("typecheck"),
+            python=data.get("python"),
+            venv=data.get("venv"),
+            env_vars=data.get("env_vars", {}),
+            src_dir=data.get("src_dir"),
+            test_dir=data.get("test_dir"),
+        )
+
+    def get_command(self, name: str) -> Optional[str]:
+        """Get a command by name."""
+        return getattr(self, name, None)
+
+    def set_command(self, name: str, value: str) -> None:
+        """Set a command by name."""
+        if hasattr(self, name):
+            setattr(self, name, value)
+
+
+@dataclass
 class EnforcementConfig:
     """Enforcement behavior settings."""
     fail_closed: bool = False  # Block on hook errors instead of allowing (safer but may cause false positives)
@@ -160,6 +232,9 @@ class ProjectConfig:
     # Feature tier
     tier: Tier = "lite"
 
+    # Environment settings (commands, paths, etc.)
+    env: EnvironmentConfig = field(default_factory=EnvironmentConfig)
+
     # Enforcement settings
     enforcement: EnforcementConfig = field(default_factory=EnforcementConfig)
 
@@ -173,6 +248,7 @@ class ProjectConfig:
             "created_at": self.created_at,
             "graduated_at": self.graduated_at,
             "graduated_by": self.graduated_by,
+            "env": self.env.to_dict(),
             "enforcement": asdict(self.enforcement),
             "multi_agent": asdict(self.multi_agent),
         }
@@ -181,12 +257,14 @@ class ProjectConfig:
     def from_dict(cls, data: dict) -> "ProjectConfig":
         ma_data = data.get("multi_agent", {})
         enf_data = data.get("enforcement", {})
+        env_data = data.get("env", {})
         return cls(
             mode=data.get("mode", "bootstrap"),
             tier=data.get("tier", "lite"),
             created_at=data.get("created_at"),
             graduated_at=data.get("graduated_at"),
             graduated_by=data.get("graduated_by"),
+            env=EnvironmentConfig.from_dict(env_data),
             enforcement=EnforcementConfig(
                 fail_closed=enf_data.get("fail_closed", False),
                 block_bash_writes=enf_data.get("block_bash_writes", False),
@@ -459,3 +537,236 @@ def tier_allows(current_tier: Tier, required_tier: Tier) -> bool:
         True if current tier >= required tier
     """
     return TIER_LEVELS.get(current_tier, 0) >= TIER_LEVELS.get(required_tier, 0)
+
+
+# ============================================================================
+# Environment Management
+# ============================================================================
+
+def get_env(project_path: str) -> EnvironmentConfig:
+    """Get environment config for a project."""
+    config = load_config(project_path)
+    return config.env
+
+
+def set_env_command(project_path: str, command_name: str, value: str) -> ProjectConfig:
+    """Set an environment command (test, lint, build, etc.).
+
+    Args:
+        project_path: Path to project root
+        command_name: One of: runner, test, lint, format, build, run, typecheck, python, venv, src_dir, test_dir
+        value: The command string or path
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+
+    valid_fields = ["runner", "test", "lint", "format", "build", "run", "typecheck", "python", "venv", "src_dir", "test_dir"]
+    if command_name not in valid_fields:
+        raise ValueError(f"Invalid field: {command_name}. Must be one of: {', '.join(valid_fields)}")
+
+    setattr(config.env, command_name, value)
+    save_config(project_path, config)
+    return config
+
+
+def set_env_var(project_path: str, key: str, value: str) -> ProjectConfig:
+    """Set an environment variable for the project.
+
+    Args:
+        project_path: Path to project root
+        key: Environment variable name
+        value: Environment variable value
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.env.env_vars[key] = value
+    save_config(project_path, config)
+    return config
+
+
+def unset_env_var(project_path: str, key: str) -> ProjectConfig:
+    """Remove an environment variable from the project.
+
+    Args:
+        project_path: Path to project root
+        key: Environment variable name to remove
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.env.env_vars.pop(key, None)
+    save_config(project_path, config)
+    return config
+
+
+def detect_environment(project_path: str) -> EnvironmentConfig:
+    """Auto-detect environment settings from project files.
+
+    Looks for:
+    - pyproject.toml (uv/poetry)
+    - requirements.txt (pip)
+    - package.json (npm/pnpm/yarn)
+    - Cargo.toml (cargo)
+    - .venv, venv directories
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        Detected EnvironmentConfig
+    """
+    p = Path(project_path)
+    env = EnvironmentConfig()
+
+    # Detect Python environments
+    if (p / "pyproject.toml").exists():
+        content = (p / "pyproject.toml").read_text()
+        if "[tool.uv]" in content or "uv.lock" in [f.name for f in p.iterdir() if f.is_file()]:
+            env.runner = "uv"
+            env.test = "uv run pytest"
+            env.lint = "uv run ruff check"
+            env.format = "uv run ruff format"
+            env.typecheck = "uv run mypy"
+        elif "[tool.poetry]" in content:
+            env.runner = "poetry"
+            env.test = "poetry run pytest"
+            env.lint = "poetry run ruff check"
+            env.format = "poetry run ruff format"
+        else:
+            # Plain pyproject.toml, assume pip
+            env.runner = "pip"
+            env.test = "pytest"
+
+    elif (p / "requirements.txt").exists():
+        env.runner = "pip"
+        env.test = "pytest"
+        env.lint = "ruff check"
+        env.format = "ruff format"
+
+    # Detect venv
+    for venv_name in [".venv", "venv", ".env"]:
+        if (p / venv_name).is_dir():
+            env.venv = venv_name
+            env.python = f"{venv_name}/bin/python"
+            break
+
+    # Detect Node.js
+    if (p / "package.json").exists():
+        content = (p / "package.json").read_text()
+        if (p / "pnpm-lock.yaml").exists():
+            env.runner = "pnpm"
+            env.test = "pnpm test"
+            env.lint = "pnpm lint"
+            env.build = "pnpm build"
+        elif (p / "yarn.lock").exists():
+            env.runner = "yarn"
+            env.test = "yarn test"
+            env.lint = "yarn lint"
+            env.build = "yarn build"
+        else:
+            env.runner = "npm"
+            env.test = "npm test"
+            env.lint = "npm run lint"
+            env.build = "npm run build"
+
+    # Detect Rust
+    if (p / "Cargo.toml").exists():
+        env.runner = "cargo"
+        env.test = "cargo test"
+        env.lint = "cargo clippy"
+        env.format = "cargo fmt"
+        env.build = "cargo build --release"
+        env.run = "cargo run"
+
+    # Detect common directories
+    for src_name in ["src", "lib", p.name]:
+        if (p / src_name).is_dir():
+            env.src_dir = src_name
+            break
+
+    for test_name in ["tests", "test", "spec"]:
+        if (p / test_name).is_dir():
+            env.test_dir = test_name
+            break
+
+    return env
+
+
+def auto_detect_and_save(project_path: str) -> ProjectConfig:
+    """Auto-detect environment and save to config.
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        Updated ProjectConfig with detected environment
+    """
+    config = load_config(project_path)
+    detected = detect_environment(project_path)
+
+    # Only set values that were detected (don't overwrite existing)
+    for field in ["runner", "test", "lint", "format", "build", "run", "typecheck", "python", "venv", "src_dir", "test_dir"]:
+        detected_val = getattr(detected, field)
+        current_val = getattr(config.env, field)
+        if detected_val and not current_val:
+            setattr(config.env, field, detected_val)
+
+    save_config(project_path, config)
+    return config
+
+
+def format_env_summary(env: EnvironmentConfig) -> str:
+    """Format environment config for display.
+
+    Args:
+        env: EnvironmentConfig to format
+
+    Returns:
+        Formatted string
+    """
+    lines = []
+
+    if env.runner:
+        lines.append(f"Runner: {env.runner}")
+
+    commands = [
+        ("test", env.test),
+        ("lint", env.lint),
+        ("format", env.format),
+        ("build", env.build),
+        ("run", env.run),
+        ("typecheck", env.typecheck),
+    ]
+
+    if any(cmd for _, cmd in commands):
+        lines.append("\nCommands:")
+        for name, cmd in commands:
+            if cmd:
+                lines.append(f"  {name}: {cmd}")
+
+    paths = [
+        ("python", env.python),
+        ("venv", env.venv),
+        ("src_dir", env.src_dir),
+        ("test_dir", env.test_dir),
+    ]
+
+    if any(path for _, path in paths):
+        lines.append("\nPaths:")
+        for name, path in paths:
+            if path:
+                lines.append(f"  {name}: {path}")
+
+    if env.env_vars:
+        lines.append("\nEnvironment Variables:")
+        for key, val in env.env_vars.items():
+            # Mask sensitive values
+            display_val = val if len(val) < 20 else f"{val[:8]}...{val[-4:]}"
+            lines.append(f"  {key}={display_val}")
+
+    return "\n".join(lines) if lines else "(not configured)"
