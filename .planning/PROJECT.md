@@ -55,7 +55,13 @@ Every code change goes through this pipeline. No exceptions.
 
 ```
 erirpg/
-├── cli.py           # All CLI commands
+├── cli.py           # CLI entry point (delegates to cli_commands/)
+├── cli_commands/    # 26 modular command modules (91+ commands)
+│   ├── setup.py     # add, remove, list, index
+│   ├── modes.py     # take, work, done, research, execute, new, next
+│   ├── knowledge.py # learn, recall, relearn, decide, pattern
+│   ├── spec_group.py, plan_group.py, run_group.py  # workflow groups
+│   └── ...          # discuss, roadmap, drift, persona, etc.
 ├── registry.py      # Project registry
 ├── indexer.py       # Code indexing
 ├── graph.py         # Dependency graph

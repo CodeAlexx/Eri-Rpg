@@ -6,8 +6,8 @@ EriRPG is organized into several layers:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   CLI (cli.py)                       │
-│  Commands: add, index, learn, quick, cleanup, etc.  │
+│              CLI (cli.py + cli_commands/)            │
+│  91+ commands across 26 modules                     │
 ├─────────────────────────────────────────────────────┤
 │                Agent API (agent/)                    │
 │  Agent, Run, Plan, Step - orchestrates workflows    │
@@ -28,7 +28,12 @@ EriRPG is organized into several layers:
 ```
 erirpg/
 ├── __init__.py        # Package init, installs write hooks
-├── cli.py             # All CLI commands (~3000 lines)
+├── cli.py             # CLI entry point (~36 lines)
+├── cli_commands/      # 26 modular command modules (91+ commands)
+│   ├── setup.py       # add, remove, list, index
+│   ├── modes.py       # take, work, done, research, execute
+│   ├── knowledge.py   # learn, recall, relearn, decide, pattern
+│   └── ...            # spec_group, plan_group, discuss, drift, etc.
 ├── registry.py        # Project registry (name → path mapping)
 ├── indexer.py         # Builds dependency graphs
 ├── graph.py           # Graph data structure

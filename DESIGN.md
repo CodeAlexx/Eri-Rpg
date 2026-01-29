@@ -9,8 +9,8 @@ No LLM. Pure Python. Claude Code is the LLM.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        CLI (cli.py)                         │
-│  add | remove | list | index | show | find | extract | ...  │
+│                 CLI (cli.py + cli_commands/)                 │
+│  91+ commands across 26 modular modules                     │
 └─────────────────────────────────────────────────────────────┘
                               │
          ┌────────────────────┼────────────────────┐
@@ -55,7 +55,8 @@ No LLM. Pure Python. Claude Code is the LLM.
 eri-rpg/
 ├── erirpg/
 │   ├── __init__.py       # Version, exports
-│   ├── cli.py            # Click CLI (200 lines)
+│   ├── cli.py            # Click CLI entry point
+│   ├── cli_commands/     # 26 modular command modules
 │   ├── registry.py       # Project registry (150 lines)
 │   ├── indexer.py        # Code indexing (400 lines)
 │   ├── graph.py          # Graph data structures (200 lines)
@@ -551,7 +552,7 @@ Implementation sequence:
 5. **ops.py** — Core operations
 6. **state.py** — State tracking
 7. **context.py** — Context generation
-8. **cli.py** — Wire everything up
+8. **cli.py + cli_commands/** — Wire everything up
 
 Each file can be tested independently.
 

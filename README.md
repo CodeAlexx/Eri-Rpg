@@ -156,7 +156,8 @@ Discussion resolved. Ready for: eri-rpg goal-plan myproject
 
 ```
 erirpg/
-├── cli.py           # All CLI commands
+├── cli.py           # CLI entry point
+├── cli_commands/    # 26 modular command modules (91+ commands)
 ├── registry.py      # Project registry
 ├── indexer.py       # Code indexing
 ├── graph.py         # Dependency graph
