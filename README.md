@@ -171,6 +171,7 @@ This persists across sessions. Claude resumes where it left off.
 | Language | Support |
 |----------|---------|
 | Python | Full (AST-based) |
+| Mojo | Full (regex) |
 | Rust | Basic (regex) |
 | C/C++ | Basic (regex) |
 | Dart | Full (regex) |
