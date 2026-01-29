@@ -221,6 +221,13 @@ class MultiAgentConfig:
 
 
 @dataclass
+class WorkflowConfig:
+    """Workflow behavior settings."""
+    auto_commit: bool = True  # Auto-commit after completing tasks (prevents losing work)
+    auto_push: bool = False   # Auto-push after commits (disabled by default for safety)
+
+
+@dataclass
 class ProjectConfig:
     """Project-level configuration."""
     # Operational mode (enforcement)
@@ -241,6 +248,9 @@ class ProjectConfig:
     # Multi-agent settings
     multi_agent: MultiAgentConfig = field(default_factory=MultiAgentConfig)
 
+    # Workflow settings
+    workflow: WorkflowConfig = field(default_factory=WorkflowConfig)
+
     def to_dict(self) -> dict:
         return {
             "mode": self.mode,
@@ -251,6 +261,7 @@ class ProjectConfig:
             "env": self.env.to_dict(),
             "enforcement": asdict(self.enforcement),
             "multi_agent": asdict(self.multi_agent),
+            "workflow": asdict(self.workflow),
         }
 
     @classmethod
@@ -258,6 +269,7 @@ class ProjectConfig:
         ma_data = data.get("multi_agent", {})
         enf_data = data.get("enforcement", {})
         env_data = data.get("env", {})
+        wf_data = data.get("workflow", {})
         return cls(
             mode=data.get("mode", "bootstrap"),
             tier=data.get("tier", "lite"),
@@ -273,7 +285,11 @@ class ProjectConfig:
                 enabled=ma_data.get("enabled", False),
                 max_concurrency=ma_data.get("max_concurrency", 3),
                 parallel_steps=ma_data.get("parallel_steps", True),
-            )
+            ),
+            workflow=WorkflowConfig(
+                auto_commit=wf_data.get("auto_commit", True),
+                auto_push=wf_data.get("auto_push", False),
+            ),
         )
 
     def is_bootstrap(self) -> bool:
@@ -770,3 +786,65 @@ def format_env_summary(env: EnvironmentConfig) -> str:
             lines.append(f"  {key}={display_val}")
 
     return "\n".join(lines) if lines else "(not configured)"
+
+
+# ============================================================================
+# Workflow Settings
+# ============================================================================
+
+def get_auto_commit(project_path: str) -> bool:
+    """Check if auto-commit is enabled for a project.
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        True if auto-commit is enabled (default: True)
+    """
+    config = load_config(project_path)
+    return config.workflow.auto_commit
+
+
+def set_auto_commit(project_path: str, enabled: bool) -> ProjectConfig:
+    """Enable or disable auto-commit for a project.
+
+    Args:
+        project_path: Path to project root
+        enabled: Whether to enable auto-commit
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.workflow.auto_commit = enabled
+    save_config(project_path, config)
+    return config
+
+
+def get_auto_push(project_path: str) -> bool:
+    """Check if auto-push is enabled for a project.
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        True if auto-push is enabled (default: False)
+    """
+    config = load_config(project_path)
+    return config.workflow.auto_push
+
+
+def set_auto_push(project_path: str, enabled: bool) -> ProjectConfig:
+    """Enable or disable auto-push for a project.
+
+    Args:
+        project_path: Path to project root
+        enabled: Whether to enable auto-push
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.workflow.auto_push = enabled
+    save_config(project_path, config)
+    return config

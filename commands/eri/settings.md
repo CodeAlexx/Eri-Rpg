@@ -8,9 +8,9 @@ Configure EriRPG features and UI elements.
 /eri:settings                    # Show current settings
 /eri:settings statusline         # Configure status line elements
 /eri:settings statusline toggle phase    # Toggle phase display
-/eri:settings statusline toggle context  # Toggle context % display
-/eri:settings statusline toggle task     # Toggle task display
-/eri:settings statusline toggle time     # Toggle session time
+/eri:settings workflow           # Show workflow settings
+/eri:settings workflow auto-commit [on|off]  # Toggle auto-commit
+/eri:settings workflow auto-push [on|off]    # Toggle auto-push
 ```
 
 ## Arguments
@@ -21,11 +21,12 @@ Configure EriRPG features and UI elements.
 1. **No arguments**: Show all current settings
 2. **statusline**: Show/configure status line elements
 3. **statusline toggle [element]**: Enable/disable specific element
+4. **workflow**: Show/configure workflow behavior
+5. **workflow auto-commit [on|off]**: Enable/disable auto-commit after task completion
 
-## Settings File
+## Settings Files
 
-Settings stored in: `~/.eri-rpg/settings.json`
-
+**Global settings**: `~/.eri-rpg/settings.json`
 ```json
 {
   "statusline": {
@@ -39,6 +40,23 @@ Settings stored in: `~/.eri-rpg/settings.json`
   }
 }
 ```
+
+**Project settings**: `.eri-rpg/config.json`
+```json
+{
+  "workflow": {
+    "auto_commit": true,
+    "auto_push": false
+  }
+}
+```
+
+## Workflow Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `auto_commit` | `true` | Auto-commit after completing tasks (prevents losing work) |
+| `auto_push` | `false` | Auto-push after commits (disabled for safety) |
 
 ## Status Line Elements
 
