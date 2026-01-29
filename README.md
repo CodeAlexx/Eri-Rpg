@@ -112,11 +112,29 @@ EriRPG adds a status line to Claude Code showing current context:
 
 ![Status Line](docs/images/status-line.png)
 
-- **Persona** - Auto-detected from tool usage (analyzer, backend, frontend, etc.)
+- **Persona** - Auto-detected from tool usage (see below)
 - **Context %** - How much of the context window is used
 - **Branch** - Current git branch
 - **Tier** - lite/standard/full (⚡ indicators)
 - **Project** - Active EriRPG project
+
+## Personas
+
+EriRPG auto-detects what Claude is doing and sets a persona:
+
+| Persona | Triggered by |
+|---------|--------------|
+| `analyzer` | Reading files, searching code |
+| `backend` | Editing .py, .go, .rs files |
+| `frontend` | Editing .jsx, .tsx, .vue, .css |
+| `security` | Touching auth, crypto, security files |
+| `qa` | Running tests |
+| `devops` | Docker, kubectl, deploy commands |
+| `scribe` | Editing docs, markdown, README |
+| `refactorer` | Running linters, formatters |
+| `architect` | Using Task tool for planning |
+
+Set manually with `/eri:persona backend` or let it auto-detect.
 
 ## How It Works
 
