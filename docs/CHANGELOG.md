@@ -41,6 +41,11 @@ Adversarial plan verification with model escalation.
 - `plan verify` command with `--model` and `--no-escalate` options
 - Plan commands changed from "full" tier to "standard" tier
 
+**Workflow Settings**
+- `auto_commit: true` (default) - Auto-commit after task completion
+- `auto_push: false` (default) - User controls when to push
+- Configure via `/eri:settings workflow` or `.eri-rpg/config.json`
+
 ---
 
 ## v0.56.0-alpha (2026-01-29)
