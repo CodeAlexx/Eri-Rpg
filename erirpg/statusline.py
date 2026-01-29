@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional, Tuple
 
 # Default persona when nothing else applies
 DEFAULT_PERSONA = "analyzer"
@@ -24,7 +25,7 @@ PHASE_PERSONA_DEFAULTS = {
     "idle": "analyzer",
     "extracting": "analyzer",
     "planning": "architect",
-    "context_ready": "analyzer",
+    "context_ready": "architect",  # Ready to plan/design
     "implementing": "backend",
     "verifying": "qa",
     "documenting": "scribe",
@@ -98,7 +99,7 @@ def get_active_persona(global_state: dict) -> str:
     return DEFAULT_PERSONA
 
 
-def get_git_branch() -> str | None:
+def get_git_branch() -> Optional[str]:
     """Get current git branch name."""
     try:
         result = subprocess.run(
@@ -124,7 +125,7 @@ def get_project_tier(project_path: str) -> str:
     return "lite"
 
 
-def get_project_info(registry: dict, cwd: str) -> tuple[str | None, str | None, str | None]:
+def get_project_info(registry: dict, cwd: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """Get project name, path, and tier from registry based on cwd."""
     for name, info in registry.items():
         proj_path = info.get("path", "")
@@ -134,7 +135,7 @@ def get_project_info(registry: dict, cwd: str) -> tuple[str | None, str | None, 
     return None, None, None
 
 
-def get_knowledge_count(project_path: str | None) -> int:
+def get_knowledge_count(project_path: Optional[str]) -> int:
     """Count learned modules from knowledge.json"""
     if not project_path:
         return 0
@@ -149,7 +150,7 @@ def get_knowledge_count(project_path: str | None) -> int:
     return 0
 
 
-def get_last_test_status(project_path: str | None) -> str | None:
+def get_last_test_status(project_path: Optional[str]) -> Optional[str]:
     """Get last test status from verification state."""
     if not project_path:
         return None
@@ -164,7 +165,21 @@ def get_last_test_status(project_path: str | None) -> str | None:
     return None
 
 
-def format_tokens(tokens: int | None) -> str:
+def get_project_state(project_path: Optional[str]) -> dict:
+    """Load project-specific state from <project>/.eri-rpg/state.json"""
+    if not project_path:
+        return {}
+
+    state_path = Path(project_path) / ".eri-rpg" / "state.json"
+    if state_path.exists():
+        try:
+            return json.loads(state_path.read_text())
+        except:
+            pass
+    return {}
+
+
+def format_tokens(tokens: Optional[int]) -> str:
     """Format token count in human-readable form."""
     if tokens is None:
         return ""
@@ -194,13 +209,18 @@ def main():
     registry = load_registry()
     cwd = os.getcwd()
 
-    # Get project info
-    project_name, project_path, tier = get_project_info(registry, cwd)
-    if not project_name:
-        project_name = global_state.get("active_project")
-        if project_name and project_name in registry:
-            project_path = registry[project_name].get("path")
-            tier = get_project_tier(project_path) if project_path else "lite"
+    # Get project info - PRIORITIZE active_project from state over cwd detection
+    project_name = global_state.get("active_project")
+    project_path = None
+    tier = None
+
+    if project_name and project_name in registry:
+        # Use the active project from state
+        project_path = registry[project_name].get("path")
+        tier = get_project_tier(project_path) if project_path else "lite"
+    else:
+        # Fallback to cwd-based detection
+        project_name, project_path, tier = get_project_info(registry, cwd)
 
     # Gather all info
     persona = get_active_persona(global_state)
@@ -209,11 +229,11 @@ def main():
     knowledge = get_knowledge_count(project_path)
     test_status = get_last_test_status(project_path)
 
-    # === LINE 1: Project | Phase | Persona | Context ===
-    line1_parts = []
+    # Get project-specific state for current_task
+    project_state = get_project_state(project_path)
 
-    if project_name:
-        line1_parts.append(f"📁 {project_name}")
+    # === LINE 1: Phase | Persona | Context | Task ===
+    line1_parts = []
 
     if phase and phase != "idle":
         line1_parts.append(f"📍 {phase}")
@@ -223,7 +243,14 @@ def main():
     if context_pct is not None:
         line1_parts.append(f"🔄 {context_pct}%")
 
-    # === LINE 2: Branch | Tier | Knowledge | Tests | Tokens ===
+    # Current task/section - from PROJECT state, not global
+    current_task = project_state.get("current_task")
+    if current_task:
+        # Truncate long task names
+        task_display = current_task[:30] + "…" if len(current_task) > 30 else current_task
+        line1_parts.append(f"🎯 {task_display}")
+
+    # === LINE 2: Branch | Tier | Project | Knowledge | Tests | Tokens ===
     line2_parts = []
 
     if branch:
@@ -234,6 +261,10 @@ def main():
     if tier:
         tier_icons = {"lite": "⚡", "standard": "⚡⚡", "full": "⚡⚡⚡"}
         line2_parts.append(f"{tier_icons.get(tier, '⚡')} {tier}")
+
+    # Bold white project name (ANSI: \033[1;37m = bold white, \033[0m = reset)
+    if project_name:
+        line2_parts.append(f"\033[1;37mProject: {project_name}\033[0m")
 
     if knowledge > 0:
         line2_parts.append(f"🧠 {knowledge}")

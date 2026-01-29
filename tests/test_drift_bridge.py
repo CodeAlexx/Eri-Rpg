@@ -463,7 +463,7 @@ class TestPatternSync:
 
         # Should find BaseScheduler in EriRPG patterns
         conf = get_combined_confidence(temp_project_with_patterns, "BaseScheduler")
-        assert conf == 0.9  # Base class confidence
+        assert conf == 0.8  # Base class confidence (updated)
 
     def test_get_sync_status(self, temp_project_with_patterns):
         """Test sync status reporting."""

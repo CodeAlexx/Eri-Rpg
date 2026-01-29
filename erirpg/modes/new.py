@@ -75,7 +75,7 @@ QUESTIONS = [
         id="language",
         question="What language?",
         why="Determines project structure and tooling",
-        options=["python", "rust", "c"],  # Must match indexer support
+        options=["python", "rust", "c", "mojo"],  # Must match indexer support
         default="python",
         required=True,
     ),

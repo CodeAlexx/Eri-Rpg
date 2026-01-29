@@ -164,7 +164,7 @@ def register(cli):
         if not project.is_indexed():
             click.echo("Indexing project... ", nl=False)
             try:
-                index_project(project.path, project.lang)
+                index_project(project)
                 registry.update_indexed(name)
                 click.echo("done")
             except Exception as e:
@@ -176,7 +176,7 @@ def register(cli):
         # Step 2: Learn all files
         click.echo("Learning files... ", nl=False)
         try:
-            graph = get_or_load_graph(project.path)
+            graph = get_or_load_graph(project)
             knowledge = load_knowledge(project.path)
 
             # Count modules
@@ -294,7 +294,7 @@ def register(cli):
                 if click.confirm("Index project now?"):
                     click.echo("Indexing project... ", nl=False)
                     try:
-                        index_project(project.path, project.lang)
+                        index_project(project)
                         registry.update_indexed(name)
                         click.echo("done")
                     except Exception as e:
@@ -314,7 +314,7 @@ def register(cli):
                 if click.confirm("Index project now?"):
                     click.echo("Indexing project... ", nl=False)
                     try:
-                        index_project(project.path, project.lang)
+                        index_project(project)
                         registry.update_indexed(name)
                         click.echo("done")
                     except Exception as e:

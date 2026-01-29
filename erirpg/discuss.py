@@ -952,3 +952,181 @@ def get_current_milestone_goal(
 
     # Build milestone-specific goal
     return f"{current.name}: {current.description}"
+
+
+# ============================================================================
+# New Project Discussion Functions
+# ============================================================================
+
+NEW_PROJECT_QUESTIONS = [
+    # Core purpose
+    "What is the core purpose of this project? (One sentence describing the main thing it does)",
+    # Stack preference
+    "What technical stack should we use? (e.g., fastapi, cli, flask, django, or 'no preference')",
+    # Constraints
+    "Are there any key constraints? (e.g., must work offline, no external deps, specific platform)",
+    # Target users
+    "Who will use this? (developers, end users, internal team, etc.)",
+]
+
+
+def generate_new_project_questions(
+    description: str,
+    project_path: str,
+) -> List[str]:
+    """Generate clarifying questions for new project creation.
+
+    Questions cover:
+    - Core purpose/MVP scope
+    - Technical stack preferences
+    - Constraints (offline, external deps)
+    - Target users
+
+    Args:
+        description: Initial project description
+        project_path: Path where project will be created
+
+    Returns:
+        List of questions to ask
+    """
+    questions = []
+
+    desc_lower = description.lower() if description else ""
+
+    # Always ask about core purpose unless description is very detailed
+    if len(description) < 100:
+        questions.append(NEW_PROJECT_QUESTIONS[0])
+
+    # Ask about stack if not already mentioned
+    stack_keywords = ["fastapi", "flask", "django", "cli", "click", "api", "rest", "graphql"]
+    has_stack_hint = any(kw in desc_lower for kw in stack_keywords)
+    if not has_stack_hint:
+        questions.append(NEW_PROJECT_QUESTIONS[1])
+
+    # Always ask about constraints
+    questions.append(NEW_PROJECT_QUESTIONS[2])
+
+    # Ask about target users unless obvious from description
+    user_keywords = ["user", "developer", "team", "customer", "client"]
+    has_user_hint = any(kw in desc_lower for kw in user_keywords)
+    if not has_user_hint:
+        questions.append(NEW_PROJECT_QUESTIONS[3])
+
+    # Limit to 3-4 questions
+    return questions[:4]
+
+
+def generate_spec_from_discussion(
+    discussion: Discussion,
+    stack_hint: Optional[str] = None,
+    project_path: str = "",
+    project_name: str = "",
+) -> "ProjectSpec":
+    """Generate a ProjectSpec from completed discussion.
+
+    Maps discussion answers to ProjectSpec fields:
+    - core_feature from purpose answer
+    - framework from stack answer
+    - directories from structure answer
+
+    Args:
+        discussion: Completed discussion with answers
+        stack_hint: Optional stack override
+        project_path: Path where project will be created
+        project_name: Name for the project
+
+    Returns:
+        Generated ProjectSpec
+    """
+    from erirpg.specs import ProjectSpec
+
+    # Extract answers
+    answers = discussion.answers
+
+    # Find core feature (purpose answer)
+    core_feature = ""
+    for q, a in answers.items():
+        if "core purpose" in q.lower() or "main thing" in q.lower():
+            core_feature = a
+            break
+
+    # If no specific answer, use the goal
+    if not core_feature:
+        core_feature = discussion.goal
+
+    # Find framework preference
+    framework = stack_hint or ""
+    for q, a in answers.items():
+        if "stack" in q.lower() or "technical" in q.lower():
+            answer_lower = a.lower()
+            if "fastapi" in answer_lower or "api" in answer_lower:
+                framework = "fastapi"
+            elif "cli" in answer_lower or "command" in answer_lower:
+                framework = "cli"
+            elif "flask" in answer_lower:
+                framework = "flask"
+            elif "django" in answer_lower:
+                framework = "django"
+            elif "no preference" not in answer_lower and a.strip():
+                framework = a.strip()
+            break
+
+    # Extract constraints as notes
+    notes_parts = []
+    skip_answers = ["none", "no", "n/a", "", "(default)", "(no answer)"]
+    for q, a in answers.items():
+        if "constraint" in q.lower():
+            if a.lower() not in skip_answers:
+                notes_parts.append(f"Constraints: {a}")
+        if "who will use" in q.lower() or "target" in q.lower():
+            if a.lower() not in skip_answers:
+                notes_parts.append(f"Target users: {a}")
+
+    # Build description from goal and answers
+    description = discussion.goal
+    if notes_parts:
+        description += "\n\n" + "\n".join(notes_parts)
+
+    # Create spec
+    spec = ProjectSpec(
+        name=project_name or _extract_name_from_goal(discussion.goal),
+        description=description,
+        language="python",  # Default to Python
+        framework=framework,
+        core_feature=core_feature,
+        output_path=project_path,
+        notes="\n".join(notes_parts),
+    )
+
+    # Normalize and generate ID
+    spec.normalize()
+
+    return spec
+
+
+def _extract_name_from_goal(goal: str) -> str:
+    """Extract a project name from a goal string.
+
+    Args:
+        goal: Goal string like "REST API for users"
+
+    Returns:
+        Slugified name like "rest-api-users"
+    """
+    import re
+
+    # Remove common prefixes
+    for prefix in ["create ", "build ", "make ", "implement ", "add "]:
+        if goal.lower().startswith(prefix):
+            goal = goal[len(prefix):]
+            break
+
+    # Take first few words
+    words = goal.split()[:4]
+    name = "-".join(words)
+
+    # Slugify
+    name = re.sub(r'[^a-zA-Z0-9-]', '', name.lower())
+    name = re.sub(r'-+', '-', name).strip('-')
+
+    return name or "new-project"

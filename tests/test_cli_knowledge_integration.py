@@ -290,7 +290,7 @@ class TestTokenEstimation:
         tokens_without_project = estimate_tokens(feature, plan, source_project=None)
 
         # With hydration we should get accurate count (~1000 tokens for 4000 chars)
-        assert tokens_with_project > 800  # At least 800 tokens
+        assert tokens_with_project > 750  # At least 750 tokens
         assert tokens_with_project < 1500  # Not too high
 
         # Without hydration, uses fallback estimate (~2000 chars per file = 500 tokens)

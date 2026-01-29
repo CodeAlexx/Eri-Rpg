@@ -4,11 +4,12 @@ EriRPG CLI Commands - Modular command structure.
 This module provides a clean separation of CLI commands into logical groups.
 Each submodule registers its commands when imported.
 
-Structure (26 modules, 91+ commands):
+Structure (27 modules, 92+ commands):
     cli_commands/
     ├── __init__.py      # This file - registration
     ├── setup.py         # add, remove, list, index
     ├── mode.py          # init, graduate, mode, info
+    ├── new_project.py   # new (project creation wizard)
     ├── modes.py         # take, work, done, research, execute, new, next
     ├── explore.py       # show, find, impact
     ├── orchestration.py # do, status, validate, diagnose, reset
@@ -89,6 +90,7 @@ def register_all(cli: "click.Group") -> None:
     from . import storage_cmd
     from . import debug_cmd
     from . import todo_cmd
+    from . import new_project
 
     setup.register(cli)
     mode.register(cli)
@@ -119,3 +121,4 @@ def register_all(cli: "click.Group") -> None:
     storage_cmd.register(cli)
     debug_cmd.register(cli)
     todo_cmd.register(cli)
+    new_project.register(cli)

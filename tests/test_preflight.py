@@ -57,15 +57,19 @@ class TestPreflightBlocking:
     def test_preflight_passes_with_learning(self):
         """Preflight should return ready=True after learning."""
         from erirpg.preflight import preflight
-        from erirpg.memory import load_knowledge
+        from erirpg.memory import load_knowledge, save_knowledge, StoredLearning
+        from datetime import datetime
 
         # Add learning for the module
-        knowledge = load_knowledge(self.project_path)
-        knowledge.learn(
+        knowledge = load_knowledge(self.project_path, "test-project")
+        learning = StoredLearning(
             module_path="test_module.py",
+            learned_at=datetime.now(),
             summary="Test module",
             purpose="Testing",
         )
+        knowledge.add_learning(learning)
+        save_knowledge(self.project_path, knowledge)
 
         report = preflight(
             project_path=self.project_path,
@@ -80,18 +84,39 @@ class TestPreflightBlocking:
     def test_preflight_detects_stale_learning(self):
         """Preflight should warn if file changed since learning."""
         from erirpg.preflight import preflight
-        from erirpg.memory import load_knowledge
+        from erirpg.memory import load_knowledge, save_knowledge, StoredLearning
+        from erirpg.refs import CodeRef
+        from datetime import datetime
+        import hashlib
+        import time
 
-        # Add learning
-        knowledge = load_knowledge(self.project_path)
-        knowledge.learn(
+        # Get original file state for CodeRef
+        test_file = Path(self.temp_dir) / "test_module.py"
+        original_content = test_file.read_text()
+        original_hash = hashlib.sha256(original_content.encode()).hexdigest()
+        original_mtime = test_file.stat().st_mtime
+
+        # Add learning with source_ref tracking the original file
+        knowledge = load_knowledge(self.project_path, "test-project")
+        source_ref = CodeRef(
+            path="test_module.py",
+            content_hash=original_hash,
+            mtime=original_mtime,
+        )
+        learning = StoredLearning(
             module_path="test_module.py",
+            learned_at=datetime.now(),
             summary="Test module",
             purpose="Testing",
+            source_ref=source_ref,
         )
+        knowledge.add_learning(learning)
+        save_knowledge(self.project_path, knowledge)
+
+        # Wait a moment to ensure mtime changes
+        time.sleep(0.1)
 
         # Modify the file after learning
-        test_file = Path(self.temp_dir) / "test_module.py"
         test_file.write_text("# Modified!\ndef hello():\n    return 'changed'\n")
 
         report = preflight(
@@ -101,9 +126,9 @@ class TestPreflightBlocking:
             strict=True,
         )
 
-        # Should still pass but have stale warning
-        # (or block if strict about staleness)
-        assert "stale" in str(report.warnings).lower() or not report.ready
+        # Should detect stale learning
+        assert len(report.stale_learnings) > 0
+        assert "test_module.py" in report.stale_learnings
 
     def test_preflight_allows_new_files(self):
         """Preflight should allow creating new files."""

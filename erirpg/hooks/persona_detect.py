@@ -43,6 +43,7 @@ import re
 import sys
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 STATE_FILE = Path.home() / ".eri-rpg" / "state.json"
 LOG_FILE = Path("/tmp/erirpg-persona.log")
@@ -82,7 +83,7 @@ def save_state(state: dict):
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
 
-def detect_persona(tool_name: str, tool_input: dict) -> str | None:
+def detect_persona(tool_name: str, tool_input: dict) -> Optional[str]:
     """Detect persona based on tool usage. Returns None if no change needed."""
 
     file_path = tool_input.get("file_path", "") or tool_input.get("path", "") or ""

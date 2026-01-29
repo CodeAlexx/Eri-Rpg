@@ -304,7 +304,8 @@ class TestVerifier:
         config = VerificationConfig()
         verifier = Verifier(config, str(tmp_path))
 
-        cmd = VerificationCommand(name="false", command="exit 1")
+        # Use false command which returns exit code 1 (or shell mode for exit)
+        cmd = VerificationCommand(name="false", command="exit 1", allow_shell=True)
         result = verifier.run_command(cmd)
 
         assert result.status == VerificationStatus.FAILED.value

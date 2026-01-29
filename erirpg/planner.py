@@ -436,7 +436,7 @@ def _compute_context_hash(graph: Any, knowledge: Any) -> str:
         # Include module paths and their dependencies
         for path in sorted(graph.modules.keys()):
             mod = graph.get_module(path)
-            deps = sorted(graph.get_dependencies(path))
+            deps = sorted(graph.get_deps(path))
             content += f"{path}:{','.join(deps)};"
 
     if knowledge:

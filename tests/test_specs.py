@@ -566,10 +566,11 @@ class TestSpecCLI:
         data = json.loads(result.output)
         assert data["name"] == "Test"
 
-    def test_spec_list_shows_specs(self, tmp_path):
+    def test_spec_list_shows_specs(self, tmp_path, monkeypatch):
         """spec list should show all specs."""
         from click.testing import CliRunner
         from erirpg.cli import cli
+        from erirpg.registry import Registry
 
         # Create some specs
         specs_dir = tmp_path / ".eri-rpg" / "specs"
@@ -580,16 +581,30 @@ class TestSpecCLI:
             str(specs_dir / "proj-1.json")
         )
 
-        runner = CliRunner()
-        result = runner.invoke(cli, ["spec", "list", "-p", str(tmp_path)])
-        assert result.exit_code == 0
-        assert "Task One" in result.output
-        assert "Project One" in result.output
+        # Register the temp project (clean up first if exists)
+        from erirpg.config import set_tier
+
+        registry = Registry.get_instance()
+        if "test-proj" in registry.projects:
+            registry.remove("test-proj")
+        registry.add("test-proj", str(tmp_path), "python")
+        set_tier(str(tmp_path), "full")  # spec-list requires full tier
+
+        try:
+            runner = CliRunner()
+            result = runner.invoke(cli, ["spec", "list", "test-proj"])
+            assert result.exit_code == 0
+            assert "Task One" in result.output
+            assert "Project One" in result.output
+        finally:
+            # Cleanup
+            registry.remove("test-proj")
 
     def test_spec_list_filter_by_type(self, tmp_path):
         """spec list -t should filter by type."""
         from click.testing import CliRunner
         from erirpg.cli import cli
+        from erirpg.registry import Registry
 
         specs_dir = tmp_path / ".eri-rpg" / "specs"
         specs_dir.mkdir(parents=True)
@@ -599,11 +614,24 @@ class TestSpecCLI:
             str(specs_dir / "proj-1.json")
         )
 
-        runner = CliRunner()
-        result = runner.invoke(cli, ["spec", "list", "-p", str(tmp_path), "-t", "task"])
-        assert result.exit_code == 0
-        assert "Task One" in result.output
-        assert "Project One" not in result.output
+        # Register the temp project (clean up first if exists)
+        from erirpg.config import set_tier
+
+        registry = Registry.get_instance()
+        if "test-proj-filter" in registry.projects:
+            registry.remove("test-proj-filter")
+        registry.add("test-proj-filter", str(tmp_path), "python")
+        set_tier(str(tmp_path), "full")  # spec-list requires full tier
+
+        try:
+            runner = CliRunner()
+            result = runner.invoke(cli, ["spec", "list", "test-proj-filter", "-t", "task"])
+            assert result.exit_code == 0
+            assert "Task One" in result.output
+            assert "Project One" not in result.output
+        finally:
+            # Cleanup
+            registry.remove("test-proj-filter")
 
 
 if __name__ == "__main__":

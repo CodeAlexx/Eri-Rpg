@@ -362,7 +362,36 @@ def preflight(
     # Recommendations
     report.should_review = report.stale_learnings.copy()
 
+    # Save state for hooks to verify
+    _save_preflight_state(project_path, report)
+
     return report
+
+
+def _save_preflight_state(project_path: str, report: PreflightReport) -> None:
+    """Save preflight state for hook verification."""
+    import json
+    from pathlib import Path
+
+    state = {
+        "target_files": report.target_files,
+        "operation": report.operation,
+        "ready": report.ready,
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+    }
+
+    state_file = Path(project_path) / ".eri-rpg" / "preflight_state.json"
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    state_file.write_text(json.dumps(state, indent=2))
+
+
+def clear_preflight_state(project_path: str) -> None:
+    """Clear preflight state file after operation complete."""
+    from pathlib import Path
+
+    state_file = Path(project_path) / ".eri-rpg" / "preflight_state.json"
+    if state_file.exists():
+        state_file.unlink()
 
 
 def require_preflight(func):
