@@ -42,6 +42,7 @@ class VerificationCommand:
     timeout: int = 300  # 5 minutes default
     required: bool = True  # If false, failure doesn't block progress
     run_on: List[str] = field(default_factory=list)  # Step types to run on, empty = all
+    allow_shell: bool = False  # SECURITY: Must explicitly opt-in to shell=True
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
@@ -52,6 +53,7 @@ class VerificationCommand:
             "timeout": self.timeout,
             "required": self.required,
             "run_on": self.run_on,
+            "allow_shell": self.allow_shell,
         }
 
     @classmethod
@@ -64,6 +66,7 @@ class VerificationCommand:
             timeout=data.get("timeout", 300),
             required=data.get("required", True),
             run_on=data.get("run_on", []),
+            allow_shell=data.get("allow_shell", False),
         )
 
 
@@ -269,28 +272,63 @@ class Verifier:
         self.project_path = project_path
 
     def run_command(self, cmd: VerificationCommand) -> CommandResult:
-        """Run a single verification command."""
+        """Run a single verification command.
+
+        SECURITY: By default, commands run with shell=False using shlex.split().
+        Commands requiring shell features must explicitly set allow_shell=True.
+        Working directory is constrained to be within project_path.
+        """
         result = CommandResult(
             name=cmd.name,
             command=cmd.command,
             started_at=datetime.now(),
         )
 
-        # Determine working directory
+        # Determine and validate working directory
         working_dir = cmd.working_dir or self.project_path
         if not os.path.isabs(working_dir):
             working_dir = os.path.join(self.project_path, working_dir)
 
+        # SECURITY: Resolve symlinks and ensure working_dir is within project
+        working_dir = os.path.realpath(working_dir)
+        project_real = os.path.realpath(self.project_path)
+
+        if not working_dir.startswith(project_real + os.sep) and working_dir != project_real:
+            result.status = VerificationStatus.ERROR.value
+            result.error_message = f"Security: working_dir '{cmd.working_dir}' escapes project root"
+            result.completed_at = datetime.now()
+            return result
+
         try:
-            # Run the command
-            process = subprocess.run(
-                cmd.command,
-                shell=True,
-                cwd=working_dir,
-                capture_output=True,
-                text=True,
-                timeout=cmd.timeout,
-            )
+            # SECURITY: Use shell=False by default, require explicit opt-in
+            if cmd.allow_shell:
+                # Shell mode - only when explicitly requested
+                process = subprocess.run(
+                    cmd.command,
+                    shell=True,
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=cmd.timeout,
+                )
+            else:
+                # Safe mode - parse command with shlex
+                try:
+                    args = shlex.split(cmd.command)
+                except ValueError as e:
+                    result.status = VerificationStatus.ERROR.value
+                    result.error_message = f"Invalid command syntax: {e}. Use allow_shell=true for complex commands."
+                    result.completed_at = datetime.now()
+                    return result
+
+                process = subprocess.run(
+                    args,
+                    shell=False,
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=cmd.timeout,
+                )
 
             result.exit_code = process.returncode
             result.stdout = process.stdout

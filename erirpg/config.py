@@ -134,6 +134,13 @@ def get_tier_for_command(command: str) -> Optional[Tier]:
 
 
 @dataclass
+class EnforcementConfig:
+    """Enforcement behavior settings."""
+    fail_closed: bool = False  # Block on hook errors instead of allowing (safer but may cause false positives)
+    block_bash_writes: bool = False  # Block all Bash file writes (safest, requires all writes via tools)
+
+
+@dataclass
 class MultiAgentConfig:
     """Multi-agent execution settings."""
     enabled: bool = False
@@ -153,6 +160,9 @@ class ProjectConfig:
     # Feature tier
     tier: Tier = "lite"
 
+    # Enforcement settings
+    enforcement: EnforcementConfig = field(default_factory=EnforcementConfig)
+
     # Multi-agent settings
     multi_agent: MultiAgentConfig = field(default_factory=MultiAgentConfig)
 
@@ -163,18 +173,24 @@ class ProjectConfig:
             "created_at": self.created_at,
             "graduated_at": self.graduated_at,
             "graduated_by": self.graduated_by,
+            "enforcement": asdict(self.enforcement),
             "multi_agent": asdict(self.multi_agent),
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "ProjectConfig":
         ma_data = data.get("multi_agent", {})
+        enf_data = data.get("enforcement", {})
         return cls(
             mode=data.get("mode", "bootstrap"),
             tier=data.get("tier", "lite"),
             created_at=data.get("created_at"),
             graduated_at=data.get("graduated_at"),
             graduated_by=data.get("graduated_by"),
+            enforcement=EnforcementConfig(
+                fail_closed=enf_data.get("fail_closed", False),
+                block_bash_writes=enf_data.get("block_bash_writes", False),
+            ),
             multi_agent=MultiAgentConfig(
                 enabled=ma_data.get("enabled", False),
                 max_concurrency=ma_data.get("max_concurrency", 3),

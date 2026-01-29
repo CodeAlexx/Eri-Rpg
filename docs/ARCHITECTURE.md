@@ -41,7 +41,7 @@ erirpg/
 ├── preflight.py       # Preflight checks before edits
 ├── verification.py    # Test running, result tracking
 ├── quick.py           # Quick fix mode
-├── hooks.py           # Python write interception (NOT the hooks dir)
+├── write_guard.py     # Python write interception
 ├── spec.py            # Spec parsing and generation
 ├── agent/
 │   ├── __init__.py    # Agent class - main workflow orchestrator
@@ -68,7 +68,7 @@ erirpg/
 
 ### Registry (`registry.py`)
 
-Stores project registrations in `~/.erirpg/registry.json`:
+Stores project registrations in `~/.eri-rpg/registry.json`:
 
 ```json
 {
@@ -173,7 +173,7 @@ Lightweight mode bypassing full workflow:
 
 ### Hooks
 
-**`hooks.py`** (Python file):
+**`write_guard.py`** (Python file):
 - Intercepts `builtins.open()`
 - Blocks writes without active run/preflight
 - Only active when erirpg is imported
@@ -201,18 +201,17 @@ Per-project data stored in `.eri-rpg/`:
 └── resume.md            # Resume instructions (from precompact)
 ```
 
-Global data in `~/.erirpg/`:
+Global data in `~/.eri-rpg/`:
 
 ```
-~/.erirpg/
+~/.eri-rpg/
 └── registry.json        # Project registry
 ```
 
 ## Known Technical Issues
 
-1. **Module naming conflict**: `hooks.py` shadows `hooks/` directory.
-   Python resolves `erirpg.hooks` to the file, not the directory.
-   Workaround: hooks must be called as scripts, not imported.
+1. **~~Module naming conflict~~**: Resolved. The file was renamed from `hooks.py`
+   to `write_guard.py` to avoid shadowing the `hooks/` directory.
 
 2. **Nested .eri-rpg directories**: If a subdirectory has its own `.eri-rpg`,
    hooks may find the wrong one. The search goes up from file path.

@@ -227,7 +227,7 @@ echo '{"tool_name":"Edit","tool_input":{"file_path":"/tmp/test.py"},"cwd":"/tmp"
 - Start quick fix or use agent with preflight
 
 **Module import error**:
-- Known issue: `hooks.py` shadows `hooks/` directory
+- ~~Known issue: `hooks.py` shadows `hooks/` directory~~ (Resolved: renamed to `write_guard.py`)
 - Use direct script path, not `-m` module import
 
 ## Disabling Hooks

@@ -44,7 +44,7 @@ def guarded_open(file, mode='r', *args, **kwargs):
     if 'w' in mode or 'a' in mode or '+' in mode:
         # Get absolute path for comparison
         try:
-            abs_path = os.path.abspath(str(file))
+            abs_path = os.path.realpath(str(file))
         except Exception as e:  # Path resolution fallback
             abs_path = str(file)
 
@@ -134,9 +134,9 @@ def enable_writes(paths: List[str], project_path: Optional[str] = None) -> None:
         if os.path.isabs(p):
             resolved_paths.append(p)
         elif project_path:
-            resolved_paths.append(os.path.abspath(os.path.join(project_path, p)))
+            resolved_paths.append(os.path.realpath(os.path.join(project_path, p)))
         else:
-            resolved_paths.append(os.path.abspath(p))
+            resolved_paths.append(os.path.realpath(p))
 
     _PROTECTED_PATHS = resolved_paths
 
@@ -175,9 +175,9 @@ def add_allowed_path(path: str, project_path: Optional[str] = None) -> None:
     if os.path.isabs(path):
         abs_path = path
     elif project_path:
-        abs_path = os.path.abspath(os.path.join(project_path, path))
+        abs_path = os.path.realpath(os.path.join(project_path, path))
     else:
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.realpath(path)
 
     if abs_path not in _PROTECTED_PATHS:
         _PROTECTED_PATHS.append(abs_path)

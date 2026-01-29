@@ -20,11 +20,12 @@ def detect_project_language(path: str) -> str:
     - Cargo.toml -> rust
     - pyproject.toml / setup.py / *.py -> python
     - mojoproject.toml / *.mojo -> mojo
-    - pubspec.yaml / *.dart -> dart
     - *.c, *.h, Makefile, CMakeLists.txt -> c
 
     Returns:
-        Language string: 'python', 'c', 'rust', 'mojo', 'dart', or 'unknown'
+        Language string: 'python', 'c', 'rust', 'mojo', or 'unknown'
+
+    Note: Only languages with indexer support are returned.
     """
     path = os.path.abspath(os.path.expanduser(path))
 
@@ -39,15 +40,11 @@ def detect_project_language(path: str) -> str:
        os.path.exists(os.path.join(path, "setup.py")):
         return "python"
 
-    if os.path.exists(os.path.join(path, "pubspec.yaml")):
-        return "dart"
-
     # Count files to determine majority language
     py_count = 0
     c_count = 0
     rs_count = 0
     mojo_count = 0
-    dart_count = 0
 
     # Fire emoji for .🔥 extension
     fire_emoji = "\U0001F525"
@@ -65,22 +62,20 @@ def detect_project_language(path: str) -> str:
                 rs_count += 1
             elif f.endswith(".mojo") or f.endswith(fire_emoji):
                 mojo_count += 1
-            elif f.endswith(".dart"):
-                dart_count += 1
 
         # Early exit if we've sampled enough
-        if py_count + c_count + rs_count + mojo_count + dart_count > 10:
+        if py_count + c_count + rs_count + mojo_count > 10:
             break
 
     # Determine by majority
-    counts = {"c": c_count, "rust": rs_count, "python": py_count, "mojo": mojo_count, "dart": dart_count}
+    counts = {"c": c_count, "rust": rs_count, "python": py_count, "mojo": mojo_count}
     max_count = max(counts.values())
 
     if max_count == 0:
         return "unknown"
 
-    # Return first language with max count (priority: mojo > dart > rust > python > c)
-    for lang in ["mojo", "dart", "rust", "python", "c"]:
+    # Return first language with max count (priority: mojo > rust > python > c)
+    for lang in ["mojo", "rust", "python", "c"]:
         if counts[lang] == max_count:
             return lang
 
@@ -92,7 +87,7 @@ class Project:
     """A registered project."""
     name: str
     path: str  # Absolute path to project root
-    lang: str  # "python" | "rust" | "c" | "mojo" | "dart"
+    lang: str  # "python" | "rust" | "c" | "mojo"
     indexed_at: Optional[datetime] = None
     graph_path: str = ""  # Path to graph.json
 

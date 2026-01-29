@@ -76,10 +76,11 @@ class TestPreToolUseHook:
 
     def test_hook_allows_after_preflight(self):
         """Write after preflight should succeed."""
-        # Create preflight state
+        # Create preflight state - current format uses target_files and ready
         state = {
-            "allowed_files": ["test.py"],
+            "target_files": ["test.py"],
             "operation": "modify",
+            "ready": True,
         }
         state_file = Path(self.project_path) / ".eri-rpg" / "preflight_state.json"
         state_file.write_text(json.dumps(state))
@@ -90,10 +91,11 @@ class TestPreToolUseHook:
 
     def test_hook_blocks_wrong_file(self):
         """Write to file not in preflight should be blocked."""
-        # Create preflight state for different file
+        # Create preflight state for different file - current format uses target_files and ready
         state = {
-            "allowed_files": ["allowed.py"],
+            "target_files": ["allowed.py"],
             "operation": "modify",
+            "ready": True,
         }
         state_file = Path(self.project_path) / ".eri-rpg" / "preflight_state.json"
         state_file.write_text(json.dumps(state))

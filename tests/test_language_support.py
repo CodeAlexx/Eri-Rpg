@@ -11,8 +11,8 @@ from erirpg.modes.new import QUESTIONS, get_structure_for
 from erirpg.registry import detect_project_language
 
 
-# The indexer only supports these languages
-SUPPORTED_LANGUAGES = {"python", "rust", "c"}
+# Languages with full indexer support (parsers exist)
+SUPPORTED_LANGUAGES = {"python", "rust", "c", "mojo"}
 
 
 class TestCLILanguageSupport:

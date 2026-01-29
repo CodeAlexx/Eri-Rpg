@@ -145,6 +145,35 @@ def get_project_mode(project_path: str) -> str:
     return "bootstrap"
 
 
+def get_enforcement_config(project_path: str) -> dict:
+    """Get enforcement configuration for a project.
+
+    Returns dict with:
+    - fail_closed: bool - Block on errors instead of allowing (safer but stricter)
+    - block_bash_writes: bool - Block all Bash file writes
+
+    Defaults to fail-open and allowing Bash writes for backwards compatibility.
+    """
+    defaults = {"fail_closed": False, "block_bash_writes": False}
+
+    config_file = Path(project_path) / ".eri-rpg" / "config.json"
+
+    if config_file.exists():
+        try:
+            with open(config_file) as f:
+                data = json.load(f)
+
+            enforcement = data.get("enforcement", {})
+            return {
+                "fail_closed": enforcement.get("fail_closed", False),
+                "block_bash_writes": enforcement.get("block_bash_writes", False),
+            }
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    return defaults
+
+
 def detect_bash_file_write(command: str) -> str:
     """Detect if a Bash command writes to a file. Returns the file path or None."""
     import re
@@ -204,6 +233,9 @@ def main():
         cwd = input_data.get("cwd", os.getcwd())
         log(f"tool_name={tool_name}, cwd={cwd}")
 
+        # Track if this originated as a Bash command (for block_bash_writes check later)
+        is_bash_write = False
+
         # Check for Bash commands that write files
         if tool_name == "Bash":
             command = tool_input.get("command", "")
@@ -215,6 +247,7 @@ def main():
                 # Treat this like an Edit/Write - set file_path and continue checks
                 tool_input["file_path"] = detected_file
                 tool_name = "Write"  # Treat as Write for enforcement
+                is_bash_write = True  # Remember this was a Bash write
             else:
                 # No file write detected, allow
                 log(f"Bash command does not write files, allowing")
@@ -236,10 +269,10 @@ def main():
             print(json.dumps({}))
             sys.exit(0)
 
-        # Resolve to absolute path
+        # Resolve to absolute path with symlink resolution (security)
         if not os.path.isabs(file_path):
             file_path = os.path.join(cwd, file_path)
-        file_path = os.path.abspath(file_path)
+        file_path = os.path.realpath(file_path)  # realpath resolves symlinks
 
         # Always allow writes to .eri-rpg directory
         if "/.eri-rpg/" in file_path or file_path.endswith("/.eri-rpg"):
@@ -292,6 +325,9 @@ def main():
         else:
             log(f"No .eri-rpg found, using cwd: {project_path}")
 
+        # SECURITY: Resolve symlinks in project_path
+        project_path = os.path.realpath(project_path)
+
         # ================================================================
         # BOOTSTRAP MODE CHECK - No enforcement in bootstrap mode
         # ================================================================
@@ -307,6 +343,26 @@ def main():
         # ================================================================
         # MAINTAIN MODE - Full enforcement below
         # ================================================================
+
+        # Load enforcement config for additional checks
+        enforcement = get_enforcement_config(project_path)
+        log(f"Enforcement config: {enforcement}")
+
+        # Check for block_bash_writes - if enabled, block ALL Bash file writes
+        if is_bash_write and enforcement.get("block_bash_writes", False):
+            rel_path = os.path.relpath(file_path, project_path)
+            log(f"BLOCKING (block_bash_writes): {rel_path}")
+            output = {
+                "decision": "block",
+                "reason": (
+                    f"ERI-RPG ENFORCEMENT: Bash file writes are blocked.\n"
+                    f"File: {rel_path}\n\n"
+                    f"Use Edit/Write tools instead, or disable this check:\n"
+                    f"  Set enforcement.block_bash_writes=false in .eri-rpg/config.json"
+                )
+            }
+            print(json.dumps(output))
+            sys.exit(0)
 
         # Check for quick fix mode FIRST (lightweight mode, no full run required)
         log(f"Checking for quick fix in: {project_path}")
@@ -430,13 +486,37 @@ def main():
         sys.exit(0)
 
     except Exception as e:
-        # On error, ALLOW (fail open for safety)
-        # But warn about the error
+        # Check if we should fail closed (block on errors) or fail open (allow)
+        # Default to fail-open for backwards compatibility
+        fail_closed = False
+        try:
+            # project_path may not be defined if exception was early
+            if 'project_path' in dir() and project_path:
+                enforcement = get_enforcement_config(project_path)
+                fail_closed = enforcement.get("fail_closed", False)
+        except Exception:
+            pass  # Can't load config, use default
+
         log(f"EXCEPTION: {str(e)}")
         log(f"TRACEBACK: {traceback.format_exc()}")
-        output = {
-            "systemMessage": f"EriRPG hook error (allowing): {str(e)}"
-        }
+        log(f"fail_closed={fail_closed}")
+
+        if fail_closed:
+            # FAIL CLOSED: Block on errors (safer but stricter)
+            output = {
+                "decision": "block",
+                "reason": (
+                    f"ERI-RPG ENFORCEMENT ERROR (fail-closed mode):\n"
+                    f"Hook error: {str(e)}\n\n"
+                    f"To allow (less safe): Set enforcement.fail_closed=false in config"
+                )
+            }
+        else:
+            # FAIL OPEN: Allow on errors (backwards compatible)
+            output = {
+                "systemMessage": f"EriRPG hook error (allowing): {str(e)}"
+            }
+
         print(json.dumps(output))
         sys.exit(0)
 

@@ -29,7 +29,7 @@ def register(cli):
     @click.argument("name")
     @click.option("--path", "-p", type=click.Path(), default=None,
                   help="Path to project root (defaults to current directory)")
-    @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo", "dart"]),
+    @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo"]),
                   help="Programming language (auto-detected if not specified)")
     @click.option("--tier", "-t", default="lite", type=click.Choice(["lite", "standard", "full"]),
                   help="Feature tier (default: lite)")

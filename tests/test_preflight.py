@@ -163,9 +163,9 @@ class TestPreflightState:
         state_file = Path(self.project_path) / ".eri-rpg" / "preflight_state.json"
         assert state_file.exists()
 
-        # Check state content
+        # Check state content - uses target_files in current format
         state = json.loads(state_file.read_text())
-        assert "test.py" in state.get("allowed_files", [])
+        assert "test.py" in state.get("target_files", [])
 
     def test_preflight_state_cleared_on_complete(self):
         """Preflight state should be clearable."""

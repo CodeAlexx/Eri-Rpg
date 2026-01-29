@@ -130,8 +130,8 @@ If hooks fail, check:
 
 ### Module import errors
 
-The `hooks.py` file shadows the `hooks/` directory. This is a known issue.
-Hooks must be called as scripts, not imported as modules.
+~~The `hooks.py` file shadows the `hooks/` directory.~~ This issue was resolved
+by renaming the file to `write_guard.py`. Hooks can now be imported as modules.
 
 ```bash
 # This works:

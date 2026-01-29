@@ -22,8 +22,8 @@ def register(cli):
     @cli.command()
     @click.argument("name")
     @click.argument("path", type=click.Path())
-    @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo", "dart"]),
-                  help="Programming language (auto-detected if not specified). Supported: python, rust, c, mojo, dart.")
+    @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo"]),
+                  help="Programming language (auto-detected if not specified). Supported: python, rust, c, mojo.")
     def add(name: str, path: str, lang: str):
         """Register a project.
 
