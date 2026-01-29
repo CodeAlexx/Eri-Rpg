@@ -20,12 +20,53 @@ DEFAULT_SETTINGS = {
     "statusline": {
         "enabled": True,
         "elements": {
+            "persona": True,
             "phase": True,
             "context": True,
             "task": True,
             "time": False
         }
     }
+}
+
+# Default persona when nothing else applies
+DEFAULT_PERSONA = "analyzer"
+
+# Persona defaults for each phase
+# Maps EriRPG phases to SuperClaude personas
+PHASE_PERSONA_DEFAULTS = {
+    "idle": "analyzer",
+    "extracting": "analyzer",
+    "planning": "architect",
+    "context_ready": "analyzer",
+    "implementing": "backend",
+    "verifying": "qa",
+    "documenting": "scribe",
+    "researching": "analyzer",
+    "designing": "architect",
+    "testing": "qa",
+    "refactoring": "refactorer",
+    "optimizing": "performance",
+    "securing": "security",
+}
+
+# Action-based persona overrides (takes precedence over phase)
+ACTION_PERSONA_DEFAULTS = {
+    "extract": "analyzer",
+    "plan": "architect",
+    "context": "analyzer",
+    "take": "architect",
+    "work": "backend",
+    "implement": "backend",
+    "done": "analyzer",
+    "decision": "architect",
+    "learn": "analyzer",
+    "verify": "qa",
+    "test": "qa",
+    "document": "scribe",
+    "research": "analyzer",
+    "quick": "backend",
+    "quick-done": "analyzer",
 }
 
 def load_settings() -> dict:
@@ -38,6 +79,46 @@ def load_settings() -> dict:
         except:
             pass
     return DEFAULT_SETTINGS
+
+
+def load_global_state() -> dict:
+    """Load global state from ~/.eri-rpg/state.json"""
+    state_path = Path.home() / ".eri-rpg" / "state.json"
+    if state_path.exists():
+        try:
+            with open(state_path) as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+
+def get_active_persona(global_state: dict) -> str:
+    """Determine active persona from state.
+
+    Priority:
+    1. Explicitly set persona in state
+    2. Last action's default persona
+    3. Current phase's default persona
+    4. Global default
+    """
+    # Check for explicit persona override
+    if global_state.get("persona"):
+        return global_state["persona"]
+
+    # Check last action in history
+    history = global_state.get("history", [])
+    if history:
+        last_action = history[-1].get("action", "")
+        if last_action in ACTION_PERSONA_DEFAULTS:
+            return ACTION_PERSONA_DEFAULTS[last_action]
+
+    # Check current phase
+    phase = global_state.get("phase", "idle")
+    if phase in PHASE_PERSONA_DEFAULTS:
+        return PHASE_PERSONA_DEFAULTS[phase]
+
+    return DEFAULT_PERSONA
 
 def find_state_file() -> Path | None:
     """Find STATE.md in current or parent directories."""
@@ -97,10 +178,14 @@ def parse_state_file(state_path: Path) -> dict:
 
     return result
 
-def format_statusline(state: dict, context_pct: int | None, settings: dict) -> str:
+def format_statusline(state: dict, context_pct: int | None, settings: dict, persona: str | None) -> str:
     """Format the status line based on settings."""
     elements = settings.get("statusline", {}).get("elements", {})
     parts = []
+
+    # Persona element (always first when enabled)
+    if elements.get("persona", True) and persona:
+        parts.append(f"🎭 {persona}")
 
     # Phase element
     if elements.get("phase", True) and state.get("phase_current"):
@@ -146,14 +231,18 @@ def main():
     except:
         pass
 
-    # Find and parse state file
+    # Find and parse state file (project-level)
     state_path = find_state_file()
     state = {}
     if state_path:
         state = parse_state_file(state_path)
 
+    # Load global state for persona
+    global_state = load_global_state()
+    persona = get_active_persona(global_state)
+
     # Format and output
-    statusline = format_statusline(state, context_pct, settings)
+    statusline = format_statusline(state, context_pct, settings, persona)
     print(statusline)
 
 if __name__ == "__main__":

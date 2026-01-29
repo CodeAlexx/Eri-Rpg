@@ -206,3 +206,91 @@ def register(cli):
         """
         from erirpg.commands import get_help_text
         click.echo(get_help_text())
+
+    # SuperClaude-compatible personas (11 total)
+    SUPERCLAUDE_PERSONAS = [
+        "architect",   # Systems design, long-term architecture
+        "frontend",    # UI/UX, accessibility
+        "backend",     # Server-side, reliability
+        "analyzer",    # Root cause analysis, investigation
+        "security",    # Threat modeling, vulnerabilities
+        "mentor",      # Knowledge transfer, teaching
+        "refactorer",  # Code quality, tech debt
+        "performance", # Optimization, bottlenecks
+        "qa",          # Testing, quality assurance
+        "devops",      # Infrastructure, deployment
+        "scribe",      # Documentation, writing
+    ]
+
+    @cli.command(name="set-persona")
+    @click.argument("name", type=click.Choice(SUPERCLAUDE_PERSONAS, case_sensitive=False))
+    def set_persona_cmd(name: str):
+        """Set the active persona for the status line.
+
+        This sets the persona displayed in Claude Code's status line.
+        The persona affects how Claude approaches tasks.
+
+        SuperClaude Personas:
+        - architect:   Systems design, scalability
+        - frontend:    UI/UX, accessibility
+        - backend:     Server-side, reliability
+        - analyzer:    Root cause, investigation
+        - security:    Threat modeling
+        - mentor:      Teaching, explanation
+        - refactorer:  Code quality
+        - performance: Optimization
+        - qa:          Testing
+        - devops:      Infrastructure
+        - scribe:      Documentation
+
+        \b
+        Examples:
+            eri-rpg set-persona architect
+            eri-rpg set-persona qa
+        """
+        import json
+        from pathlib import Path
+
+        state_path = Path.home() / ".eri-rpg" / "state.json"
+
+        # Load existing state
+        state = {}
+        if state_path.exists():
+            try:
+                state = json.loads(state_path.read_text())
+            except:
+                pass
+
+        # Update persona
+        state["persona"] = name.lower()
+
+        # Save
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(state, indent=2))
+
+        click.echo(f"Active persona set to: {name.lower()}")
+        click.echo("Status line will show: 🎭 " + name.lower())
+
+    @cli.command(name="clear-persona")
+    def clear_persona_cmd():
+        """Clear explicit persona (use automatic detection).
+
+        Removes the explicit persona override, allowing the system
+        to auto-detect persona based on workflow phase and actions.
+        """
+        import json
+        from pathlib import Path
+
+        state_path = Path.home() / ".eri-rpg" / "state.json"
+
+        if not state_path.exists():
+            click.echo("No state file found")
+            return
+
+        state = json.loads(state_path.read_text())
+        if "persona" in state:
+            del state["persona"]
+            state_path.write_text(json.dumps(state, indent=2))
+            click.echo("Persona cleared. Using automatic detection.")
+        else:
+            click.echo("No explicit persona was set.")
