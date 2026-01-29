@@ -6,6 +6,44 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ## January 29, 2026
 
+### Per-Project Environment Configuration
+
+Store environment settings per project to avoid wasting tokens guessing how to run tests, lint, etc.
+
+**New EnvironmentConfig dataclass:**
+| Field | Description | Example |
+|-------|-------------|---------|
+| runner | Package manager | uv, pip, poetry, cargo, npm |
+| test | Test command | `uv run pytest` |
+| lint | Lint command | `uv run ruff check` |
+| format | Format command | `uv run ruff format` |
+| build | Build command | `uv build` |
+| run | Run command | `uv run python main.py` |
+| typecheck | Type check command | `uv run mypy` |
+| python | Python path | `.venv/bin/python` |
+| venv | Virtual env path | `.venv` |
+| env_vars | Environment variables | `{"DEBUG": "1"}` |
+| src_dir | Source directory | `src` |
+| test_dir | Test directory | `tests` |
+
+**New CLI Commands:**
+| Command | Description |
+|---------|-------------|
+| `env <project> --show` | Show environment config |
+| `env <project> --detect` | Auto-detect from project files |
+| `env <project> --set NAME VALUE` | Set a command/path |
+| `env <project> --var KEY VALUE` | Set environment variable |
+
+**Auto-Detection Supports:**
+- pyproject.toml (uv/poetry detection via `[tool.uv]` or `[tool.poetry]`)
+- requirements.txt (pip)
+- package.json (npm/pnpm/yarn via lock files)
+- Cargo.toml (cargo)
+- .venv directories
+
+**New Slash Command:**
+- `/eri:env` - Show project environment
+
 ### Spec-Driven Session File Generation
 
 Session files now reflect actual spec execution steps for modification tasks:
