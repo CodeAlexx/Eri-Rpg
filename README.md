@@ -134,6 +134,25 @@ This persists across sessions. Claude resumes where it left off.
 - [docs/MANUAL.md](docs/MANUAL.md) - Complete reference
 - [DESIGN.md](DESIGN.md) - Technical architecture
 
+## Empowerment Directive
+
+EriRPG includes [EMPOWERMENT.md](EMPOWERMENT.md) - a mandatory behavior directive based on research showing AI assistants can inadvertently undermine user autonomy and skill development.
+
+**The core principle:** Make the developer better, not unnecessary.
+
+This means Claude will:
+- **Challenge before compliance** - Push back on bad ideas before implementing
+- **Require intent** - Ask "why" before blindly executing "what"
+- **Flag autonomy transfers** - Enumerate significant decisions before making them
+- **Preserve skills** - Explain reasoning so you can do it yourself next time
+- **No sycophancy** - Honest feedback over empty validation
+
+Based on: [Who's in Charge? Disempowerment Patterns in Real-World LLM Usage](https://arxiv.org/abs/2601.19062) (Sharma et al., 2026)
+
+> "Interactions with greater disempowerment potential receive higher user approval ratings, possibly suggesting a tension between short-term user preferences and long-term human empowerment."
+
+EriRPG optimizes for your growth, not your approval.
+
 ## Status
 
 Alpha v0.56 - usable but evolving.
@@ -145,6 +164,8 @@ Alpha v0.56 - usable but evolving.
 - ✅ Discussion mode
 - ✅ Run tracking with decisions
 - ✅ Claude Code hooks
+- ✅ Session context persistence (SQLite)
+- ✅ Automatic git branch tracking
 
 ### In Progress
 - ⚠️ Multi-agent parallel execution

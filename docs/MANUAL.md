@@ -33,6 +33,7 @@ EriRPG gives Claude a structured workflow and persistent memory. You talk to Cla
 - Verify changes with tests before marking complete
 - Follow a structured workflow: discuss → plan → implement → verify
 - Rollback if something goes wrong
+- Challenge bad ideas and require intent (see [EMPOWERMENT.md](/EMPOWERMENT.md))
 
 **What you need to do:**
 - Install EriRPG (one time)
@@ -363,6 +364,23 @@ For vague or large goals:
 | `eri-rpg handoff <project>` | Generate handoff summary |
 | `eri-rpg resume` | Show resume context |
 
+### Session Context (New)
+
+| Command | Description |
+|---------|-------------|
+| `eri-rpg snapshot --alias "name"` | Checkpoint with readable name |
+| `eri-rpg add-decision "ctx" "choice" "why"` | Log decision to SQLite |
+| `eri-rpg add-blocker "desc" --severity HIGH` | Track blocker |
+| `eri-rpg add-action "action" --priority 5` | Queue next action |
+| `eri-rpg recall-decision --last 10` | List recent decisions |
+| `eri-rpg generate-context` | Generate CONTEXT.md |
+| `eri-rpg generate-status` | Generate STATUS.md |
+
+Session context persists in SQLite and is automatically:
+- Captured before context compaction (PreCompact hook)
+- Presented at session start (SessionStart hook)
+- Includes git branch for context
+
 ### Configuration
 
 | Command | Description |
@@ -449,6 +467,14 @@ summary = agent.generate_summary("Added caching")
 ---
 
 ## Version History
+
+**v0.57-alpha** (January 2026)
+- SQLite session context persistence
+- Automatic git branch tracking
+- Session aliases for human-readable names
+- EMPOWERMENT.md directive for AI behavior
+- Blockers and next actions tracking
+- Auto-generated CONTEXT.md and STATUS.md
 
 **v0.56-alpha** (January 2026)
 - Decision logging and deferred ideas
