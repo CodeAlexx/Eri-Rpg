@@ -45,7 +45,7 @@ class ProjectPatterns:
     """Detected patterns for a project."""
     # When analyzed
     analyzed_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "1.0.0"
+    version: str = "0.55.0-alpha"
 
     # Where things go
     structure: Dict[str, str] = field(default_factory=dict)

@@ -179,6 +179,28 @@ def normalize_path(path: str, project_path: str = "") -> str:
     return normalized
 
 
+def _get_cached_learnings_status(project_path: str) -> Optional[Dict[str, str]]:
+    """Get cached learnings_status from preflight_state.json.
+
+    Returns None if cache not available or expired.
+    This enables instant preflight lookups after running 'erirpg sync'.
+    """
+    import json
+    from pathlib import Path
+
+    preflight_file = Path(project_path) / ".eri-rpg" / "preflight_state.json"
+
+    if not preflight_file.exists():
+        return None
+
+    try:
+        with open(preflight_file, "r") as f:
+            state = json.load(f)
+        return state.get("learnings_status")
+    except (json.JSONDecodeError, IOError):
+        return None
+
+
 def preflight(
     project_path: str,
     files: List[str],
@@ -238,6 +260,9 @@ def preflight(
         except Exception as e:
             import sys; print(f"[EriRPG] {e}", file=sys.stderr)  # Graph not available, skip dependency analysis
 
+    # Try to use cached learnings_status for instant lookup
+    cached_status = _get_cached_learnings_status(project_path)
+
     # Check learnings for each file
     for file_path in normalized_files:
         # module_key is already normalized
@@ -248,9 +273,15 @@ def preflight(
         if learning:
             report.existing_learnings[file_path] = learning
 
-            # Check staleness
-            if learning.is_stale(project_path):
-                report.stale_learnings.append(file_path)
+            # Check staleness - use cache if available, else compute
+            if cached_status and module_key in cached_status:
+                # Instant lookup from sync cache
+                if cached_status[module_key] == "stale":
+                    report.stale_learnings.append(file_path)
+            else:
+                # Fallback: compute staleness (slower)
+                if learning.is_stale(project_path):
+                    report.stale_learnings.append(file_path)
         else:
             report.missing_learnings.append(file_path)
 

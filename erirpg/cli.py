@@ -43,7 +43,7 @@ from erirpg.agent.run import WaveExecutor
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="0.55.0-alpha")
 def cli():
     """EriRPG - Cross-project feature transplant tool.
 
@@ -5187,6 +5187,104 @@ def sync_patterns_cmd(project: str = None, direction: str = "both"):
     click.echo("Patterns are now synchronized.")
     click.echo("EriRPG learnings can use Drift confidence scores.")
     click.echo("Drift can use EriRPG extension points and registries.")
+
+
+@cli.command(name="sync")
+@click.argument("project", required=False)
+@click.option("--learn", is_flag=True, help="Auto-learn unknown/stale files")
+@click.option("--verbose", "-v", is_flag=True, help="Show detailed progress")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--lang", type=click.Choice(["python", "rust", "c", "mojo", "dart"]),
+              help="Limit to specific language")
+def sync_cmd(project: str = None, learn: bool = False, verbose: bool = False,
+             as_json: bool = False, lang: str = None):
+    """Synchronize knowledge.json with codebase files.
+
+    Scans all source files and compares against existing learnings:
+
+    \b
+    - Known:   File exists and hash matches stored learning
+    - Stale:   File exists but content has changed
+    - Unknown: File exists but no learning stored
+    - Deleted: Learning exists but file was removed
+
+    Use --learn to automatically parse and learn unknown/stale files.
+
+    \b
+    Examples:
+        eri-rpg sync                    # Show status for current directory
+        eri-rpg sync onetrainer         # Show status for named project
+        eri-rpg sync --learn            # Auto-learn unknown/stale files
+        eri-rpg sync --learn --verbose  # Learn with detailed output
+        eri-rpg sync --json             # Output as JSON for scripting
+        eri-rpg sync --lang python      # Only scan Python files
+    """
+    from erirpg.sync import sync_knowledge, sync_and_learn
+
+    registry = Registry.get_instance()
+
+    # Get project path and name
+    if project:
+        proj = registry.get(project)
+        if not proj:
+            click.echo(f"Error: Project '{project}' not found", err=True)
+            sys.exit(1)
+        project_path = proj.path
+        project_name = project
+    else:
+        project_path = os.getcwd()
+        project_name = os.path.basename(project_path)
+
+    # Check .eri-rpg directory exists
+    eri_dir = os.path.join(project_path, ".eri-rpg")
+    if not os.path.exists(eri_dir):
+        click.echo(f"Warning: No .eri-rpg directory found at {project_path}")
+        click.echo("Creating .eri-rpg directory...")
+        os.makedirs(eri_dir, exist_ok=True)
+
+    if learn:
+        # Sync and auto-learn
+        if not as_json:
+            click.echo(f"Scanning {project_path}...")
+        result = sync_and_learn(project_path, project_name, lang, verbose)
+    else:
+        # Just sync status
+        if not as_json:
+            click.echo(f"Scanning {project_path}...")
+        result = sync_knowledge(project_path, project_name, lang, verbose)
+
+    # Output results
+    if as_json:
+        click.echo(json.dumps(result.to_dict(), indent=2))
+    else:
+        click.echo("")
+        click.echo(result.summary())
+
+        # Show first few items in each category if verbose
+        if verbose:
+            if result.unknown:
+                click.echo("")
+                click.echo("Unknown files (sample):")
+                for status in result.unknown[:10]:
+                    click.echo(f"  - {status.path}")
+                if len(result.unknown) > 10:
+                    click.echo(f"  ... and {len(result.unknown) - 10} more")
+
+            if result.stale:
+                click.echo("")
+                click.echo("Stale files (sample):")
+                for status in result.stale[:10]:
+                    click.echo(f"  - {status.path}")
+                if len(result.stale) > 10:
+                    click.echo(f"  ... and {len(result.stale) - 10} more")
+
+            if result.deleted:
+                click.echo("")
+                click.echo("Deleted files:")
+                for status in result.deleted[:10]:
+                    click.echo(f"  - {status.path}")
+                if len(result.deleted) > 10:
+                    click.echo(f"  ... and {len(result.deleted) - 10} more")
 
 
 @cli.command(name="drift-patterns")

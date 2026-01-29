@@ -1,6 +1,37 @@
 # Changelog
 
-## v2.3.0 (2026-01-28)
+## v0.55.0-alpha (2026-01-28)
+
+Knowledge sync and instant preflight.
+
+### New Features
+
+**Knowledge Sync Command**
+- `eri-rpg sync [project]` - Compare codebase files against knowledge.json
+- `eri-rpg sync --learn` - Auto-learn unknown/stale files using parsers
+- `eri-rpg sync --json` - Output as JSON for scripting
+- `eri-rpg sync --lang python` - Limit to specific language
+- Categories: known (up-to-date), stale (changed), unknown (new), deleted (removed)
+
+**Instant Preflight**
+- Preflight now uses cached `learnings_status` from `preflight_state.json`
+- ~12ms lookup time instead of computing file hashes per-file
+- Run `eri-rpg sync --learn` to populate cache for instant preflight
+
+**New Module**
+- `erirpg/sync.py` - Knowledge synchronization logic
+- `SyncResult` dataclass for reporting
+- `sync_knowledge()` - Compare files vs knowledge
+- `sync_and_learn()` - Sync + auto-populate knowledge
+- `learn_file()` - Parse single file into StoredLearning
+
+### Version Cleanup
+- Corrected version strings across all modules to 0.55.0-alpha
+- Files updated: cli.py, memory.py, graph.py, analyze.py, registry.py, ui/*, pyproject.toml
+
+---
+
+## v0.54.0-alpha (2026-01-28)
 
 Bootstrap/Maintain mode system.
 

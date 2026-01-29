@@ -203,7 +203,7 @@ class Registry:
         Path(self.config_dir).mkdir(parents=True, exist_ok=True)
 
         data = {
-            "version": "1.0.0",
+            "version": "0.55.0-alpha",
             "projects": {k: v.to_dict() for k, v in self.projects.items()},
         }
 

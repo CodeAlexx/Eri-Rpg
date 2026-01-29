@@ -1327,7 +1327,7 @@ class KnowledgeStore:
     independently of the structural graph. Survives reindexing.
     """
     project: str
-    version: str = "2.2.0"  # Bumped for GSD-style decisions and deferred ideas
+    version: str = "0.55.0-alpha"
     learnings: Dict[str, StoredLearning] = field(default_factory=dict)
     decisions: List[StoredDecision] = field(default_factory=list)
     patterns: Dict[str, str] = field(default_factory=dict)
@@ -1596,7 +1596,7 @@ class KnowledgeStore:
 
         return cls(
             project=data.get("project", "unknown"),
-            version=data.get("version", "2.1.0"),
+            version=data.get("version", "0.55.0-alpha"),
             learnings={
                 k: StoredLearning.from_dict(v)
                 for k, v in data.get("learnings", {}).items()
