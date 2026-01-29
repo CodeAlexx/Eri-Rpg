@@ -88,6 +88,7 @@ def register_all(cli: "click.Group") -> None:
     from . import drift
     from . import storage_cmd
     from . import debug_cmd
+    from . import todo_cmd
 
     setup.register(cli)
     mode.register(cli)
@@ -117,3 +118,4 @@ def register_all(cli: "click.Group") -> None:
     drift.register(cli)
     storage_cmd.register(cli)
     debug_cmd.register(cli)
+    todo_cmd.register(cli)

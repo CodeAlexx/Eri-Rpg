@@ -283,6 +283,16 @@ def main():
                 messages.append(f"EriRPG: Quick fix active on {quick_fix.get('target_file')}")
                 messages.append("Complete: eri-rpg quick-done or cancel: eri-rpg quick-cancel")
 
+        # Add personal todos summary
+        try:
+            from erirpg.todos import get_session_summary
+            todo_summary = get_session_summary()
+            if todo_summary:
+                messages.append("")
+                messages.append(todo_summary)
+        except Exception as e:
+            log(f"Todo summary error: {e}")
+
         # Output message if any
         if messages:
             output = {
