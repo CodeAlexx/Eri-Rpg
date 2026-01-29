@@ -23,28 +23,35 @@ Production-ready for personal use. See [docs/MANUAL.md](docs/MANUAL.md) for comp
 
 ## Quick Start
 
+**One-time setup (human):**
 ```bash
-# Install
 pip install -e /path/to/eri-rpg
-
-# Set up Claude Code integration
-eri-rpg install
-
-# Register a project
-eri-rpg add myproject /path/to/project
-
-# Index it (builds dependency graph)
-eri-rpg index myproject
-
-# Start a discussion for a vague goal
-eri-rpg discuss myproject "improve the caching system"
-
-# Or generate a spec directly for a clear goal
-eri-rpg goal-plan myproject "add retry logic to api.py"
-
-# Start the run
-eri-rpg goal-run myproject
+eri-rpg install                        # Set up Claude Code hooks
+eri-rpg add myproject /path/to/project # Register project
+eri-rpg index myproject                # Build dependency graph
 ```
+
+**Then in Claude Code, use slash commands:**
+- `/eri:start` - Start a session (Claude runs the workflow)
+- `/eri:execute` - Execute a goal with full agent loop
+- `/eri:quick` - Quick single-file fix
+- `/eri:status` - Check current state
+
+**Claude uses the CLI internally** - you describe what you want, Claude runs the commands:
+```
+User: "Add retry logic to the API client"
+Claude: Runs eri-rpg quick, makes edits, runs eri-rpg quick-done
+```
+
+### Tiers
+
+| Tier | Features | Default |
+|------|----------|---------|
+| **lite** | Quick fix, indexing, cross-project search | ✓ |
+| **standard** | + Discussion mode, codebase awareness | |
+| **full** | + Agent runs, specs, plans, verification | |
+
+Upgrade with: `eri-rpg mode myproject --standard`
 
 ## Core Commands
 
@@ -56,7 +63,7 @@ eri-rpg list                   # List registered projects
 eri-rpg index <name>           # Build dependency graph
 ```
 
-### Discussion & Planning
+### Discussion & Planning (standard+ tier)
 ```bash
 eri-rpg discuss <project> "<goal>"        # Start discussion for vague goal
 eri-rpg discuss-answer <project> <n> "answer"  # Answer question N
@@ -93,7 +100,7 @@ eri-rpg db-export myproject out.json  # Export to JSON for sharing
 
 Cross-project queries use a global SQLite database (`~/.eri-rpg/graphs.db`) for O(log n) indexed lookups across all registered projects.
 
-### Run Management
+### Run Management (full tier)
 ```bash
 eri-rpg goal-plan <project> "<goal>"  # Generate spec from goal
 eri-rpg goal-run <project>            # Start/resume run
@@ -103,7 +110,7 @@ eri-rpg cleanup <project> --prune     # Delete stale runs
 eri-rpg rollback <project> <file>     # Rollback changes
 ```
 
-### Quick Fix Mode
+### Quick Fix Mode (all tiers)
 ```bash
 eri-rpg quick <project> <file> "description"  # Start quick fix
 eri-rpg quick-done <project>                  # Commit and complete
