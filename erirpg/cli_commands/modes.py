@@ -21,6 +21,79 @@ import click
 from erirpg.cli_commands.guards import tier_required
 
 
+def _get_session_id(project_path: str) -> str:
+    """Get session ID from state file."""
+    from pathlib import Path
+
+    state_file = Path(project_path) / ".eri-rpg" / "state.json"
+    if state_file.exists():
+        try:
+            with open(state_file) as f:
+                state = json.load(f)
+                return state.get("session_id")
+        except Exception:
+            pass
+    return None
+
+
+def _get_project_name(project_path: str) -> str:
+    """Get project name from config."""
+    from pathlib import Path
+
+    config_file = Path(project_path) / ".eri-rpg" / "config.json"
+    if config_file.exists():
+        try:
+            with open(config_file) as f:
+                config = json.load(f)
+                return config.get("project_name", os.path.basename(project_path))
+        except Exception:
+            pass
+    return os.path.basename(project_path)
+
+
+def _archive_session(project_path: str, summary: str):
+    """Archive session decisions and regenerate STATUS.md."""
+    from pathlib import Path
+
+    try:
+        from erirpg import storage
+        from erirpg.generators.status_md import regenerate_status
+
+        session_id = _get_session_id(project_path)
+        project_name = _get_project_name(project_path)
+
+        if session_id:
+            # End the session with summary
+            storage.end_session(session_id, summary=summary)
+
+            # Archive decisions for this session
+            archived_count = storage.archive_session_decisions(session_id)
+            if archived_count > 0:
+                click.echo(f"  Archived {archived_count} decision(s)")
+
+        # Regenerate STATUS.md
+        status_path = regenerate_status(project_name, project_path)
+        click.echo(f"  Updated: {status_path}")
+
+        # Clear session ID from state
+        state_file = Path(project_path) / ".eri-rpg" / "state.json"
+        if state_file.exists():
+            try:
+                with open(state_file) as f:
+                    state = json.load(f)
+                state.pop("session_id", None)
+                with open(state_file, "w") as f:
+                    json.dump(state, f, indent=2)
+            except Exception:
+                pass
+
+    except ImportError:
+        # Storage module not available, skip
+        pass
+    except Exception as e:
+        click.echo(f"  Warning: Could not archive session: {e}", err=True)
+
+
 def register(cli):
     """Register mode commands with CLI."""
     from erirpg.registry import Registry
@@ -101,10 +174,11 @@ def register(cli):
             click.echo("")
 
     @cli.command()
-    def done():
+    @click.option("--summary", "-s", default=None, help="Summary of what was accomplished")
+    def done(summary: str):
         """Mark current work as complete.
 
-        Updates state and logs completion.
+        Updates state, archives session decisions, and regenerates STATUS.md.
         """
         state = State.load()
 
@@ -114,6 +188,11 @@ def register(cli):
 
         task = state.current_task or "Unknown task"
         state.log("done", f"Completed: {task}")
+
+        # Archive session and regenerate STATUS.md
+        project_path = os.getcwd()
+        _archive_session(project_path, summary or task)
+
         state.reset()
 
         click.echo(f"✓ Marked complete: {task}")

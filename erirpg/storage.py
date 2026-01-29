@@ -26,7 +26,7 @@ from erirpg.graph import Graph, Module, Interface, Edge
 DEFAULT_DB_PATH = os.path.expanduser("~/.eri-rpg/graphs.db")
 
 # Schema version for migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def get_db_path() -> str:
@@ -149,6 +149,78 @@ def init_db(db_path: Optional[str] = None) -> None:
 
             -- Set schema version
             INSERT OR REPLACE INTO schema_version (version) VALUES (1);
+
+            -- =================================================================
+            -- Session tracking tables (v2)
+            -- =================================================================
+
+            -- Sessions table - tracks Claude sessions for context preservation
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,  -- UUID
+                project_name TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                ended_at TEXT,
+                phase TEXT,  -- e.g., 'implementing', 'researching', 'planning'
+                step TEXT,   -- e.g., '2/5 - Add SQLite session storage'
+                progress_pct INTEGER DEFAULT 0,
+                summary TEXT,  -- Brief summary of what was accomplished
+                files_modified TEXT  -- JSON array of modified files
+            );
+
+            -- Decisions made during sessions
+            CREATE TABLE IF NOT EXISTS decisions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                context TEXT NOT NULL,  -- What was being decided
+                decision TEXT NOT NULL,  -- What was chosen
+                rationale TEXT,  -- Why this choice
+                timestamp TEXT NOT NULL,
+                archived INTEGER DEFAULT 0  -- 1 if archived after session
+            );
+
+            -- Blockers encountered during sessions
+            CREATE TABLE IF NOT EXISTS blockers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                description TEXT NOT NULL,
+                severity TEXT DEFAULT 'MEDIUM',  -- LOW, MEDIUM, HIGH, CRITICAL
+                resolved INTEGER DEFAULT 0,
+                resolved_at TEXT,
+                resolution TEXT,  -- How it was resolved
+                timestamp TEXT NOT NULL
+            );
+
+            -- Next actions queue
+            CREATE TABLE IF NOT EXISTS next_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                action TEXT NOT NULL,
+                priority INTEGER DEFAULT 0,  -- Higher = more important
+                completed INTEGER DEFAULT 0,
+                completed_at TEXT,
+                timestamp TEXT NOT NULL
+            );
+
+            -- Learnings captured during sessions (for cross-session knowledge)
+            CREATE TABLE IF NOT EXISTS session_learnings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                topic TEXT NOT NULL,
+                content TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            );
+
+            -- Indexes for session queries
+            CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_name);
+            CREATE INDEX IF NOT EXISTS idx_sessions_started ON sessions(started_at);
+            CREATE INDEX IF NOT EXISTS idx_decisions_session ON decisions(session_id);
+            CREATE INDEX IF NOT EXISTS idx_blockers_session ON blockers(session_id);
+            CREATE INDEX IF NOT EXISTS idx_blockers_unresolved ON blockers(resolved) WHERE resolved = 0;
+            CREATE INDEX IF NOT EXISTS idx_next_actions_session ON next_actions(session_id);
+            CREATE INDEX IF NOT EXISTS idx_next_actions_pending ON next_actions(completed) WHERE completed = 0;
+
+            -- Update schema version to 2
+            INSERT OR REPLACE INTO schema_version (version) VALUES (2);
         """)
         conn.commit()
 
@@ -682,3 +754,669 @@ def export_to_json(project_name: str, output_path: str, db_path: Optional[str] =
 
     graph.save(output_path)
     return True
+
+
+# =============================================================================
+# Session Tracking Operations
+# =============================================================================
+
+@dataclass
+class Session:
+    """A Claude session for context tracking."""
+    id: str
+    project_name: str
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    phase: Optional[str] = None
+    step: Optional[str] = None
+    progress_pct: int = 0
+    summary: Optional[str] = None
+    files_modified: Optional[List[str]] = None
+
+
+@dataclass
+class Decision:
+    """A decision made during a session."""
+    id: int
+    session_id: str
+    context: str
+    decision: str
+    rationale: Optional[str]
+    timestamp: datetime
+    archived: bool = False
+
+
+@dataclass
+class Blocker:
+    """A blocker encountered during a session."""
+    id: int
+    session_id: str
+    description: str
+    severity: str
+    resolved: bool
+    resolved_at: Optional[datetime]
+    resolution: Optional[str]
+    timestamp: datetime
+
+
+@dataclass
+class NextAction:
+    """An action queued for future work."""
+    id: int
+    session_id: str
+    action: str
+    priority: int
+    completed: bool
+    completed_at: Optional[datetime]
+    timestamp: datetime
+
+
+def create_session(
+    session_id: str,
+    project_name: str,
+    phase: Optional[str] = None,
+    step: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> Session:
+    """Create a new session record."""
+    init_db(db_path)
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        conn.execute("""
+            INSERT INTO sessions (id, project_name, started_at, phase, step)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session_id, project_name, now.isoformat(), phase, step))
+        conn.commit()
+
+    return Session(
+        id=session_id,
+        project_name=project_name,
+        started_at=now,
+        phase=phase,
+        step=step,
+    )
+
+
+def get_session(session_id: str, db_path: Optional[str] = None) -> Optional[Session]:
+    """Get a session by ID."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        row = conn.execute("""
+            SELECT * FROM sessions WHERE id = ?
+        """, (session_id,)).fetchone()
+
+        if not row:
+            return None
+
+        import json
+        files = json.loads(row["files_modified"]) if row["files_modified"] else None
+
+        return Session(
+            id=row["id"],
+            project_name=row["project_name"],
+            started_at=datetime.fromisoformat(row["started_at"]),
+            ended_at=datetime.fromisoformat(row["ended_at"]) if row["ended_at"] else None,
+            phase=row["phase"],
+            step=row["step"],
+            progress_pct=row["progress_pct"],
+            summary=row["summary"],
+            files_modified=files,
+        )
+
+
+def get_latest_session(project_name: str, db_path: Optional[str] = None) -> Optional[Session]:
+    """Get the most recent session for a project."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        row = conn.execute("""
+            SELECT * FROM sessions
+            WHERE project_name = ?
+            ORDER BY started_at DESC
+            LIMIT 1
+        """, (project_name,)).fetchone()
+
+        if not row:
+            return None
+
+        import json
+        files = json.loads(row["files_modified"]) if row["files_modified"] else None
+
+        return Session(
+            id=row["id"],
+            project_name=row["project_name"],
+            started_at=datetime.fromisoformat(row["started_at"]),
+            ended_at=datetime.fromisoformat(row["ended_at"]) if row["ended_at"] else None,
+            phase=row["phase"],
+            step=row["step"],
+            progress_pct=row["progress_pct"],
+            summary=row["summary"],
+            files_modified=files,
+        )
+
+
+def update_session(
+    session_id: str,
+    phase: Optional[str] = None,
+    step: Optional[str] = None,
+    progress_pct: Optional[int] = None,
+    summary: Optional[str] = None,
+    files_modified: Optional[List[str]] = None,
+    ended_at: Optional[datetime] = None,
+    db_path: Optional[str] = None,
+) -> bool:
+    """Update session fields. Only non-None values are updated."""
+    updates = []
+    params = []
+
+    if phase is not None:
+        updates.append("phase = ?")
+        params.append(phase)
+    if step is not None:
+        updates.append("step = ?")
+        params.append(step)
+    if progress_pct is not None:
+        updates.append("progress_pct = ?")
+        params.append(progress_pct)
+    if summary is not None:
+        updates.append("summary = ?")
+        params.append(summary)
+    if files_modified is not None:
+        import json
+        updates.append("files_modified = ?")
+        params.append(json.dumps(files_modified))
+    if ended_at is not None:
+        updates.append("ended_at = ?")
+        params.append(ended_at.isoformat())
+
+    if not updates:
+        return False
+
+    params.append(session_id)
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute(
+            f"UPDATE sessions SET {', '.join(updates)} WHERE id = ?",
+            params,
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def end_session(
+    session_id: str,
+    summary: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> bool:
+    """Mark a session as ended."""
+    return update_session(
+        session_id,
+        ended_at=datetime.now(),
+        summary=summary,
+        db_path=db_path,
+    )
+
+
+# Decision operations
+
+def add_decision(
+    session_id: str,
+    context: str,
+    decision: str,
+    rationale: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> Decision:
+    """Add a decision to a session."""
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            INSERT INTO decisions (session_id, context, decision, rationale, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session_id, context, decision, rationale, now.isoformat()))
+        conn.commit()
+
+        return Decision(
+            id=cursor.lastrowid,
+            session_id=session_id,
+            context=context,
+            decision=decision,
+            rationale=rationale,
+            timestamp=now,
+        )
+
+
+def get_session_decisions(
+    session_id: str,
+    include_archived: bool = False,
+    db_path: Optional[str] = None,
+) -> List[Decision]:
+    """Get all decisions for a session."""
+    with get_connection(db_path) as conn:
+        if include_archived:
+            rows = conn.execute("""
+                SELECT * FROM decisions WHERE session_id = ? ORDER BY timestamp
+            """, (session_id,))
+        else:
+            rows = conn.execute("""
+                SELECT * FROM decisions WHERE session_id = ? AND archived = 0 ORDER BY timestamp
+            """, (session_id,))
+
+        return [
+            Decision(
+                id=r["id"],
+                session_id=r["session_id"],
+                context=r["context"],
+                decision=r["decision"],
+                rationale=r["rationale"],
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+                archived=bool(r["archived"]),
+            )
+            for r in rows
+        ]
+
+
+def get_recent_decisions(
+    project_name: str,
+    limit: int = 10,
+    db_path: Optional[str] = None,
+) -> List[Decision]:
+    """Get recent decisions across all sessions for a project."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT d.* FROM decisions d
+            JOIN sessions s ON d.session_id = s.id
+            WHERE s.project_name = ?
+            ORDER BY d.timestamp DESC
+            LIMIT ?
+        """, (project_name, limit))
+
+        return [
+            Decision(
+                id=r["id"],
+                session_id=r["session_id"],
+                context=r["context"],
+                decision=r["decision"],
+                rationale=r["rationale"],
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+                archived=bool(r["archived"]),
+            )
+            for r in rows
+        ]
+
+
+def search_decisions(
+    project_name: str,
+    context_query: str,
+    db_path: Optional[str] = None,
+) -> List[Decision]:
+    """Search decisions by context keyword."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT d.* FROM decisions d
+            JOIN sessions s ON d.session_id = s.id
+            WHERE s.project_name = ? AND d.context LIKE ?
+            ORDER BY d.timestamp DESC
+        """, (project_name, f"%{context_query}%"))
+
+        return [
+            Decision(
+                id=r["id"],
+                session_id=r["session_id"],
+                context=r["context"],
+                decision=r["decision"],
+                rationale=r["rationale"],
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+                archived=bool(r["archived"]),
+            )
+            for r in rows
+        ]
+
+
+def archive_session_decisions(session_id: str, db_path: Optional[str] = None) -> int:
+    """Archive all decisions for a session."""
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            UPDATE decisions SET archived = 1 WHERE session_id = ?
+        """, (session_id,))
+        conn.commit()
+        return cursor.rowcount
+
+
+# Blocker operations
+
+def add_blocker(
+    session_id: str,
+    description: str,
+    severity: str = "MEDIUM",
+    db_path: Optional[str] = None,
+) -> Blocker:
+    """Add a blocker to a session."""
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            INSERT INTO blockers (session_id, description, severity, timestamp)
+            VALUES (?, ?, ?, ?)
+        """, (session_id, description, severity, now.isoformat()))
+        conn.commit()
+
+        return Blocker(
+            id=cursor.lastrowid,
+            session_id=session_id,
+            description=description,
+            severity=severity,
+            resolved=False,
+            resolved_at=None,
+            resolution=None,
+            timestamp=now,
+        )
+
+
+def resolve_blocker(
+    blocker_id: int,
+    resolution: str,
+    db_path: Optional[str] = None,
+) -> bool:
+    """Mark a blocker as resolved."""
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            UPDATE blockers SET resolved = 1, resolved_at = ?, resolution = ?
+            WHERE id = ?
+        """, (now.isoformat(), resolution, blocker_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def get_unresolved_blockers(
+    project_name: str,
+    db_path: Optional[str] = None,
+) -> List[Blocker]:
+    """Get all unresolved blockers for a project."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT b.* FROM blockers b
+            JOIN sessions s ON b.session_id = s.id
+            WHERE s.project_name = ? AND b.resolved = 0
+            ORDER BY
+                CASE b.severity
+                    WHEN 'CRITICAL' THEN 1
+                    WHEN 'HIGH' THEN 2
+                    WHEN 'MEDIUM' THEN 3
+                    WHEN 'LOW' THEN 4
+                END,
+                b.timestamp DESC
+        """, (project_name,))
+
+        return [
+            Blocker(
+                id=r["id"],
+                session_id=r["session_id"],
+                description=r["description"],
+                severity=r["severity"],
+                resolved=bool(r["resolved"]),
+                resolved_at=datetime.fromisoformat(r["resolved_at"]) if r["resolved_at"] else None,
+                resolution=r["resolution"],
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+            )
+            for r in rows
+        ]
+
+
+def get_session_blockers(
+    session_id: str,
+    db_path: Optional[str] = None,
+) -> List[Blocker]:
+    """Get all blockers for a session."""
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT * FROM blockers WHERE session_id = ? ORDER BY timestamp
+        """, (session_id,))
+
+        return [
+            Blocker(
+                id=r["id"],
+                session_id=r["session_id"],
+                description=r["description"],
+                severity=r["severity"],
+                resolved=bool(r["resolved"]),
+                resolved_at=datetime.fromisoformat(r["resolved_at"]) if r["resolved_at"] else None,
+                resolution=r["resolution"],
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+            )
+            for r in rows
+        ]
+
+
+# Next action operations
+
+def add_next_action(
+    session_id: str,
+    action: str,
+    priority: int = 0,
+    db_path: Optional[str] = None,
+) -> NextAction:
+    """Add a next action to a session."""
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            INSERT INTO next_actions (session_id, action, priority, timestamp)
+            VALUES (?, ?, ?, ?)
+        """, (session_id, action, priority, now.isoformat()))
+        conn.commit()
+
+        return NextAction(
+            id=cursor.lastrowid,
+            session_id=session_id,
+            action=action,
+            priority=priority,
+            completed=False,
+            completed_at=None,
+            timestamp=now,
+        )
+
+
+def complete_action(action_id: int, db_path: Optional[str] = None) -> bool:
+    """Mark a next action as completed."""
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            UPDATE next_actions SET completed = 1, completed_at = ?
+            WHERE id = ?
+        """, (now.isoformat(), action_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def get_pending_actions(
+    project_name: str,
+    db_path: Optional[str] = None,
+) -> List[NextAction]:
+    """Get all pending actions for a project, ordered by priority."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT a.* FROM next_actions a
+            JOIN sessions s ON a.session_id = s.id
+            WHERE s.project_name = ? AND a.completed = 0
+            ORDER BY a.priority DESC, a.timestamp
+        """, (project_name,))
+
+        return [
+            NextAction(
+                id=r["id"],
+                session_id=r["session_id"],
+                action=r["action"],
+                priority=r["priority"],
+                completed=bool(r["completed"]),
+                completed_at=datetime.fromisoformat(r["completed_at"]) if r["completed_at"] else None,
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+            )
+            for r in rows
+        ]
+
+
+def get_session_actions(
+    session_id: str,
+    db_path: Optional[str] = None,
+) -> List[NextAction]:
+    """Get all actions for a session."""
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT * FROM next_actions WHERE session_id = ?
+            ORDER BY priority DESC, timestamp
+        """, (session_id,))
+
+        return [
+            NextAction(
+                id=r["id"],
+                session_id=r["session_id"],
+                action=r["action"],
+                priority=r["priority"],
+                completed=bool(r["completed"]),
+                completed_at=datetime.fromisoformat(r["completed_at"]) if r["completed_at"] else None,
+                timestamp=datetime.fromisoformat(r["timestamp"]),
+            )
+            for r in rows
+        ]
+
+
+# Session learning operations
+
+def add_session_learning(
+    session_id: str,
+    topic: str,
+    content: str,
+    db_path: Optional[str] = None,
+) -> int:
+    """Add a learning to a session."""
+    now = datetime.now()
+
+    with get_connection(db_path) as conn:
+        cursor = conn.execute("""
+            INSERT INTO session_learnings (session_id, topic, content, timestamp)
+            VALUES (?, ?, ?, ?)
+        """, (session_id, topic, content, now.isoformat()))
+        conn.commit()
+        return cursor.lastrowid
+
+
+def get_session_learnings(
+    session_id: str,
+    db_path: Optional[str] = None,
+) -> List[dict]:
+    """Get all learnings for a session."""
+    with get_connection(db_path) as conn:
+        rows = conn.execute("""
+            SELECT * FROM session_learnings WHERE session_id = ? ORDER BY timestamp
+        """, (session_id,))
+
+        return [
+            {
+                "id": r["id"],
+                "topic": r["topic"],
+                "content": r["content"],
+                "timestamp": r["timestamp"],
+            }
+            for r in rows
+        ]
+
+
+# Session summary helpers
+
+def get_session_context(
+    session_id: str,
+    db_path: Optional[str] = None,
+) -> dict:
+    """Get complete context for a session including decisions, blockers, actions."""
+    init_db(db_path)
+    session = get_session(session_id, db_path)
+    if not session:
+        return {}
+
+    return {
+        "session": {
+            "id": session.id,
+            "project_name": session.project_name,
+            "started_at": session.started_at.isoformat(),
+            "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+            "phase": session.phase,
+            "step": session.step,
+            "progress_pct": session.progress_pct,
+            "summary": session.summary,
+            "files_modified": session.files_modified,
+        },
+        "decisions": [
+            {
+                "context": d.context,
+                "decision": d.decision,
+                "rationale": d.rationale,
+                "timestamp": d.timestamp.isoformat(),
+            }
+            for d in get_session_decisions(session_id, db_path=db_path)
+        ],
+        "blockers": [
+            {
+                "description": b.description,
+                "severity": b.severity,
+                "resolved": b.resolved,
+                "resolution": b.resolution,
+            }
+            for b in get_session_blockers(session_id, db_path=db_path)
+        ],
+        "next_actions": [
+            {
+                "action": a.action,
+                "priority": a.priority,
+                "completed": a.completed,
+            }
+            for a in get_session_actions(session_id, db_path=db_path)
+        ],
+        "learnings": get_session_learnings(session_id, db_path=db_path),
+    }
+
+
+def get_project_context_summary(
+    project_name: str,
+    db_path: Optional[str] = None,
+) -> dict:
+    """Get a summary of project context across recent sessions."""
+    latest = get_latest_session(project_name, db_path)
+    if not latest:
+        return {"has_context": False}
+
+    # Get stats
+    recent_decisions = get_recent_decisions(project_name, limit=5, db_path=db_path)
+    unresolved_blockers = get_unresolved_blockers(project_name, db_path=db_path)
+    pending_actions = get_pending_actions(project_name, db_path=db_path)
+
+    # Calculate time since last session
+    if latest.ended_at:
+        time_since = datetime.now() - latest.ended_at
+    else:
+        time_since = datetime.now() - latest.started_at
+
+    hours_since = time_since.total_seconds() / 3600
+
+    return {
+        "has_context": True,
+        "last_session": {
+            "id": latest.id,
+            "phase": latest.phase,
+            "step": latest.step,
+            "progress_pct": latest.progress_pct,
+            "hours_ago": round(hours_since, 1),
+            "was_ended": latest.ended_at is not None,
+        },
+        "decisions_count": len(recent_decisions),
+        "blockers_count": len(unresolved_blockers),
+        "blockers_high": len([b for b in unresolved_blockers if b.severity in ("HIGH", "CRITICAL")]),
+        "pending_actions": len(pending_actions),
+    }

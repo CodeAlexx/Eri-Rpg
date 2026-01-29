@@ -5,9 +5,20 @@ Commands:
 - session: Show or update current session state
 - handoff: Generate handoff summary for next session
 - gaps: Show gaps from verification failures
+- status: Show full session context from SQLite
+- snapshot: Save checkpoint before risky operations
+- decision: Record a decision with rationale
+- blocker: Add or resolve blockers
+- action: Add next actions
 """
 
+import json
+import os
 import sys
+import uuid
+from datetime import datetime
+from pathlib import Path
+
 import click
 
 
@@ -282,3 +293,310 @@ def register(cli):
                         click.echo(f"  ↳ {d.rationale}")
         except Exception:
             pass  # No run decisions to show
+
+    # ==========================================================================
+    # New SQLite-backed session commands
+    # ==========================================================================
+
+    def _get_project_name(project_path: str) -> str:
+        """Get project name from config or directory name."""
+        config_path = Path(project_path) / ".eri-rpg" / "config.json"
+        if config_path.exists():
+            try:
+                with open(config_path) as f:
+                    config = json.load(f)
+                    return config.get("project_name", Path(project_path).name)
+            except Exception:
+                pass
+        return Path(project_path).name
+
+    def _get_session_id(project_path: str) -> str:
+        """Get session ID from state file, or create one."""
+        state_file = Path(project_path) / ".eri-rpg" / "state.json"
+        state = {}
+        if state_file.exists():
+            try:
+                with open(state_file) as f:
+                    state = json.load(f)
+            except Exception:
+                pass
+
+        session_id = state.get("session_id")
+        if not session_id:
+            session_id = str(uuid.uuid4())[:8]
+            state["session_id"] = session_id
+            state_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(state_file, "w") as f:
+                json.dump(state, f, indent=2)
+
+        return session_id
+
+    @cli.command(name="status")
+    @click.option("--full", "-f", is_flag=True, help="Show full context with all details")
+    @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
+    def status_cmd(full: bool, project: str):
+        """Show session context from SQLite.
+
+        Displays current session status, decisions, blockers, and next actions.
+
+        Example:
+            eri-rpg status
+            eri-rpg status --full
+        """
+        try:
+            from erirpg import storage
+            from erirpg.generators.context_md import generate_compact_summary, generate_context_md
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        project_path = project or os.getcwd()
+        project_name = _get_project_name(project_path)
+
+        if full:
+            # Full context from CONTEXT.md generator
+            content = generate_context_md(project_name)
+            click.echo(content)
+        else:
+            # Compact summary
+            summary = generate_compact_summary(project_name)
+            click.echo(summary)
+
+    @cli.command(name="snapshot")
+    @click.option("--note", "-n", default=None, help="Note about this checkpoint")
+    @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
+    def snapshot_cmd(note: str, project: str):
+        """Save a checkpoint before risky operations.
+
+        Creates a snapshot of current session state. Useful before
+        major refactors or experimental changes.
+
+        Example:
+            eri-rpg snapshot --note "Before auth refactor"
+            eri-rpg snapshot -n "Testing new approach"
+        """
+        try:
+            from erirpg import storage
+            from erirpg.generators.context_md import generate_context_md
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        project_path = project or os.getcwd()
+        project_name = _get_project_name(project_path)
+        session_id = _get_session_id(project_path)
+
+        # Ensure session exists in SQLite
+        existing = storage.get_session(session_id)
+        if not existing:
+            storage.create_session(session_id, project_name)
+            click.echo(f"Created session: {session_id}")
+
+        # Generate CONTEXT.md as snapshot
+        context_path = Path(project_path) / ".eri-rpg" / "CONTEXT.md"
+        generate_context_md(project_name, session_id, str(context_path))
+
+        # Also save a timestamped snapshot
+        snapshots_dir = Path(project_path) / ".eri-rpg" / "snapshots"
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        snapshot_path = snapshots_dir / f"snapshot_{timestamp}.md"
+        generate_context_md(project_name, session_id, str(snapshot_path))
+
+        # Add note as learning if provided
+        if note:
+            storage.add_session_learning(session_id, "Snapshot Note", note)
+
+        click.echo(f"✓ Snapshot saved")
+        click.echo(f"  Session: {session_id}")
+        click.echo(f"  Context: {context_path}")
+        click.echo(f"  Archive: {snapshot_path}")
+
+    @cli.command(name="decision")
+    @click.argument("context")
+    @click.argument("choice")
+    @click.option("--why", "-w", default=None, help="Rationale for the decision")
+    @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
+    def decision_cmd(context: str, choice: str, why: str, project: str):
+        """Record a decision with rationale.
+
+        Decisions are stored in SQLite for cross-session recall.
+
+        Example:
+            eri-rpg decision "Session storage" "SQLite" --why "Fast queries"
+            eri-rpg decision "Auth method" "JWT" -w "Stateless, scales well"
+        """
+        try:
+            from erirpg import storage
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        project_path = project or os.getcwd()
+        project_name = _get_project_name(project_path)
+        session_id = _get_session_id(project_path)
+
+        # Ensure session exists
+        existing = storage.get_session(session_id)
+        if not existing:
+            storage.create_session(session_id, project_name)
+
+        # Add decision
+        decision = storage.add_decision(session_id, context, choice, why)
+        click.echo(f"✓ Decision recorded")
+        click.echo(f"  Context: {context}")
+        click.echo(f"  Choice: {choice}")
+        if why:
+            click.echo(f"  Why: {why}")
+
+    @cli.command(name="add-blocker")
+    @click.argument("description")
+    @click.option("--severity", "-s", type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+                  default="MEDIUM", help="Blocker severity")
+    @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
+    def add_blocker_cmd(description: str, severity: str, project: str):
+        """Add a blocker to current session.
+
+        Example:
+            eri-rpg add-blocker "API rate limiting issue" --severity HIGH
+            eri-rpg add-blocker "Missing test fixtures"
+        """
+        try:
+            from erirpg import storage
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        project_path = project or os.getcwd()
+        project_name = _get_project_name(project_path)
+        session_id = _get_session_id(project_path)
+
+        # Ensure session exists
+        existing = storage.get_session(session_id)
+        if not existing:
+            storage.create_session(session_id, project_name)
+
+        # Add blocker
+        blocker = storage.add_blocker(session_id, description, severity)
+        click.echo(f"✓ Blocker added [{severity}]")
+        click.echo(f"  ID: {blocker.id}")
+        click.echo(f"  {description}")
+
+    @cli.command(name="resolve-blocker")
+    @click.argument("blocker_id", type=int)
+    @click.argument("resolution")
+    def resolve_blocker_cmd(blocker_id: int, resolution: str):
+        """Mark a blocker as resolved.
+
+        Example:
+            eri-rpg resolve-blocker 1 "Implemented retry logic"
+            eri-rpg resolve-blocker 3 "Skipped - not needed"
+        """
+        try:
+            from erirpg import storage
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        success = storage.resolve_blocker(blocker_id, resolution)
+        if success:
+            click.echo(f"✓ Blocker {blocker_id} resolved")
+            click.echo(f"  Resolution: {resolution}")
+        else:
+            click.echo(f"Blocker {blocker_id} not found", err=True)
+            raise SystemExit(1)
+
+    @cli.command(name="add-action")
+    @click.argument("action")
+    @click.option("--priority", "-p", type=int, default=0, help="Priority (higher = more important)")
+    @click.option("--project", default=None, help="Project path (default: current directory)")
+    def add_action_cmd(action: str, priority: int, project: str):
+        """Add a next action to the queue.
+
+        Example:
+            eri-rpg add-action "Implement SQLite tables" --priority 5
+            eri-rpg add-action "Write tests for auth"
+        """
+        try:
+            from erirpg import storage
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        project_path = project or os.getcwd()
+        project_name = _get_project_name(project_path)
+        session_id = _get_session_id(project_path)
+
+        # Ensure session exists
+        existing = storage.get_session(session_id)
+        if not existing:
+            storage.create_session(session_id, project_name)
+
+        # Add action
+        next_action = storage.add_next_action(session_id, action, priority)
+        click.echo(f"✓ Action added")
+        click.echo(f"  ID: {next_action.id}")
+        click.echo(f"  {action}")
+        if priority > 0:
+            click.echo(f"  Priority: {priority}")
+
+    @cli.command(name="complete-action")
+    @click.argument("action_id", type=int)
+    def complete_action_cmd(action_id: int):
+        """Mark a next action as completed.
+
+        Example:
+            eri-rpg complete-action 1
+        """
+        try:
+            from erirpg import storage
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        success = storage.complete_action(action_id)
+        if success:
+            click.echo(f"✓ Action {action_id} completed")
+        else:
+            click.echo(f"Action {action_id} not found", err=True)
+            raise SystemExit(1)
+
+    @cli.command(name="recall-decision")
+    @click.argument("context_query", required=False, default=None)
+    @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
+    @click.option("--limit", "-n", type=int, default=10, help="Max results")
+    def recall_decision_cmd(context_query: str, project: str, limit: int):
+        """Recall decisions by context keyword.
+
+        Example:
+            eri-rpg recall-decision "auth"
+            eri-rpg recall-decision "storage"
+            eri-rpg recall-decision  # Lists all recent
+        """
+        try:
+            from erirpg import storage
+        except ImportError as e:
+            click.echo(f"Error: Required modules not available: {e}", err=True)
+            raise SystemExit(1)
+
+        project_path = project or os.getcwd()
+        project_name = _get_project_name(project_path)
+
+        if context_query:
+            decisions = storage.search_decisions(project_name, context_query)
+        else:
+            decisions = storage.get_recent_decisions(project_name, limit=limit)
+
+        if not decisions:
+            click.echo("No decisions found")
+            return
+
+        click.echo(f"Decisions ({len(decisions)} found):")
+        click.echo("")
+        for d in decisions[:limit]:
+            date_str = d.timestamp.strftime("%Y-%m-%d %H:%M")
+            click.echo(f"[{date_str}] {d.context}")
+            click.echo(f"  → {d.decision}")
+            if d.rationale:
+                click.echo(f"    Why: {d.rationale}")
+            click.echo("")
