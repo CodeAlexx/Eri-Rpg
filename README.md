@@ -63,6 +63,25 @@ Claude: [Internally runs eri-rpg commands to:]
 
 You describe what you want. Claude handles the workflow.
 
+### Typical Workflow
+
+```
+/eri:start myproject           # 1. Start session
+/eri:discuss "add auth"        # 2. Clarify requirements
+/eri:spec create auth          # 3. Lock down spec
+/eri:research auth             # 4. Learn existing code
+/eri:plan                      # 5. Create implementation plan
+/eri:execute                   # 6. Implement with verification
+/eri:done                      # 7. Mark complete
+```
+
+Or skip the ceremony for quick fixes:
+```
+/eri:quick myproject src/utils.py "fix off-by-one"
+```
+
+See [docs/TYPICAL_WORKFLOW.md](docs/TYPICAL_WORKFLOW.md) for details.
+
 ## Tiers
 
 | Tier | What Claude can do |
@@ -157,7 +176,7 @@ EriRPG optimizes for your growth, not your approval.
 
 ## Status
 
-Alpha v0.56 - usable but evolving.
+Alpha v0.57 - usable but evolving.
 
 ### Working
 - ✅ Knowledge storage and recall
