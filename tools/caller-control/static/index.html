@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Claude Code Remote</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.19.0/css/xterm.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; background: #1e1e1e; overflow: hidden; }
+        #app { display: flex; flex-direction: column; height: 100%; }
+        #header { padding: 8px 12px; background: #2d2d2d; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center; }
+        #header h1 { color: #d4d4d4; font-size: 14px; font-family: system-ui; }
+        #status { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-family: system-ui; }
+        .connected { background: #2d4a2d; color: #4ade80; }
+        .disconnected { background: #4a2d2d; color: #f87171; }
+        .connecting { background: #4a3d2d; color: #fbbf24; }
+        #terminal-container { flex: 1; padding: 4px; overflow: hidden; }
+        #terminal { height: 100%; }
+        #controls { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: #252525; border-top: 1px solid #3c3c3c; justify-content: center; }
+        .btn { padding: 12px 16px; background: #3c3c3c; color: #d4d4d4; border: 1px solid #505050; border-radius: 6px; font-family: monospace; font-size: 14px; cursor: pointer; }
+        .btn:active { background: #505050; }
+        .btn.danger { background: #5a1d1d; border-color: #742a2a; color: #fca5a5; }
+        .btn.primary { background: #0e639c; border-color: #1177bb; color: #fff; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="header">
+            <h1>Claude Code Remote</h1>
+            <span id="status" class="connecting">Connecting</span>
+        </div>
+        <div id="terminal-container">
+            <div id="terminal"></div>
+        </div>
+        <div id="controls">
+            <button class="btn danger" onclick="send('\x03')">Ctrl+C</button>
+            <button class="btn" onclick="send('\x04')">Ctrl+D</button>
+            <button class="btn" onclick="send('\x1b')">ESC</button>
+            <button class="btn" onclick="send('\t')">TAB</button>
+            <button class="btn" onclick="send('\x1b[A')">↑</button>
+            <button class="btn" onclick="send('\x1b[B')">↓</button>
+            <button class="btn primary" onclick="send('y')">y</button>
+            <button class="btn primary" onclick="send('n')">n</button>
+            <button class="btn" onclick="send('\r')">Enter</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@4.19.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.5.0/lib/xterm-addon-fit.min.js"></script>
+    <script>
+        const statusEl = document.getElementById('status');
+        let ws = null;
+        let term = null;
+
+        function setStatus(s) {
+            statusEl.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+            statusEl.className = s;
+        }
+
+        function send(data) {
+            if (ws && ws.readyState === 1) ws.send(data);
+            if (term) term.focus();
+        }
+
+        function init() {
+            // Create terminal
+            term = new Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: 'monospace',
+                theme: { background: '#1e1e1e', foreground: '#d4d4d4' }
+            });
+
+            const fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(document.getElementById('terminal'));
+            fitAddon.fit();
+
+            term.writeln('Connecting to Claude Code...');
+
+            // Handle input
+            term.onData(data => send(data));
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                fitAddon.fit();
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'resize', rows: term.rows, cols: term.cols }));
+                }
+            });
+
+            // Connect WebSocket
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(protocol + '//' + location.host + '/ws/terminal');
+
+            ws.onopen = () => {
+                setStatus('connected');
+                term.writeln('\x1b[32mConnected!\x1b[0m\r\n');
+                ws.send(JSON.stringify({ type: 'resize', rows: term.rows, cols: term.cols }));
+                term.focus();
+            };
+
+            ws.onmessage = (e) => {
+                term.write(e.data);
+            };
+
+            ws.onclose = () => {
+                setStatus('disconnected');
+                term.writeln('\r\n\x1b[31mDisconnected\x1b[0m');
+            };
+
+            ws.onerror = () => {
+                term.writeln('\r\n\x1b[31mConnection error\x1b[0m');
+            };
+        }
+
+        // Start when DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
