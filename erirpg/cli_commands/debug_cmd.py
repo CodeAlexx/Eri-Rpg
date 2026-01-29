@@ -71,8 +71,8 @@ def detect_external_mention(text: str, known_externals: list[str]) -> list[str]:
     return [ext for ext in known_externals if ext.lower() in text_lower]
 
 
-def set_debug_persona():
-    """Set persona to debug in state."""
+def set_debug_session(description: str = None, externals: list[str] = None):
+    """Store debug session context (doesn't lock persona - auto-detect continues)."""
     state_path = Path.home() / ".eri-rpg" / "state.json"
     state = {}
     if state_path.exists():
@@ -80,8 +80,15 @@ def set_debug_persona():
             state = json.loads(state_path.read_text())
         except:
             pass
-    state["persona"] = "debug"
-    state["persona_auto"] = False  # Explicitly set, not auto-detected
+
+    # Store debug session info (separate from persona)
+    state["debug_session"] = {
+        "active": True,
+        "description": description,
+        "externals": externals or [],
+        "started": __import__("datetime").datetime.now().isoformat(),
+    }
+
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state, indent=2))
 
@@ -109,9 +116,6 @@ def register(cli):
             eri-rpg debug --triage
             eri-rpg debug "diffusers pipeline fails" --external diffusers
         """
-        # Set persona
-        set_debug_persona()
-
         project_path = os.getcwd()
         known_externals = get_known_externals(project_path)
 
@@ -123,9 +127,11 @@ def register(cli):
             mentioned_externals.extend(list(external))
         mentioned_externals = list(set(mentioned_externals))  # Dedupe
 
+        # Store debug session context (persona auto-detect continues)
+        set_debug_session(description, mentioned_externals)
+
         # Output triage structure for Claude to use
         output = {
-            "persona": "debug",
             "mode": "triage",
             "triage_questions": TRIAGE_QUESTIONS,
             "known_externals": known_externals,

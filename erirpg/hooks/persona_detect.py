@@ -167,13 +167,6 @@ def main():
         if detected:
             state = load_state()
             current = state.get("persona")
-            was_auto = state.get("persona_auto", True)  # Default to True (can override)
-
-            # Don't override explicitly set personas (persona_auto=False)
-            if not was_auto:
-                log(f"Skipping auto-detect: {current} was explicitly set")
-                print(json.dumps({}))
-                sys.exit(0)
 
             # Only update if different (avoid excessive writes)
             if current != detected:
