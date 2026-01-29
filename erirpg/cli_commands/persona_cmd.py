@@ -208,6 +208,7 @@ def register(cli):
         click.echo(get_help_text())
 
     # SuperClaude-compatible personas (11 total)
+    # Note: "debug" is a distinct EriRPG persona, not an alias
     SUPERCLAUDE_PERSONAS = [
         "architect",   # Systems design, long-term architecture
         "frontend",    # UI/UX, accessibility
@@ -220,6 +221,7 @@ def register(cli):
         "qa",          # Testing, quality assurance
         "devops",      # Infrastructure, deployment
         "scribe",      # Documentation, writing
+        "debug",       # EriRPG-specific: triage-first debugging
     ]
 
     @cli.command(name="set-persona")
@@ -230,7 +232,7 @@ def register(cli):
         This sets the persona displayed in Claude Code's status line.
         The persona affects how Claude approaches tasks.
 
-        SuperClaude Personas:
+        Personas:
         - architect:   Systems design, scalability
         - frontend:    UI/UX, accessibility
         - backend:     Server-side, reliability
@@ -242,6 +244,7 @@ def register(cli):
         - qa:          Testing
         - devops:      Infrastructure
         - scribe:      Documentation
+        - debug:       Triage-first debugging (use /eri:debug for full flow)
 
         \b
         Examples:
@@ -269,6 +272,8 @@ def register(cli):
         state_path.write_text(json.dumps(state, indent=2))
 
         click.echo(f"Active persona set to: {name.lower()}")
+        if name.lower() == "debug":
+            click.echo("Tip: Use /eri:debug for the full triage flow")
         click.echo("Status line will show: 🎭 " + name.lower())
 
     @cli.command(name="clear-persona")

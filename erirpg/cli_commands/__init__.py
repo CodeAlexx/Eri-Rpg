@@ -87,6 +87,7 @@ def register_all(cli: "click.Group") -> None:
     from . import persona_cmd
     from . import drift
     from . import storage_cmd
+    from . import debug_cmd
 
     setup.register(cli)
     mode.register(cli)
@@ -115,3 +116,4 @@ def register_all(cli: "click.Group") -> None:
     persona_cmd.register(cli)
     drift.register(cli)
     storage_cmd.register(cli)
+    debug_cmd.register(cli)
