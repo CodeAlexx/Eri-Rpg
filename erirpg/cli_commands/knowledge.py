@@ -1,12 +1,12 @@
 """
 Knowledge Commands - Learning storage and retrieval.
 
-Commands:
+Commands (standard tier):
 - learn: Store a learning about a module
 - recall: Retrieve what was learned about a module
 - relearn: Force re-read a module (removes stored learning)
 - history: Show version history for a module's learning
-- rollback: Rollback a module's learning to a previous version
+- rollback: Rollback a module's learning to a previous version (full tier)
 - decide: Record an architectural decision (legacy)
 - pattern: Store a reusable pattern or gotcha
 - patterns: List all stored patterns for a project
@@ -16,6 +16,8 @@ import os
 import sys
 import click
 from datetime import datetime
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -27,6 +29,7 @@ def register(cli):
     @click.option("--summary", "-s", prompt=True, help="One-line summary of the module")
     @click.option("--purpose", "-p", prompt=True, help="Detailed purpose explanation")
     @click.option("--non-interactive", "-y", is_flag=True, help="Skip interactive prompts for key functions and gotchas")
+    @tier_required("standard")
     def learn(project: str, module_path: str, summary: str, purpose: str, non_interactive: bool):
         """Store a learning about a module.
 

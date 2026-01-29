@@ -1,10 +1,10 @@
 """
-Mode Commands - Bootstrap/Maintain mode management.
+Mode Commands - Bootstrap/Maintain mode and Tier management.
 
 Commands:
 - init: Initialize a new project in bootstrap mode
 - graduate: Graduate project to maintain mode
-- mode: Show or change project mode
+- mode: Show or change project mode and tier
 - info: Show detailed project status
 """
 
@@ -16,7 +16,7 @@ import click
 from erirpg.registry import Registry, detect_project_language
 from erirpg.config import (
     load_config, get_mode, set_mode, graduate_project,
-    init_project_config
+    init_project_config, get_tier, set_tier, TIER_CONFIG
 )
 from erirpg.indexer import index_project, get_or_load_graph
 from erirpg.memory import load_knowledge, save_knowledge
@@ -31,16 +31,24 @@ def register(cli):
                   help="Path to project root (defaults to current directory)")
     @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo", "dart"]),
                   help="Programming language (auto-detected if not specified)")
-    def init_project(name: str, path: str, lang: str):
+    @click.option("--tier", "-t", default="lite", type=click.Choice(["lite", "standard", "full"]),
+                  help="Feature tier (default: lite)")
+    def init_project(name: str, path: str, lang: str, tier: str):
         """Initialize a new EriRPG project in bootstrap mode.
 
         Creates .eri-rpg/ directory with empty config, state, and knowledge files.
         Project starts in bootstrap mode with no enforcement.
 
+        Tiers:
+        - lite: Fast workflow tracking, no indexing
+        - standard: Adds codebase awareness, discussion
+        - full: All features including agent runs
+
         NAME: Unique project identifier
 
         Example:
             eri-rpg init my-app --path ~/projects/my-app
+            eri-rpg init my-app --tier standard
         """
         from pathlib import Path as P
 
@@ -65,8 +73,8 @@ def register(cli):
         eri_rpg_dir = P(abs_path) / ".eri-rpg"
         eri_rpg_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize config in bootstrap mode
-        init_project_config(abs_path)
+        # Initialize config in bootstrap mode with specified tier
+        init_project_config(abs_path, tier=tier)
 
         # Create empty state.json
         state_file = eri_rpg_dir / "state.json"
@@ -98,9 +106,12 @@ def register(cli):
         click.echo(f"Initialized project: {name}")
         click.echo(f"  Path: {abs_path}")
         click.echo(f"  Language: {lang}")
+        click.echo(f"  Tier: {tier} ({TIER_CONFIG[tier]['description']})")
         click.echo(f"  Mode: bootstrap (no enforcement)")
         click.echo("")
         click.echo("Build freely - no EriRPG enforcement active.")
+        if tier == "lite":
+            click.echo("Upgrade tier with: eri-rpg mode {name} --standard")
         click.echo("When ready to lock down patterns, run:")
         click.echo(f"  eri-rpg graduate {name}")
 
@@ -192,19 +203,30 @@ def register(cli):
     @click.argument("name")
     @click.option("--bootstrap", "set_bootstrap", is_flag=True, help="Set to bootstrap mode (no enforcement)")
     @click.option("--maintain", "set_maintain", is_flag=True, help="Set to maintain mode (full enforcement)")
-    def mode(name: str, set_bootstrap: bool, set_maintain: bool):
-        """Show or change project operational mode.
+    @click.option("--lite", "set_lite", is_flag=True, help="Set to lite tier (fast tracking)")
+    @click.option("--standard", "set_standard", is_flag=True, help="Set to standard tier (codebase awareness)")
+    @click.option("--full", "set_full", is_flag=True, help="Set to full tier (all features)")
+    def mode(name: str, set_bootstrap: bool, set_maintain: bool,
+             set_lite: bool, set_standard: bool, set_full: bool):
+        """Show or change project operational mode and tier.
 
-        Modes:
+        Enforcement Modes:
         - bootstrap: No enforcement, hooks pass through
         - maintain: Full enforcement, requires preflight/runs
+
+        Feature Tiers:
+        - lite: Fast workflow tracking, no indexing
+        - standard: Adds codebase awareness, discussion
+        - full: All features including agent runs
 
         NAME: Project name
 
         Examples:
-            eri-rpg mode my-app              # Show current mode
+            eri-rpg mode my-app              # Show current mode/tier
             eri-rpg mode my-app --bootstrap  # Disable enforcement
             eri-rpg mode my-app --maintain   # Enable enforcement
+            eri-rpg mode my-app --standard   # Upgrade to standard tier
+            eri-rpg mode my-app --full       # Upgrade to full tier
         """
         registry = Registry.get_instance()
         project = registry.get(name)
@@ -215,14 +237,21 @@ def register(cli):
 
         config = load_config(project.path)
         current_mode = get_mode(project.path)
+        current_tier = get_tier(project.path)
 
-        # Both flags = error
+        # Validate flag combinations
         if set_bootstrap and set_maintain:
             click.echo("Error: Cannot set both --bootstrap and --maintain", err=True)
             sys.exit(1)
 
+        tier_flags = sum([set_lite, set_standard, set_full])
+        if tier_flags > 1:
+            click.echo("Error: Cannot set multiple tiers at once", err=True)
+            sys.exit(1)
+
         # No flags = show status
-        if not set_bootstrap and not set_maintain:
+        mode_flags = set_bootstrap or set_maintain
+        if not mode_flags and tier_flags == 0:
             graduated_info = ""
             if config.graduated_at:
                 graduated_info = f" (graduated {config.graduated_at[:10]})"
@@ -233,27 +262,76 @@ def register(cli):
 
             click.echo(f"Project: {name}")
             click.echo(f"Mode: {current_mode}{graduated_info}")
+            click.echo(f"Tier: {current_tier} ({TIER_CONFIG[current_tier]['description']})")
+            click.echo("")
 
             if current_mode == "bootstrap":
                 click.echo("Enforcement: disabled")
-                click.echo("")
-                click.echo("To enable enforcement:")
-                click.echo(f"  eri-rpg graduate {name}   # Learn all + enable")
-                click.echo(f"  eri-rpg mode {name} --maintain  # Just enable")
             else:
                 click.echo("Enforcement: enabled")
-                click.echo("")
-                click.echo("To disable temporarily:")
-                click.echo(f"  eri-rpg mode {name} --bootstrap")
+
+            click.echo("")
+            click.echo("Available tiers:")
+            for t, info in TIER_CONFIG.items():
+                marker = " *" if t == current_tier else ""
+                click.echo(f"  {t}: {info['description']}{marker}")
+
+            click.echo("")
+            click.echo("Commands:")
+            click.echo(f"  eri-rpg mode {name} --lite|--standard|--full  # Change tier")
+            click.echo(f"  eri-rpg mode {name} --bootstrap|--maintain    # Change enforcement")
             return
 
-        # Set bootstrap mode
+        # Handle tier changes
+        if set_lite:
+            set_tier(project.path, "lite")
+            click.echo(f"Tier set to lite ({TIER_CONFIG['lite']['description']})")
+
+        if set_standard:
+            # Standard requires index
+            if not project.is_indexed():
+                click.echo("Standard tier requires an indexed codebase.")
+                if click.confirm("Index project now?"):
+                    click.echo("Indexing project... ", nl=False)
+                    try:
+                        index_project(project.path, project.lang)
+                        registry.update_indexed(name)
+                        click.echo("done")
+                    except Exception as e:
+                        click.echo(f"failed: {e}", err=True)
+                        sys.exit(1)
+                else:
+                    click.echo("Cancelled. Index with: eri-rpg index {name}")
+                    return
+
+            set_tier(project.path, "standard")
+            click.echo(f"Tier set to standard ({TIER_CONFIG['standard']['description']})")
+
+        if set_full:
+            # Full also requires index
+            if not project.is_indexed():
+                click.echo("Full tier requires an indexed codebase.")
+                if click.confirm("Index project now?"):
+                    click.echo("Indexing project... ", nl=False)
+                    try:
+                        index_project(project.path, project.lang)
+                        registry.update_indexed(name)
+                        click.echo("done")
+                    except Exception as e:
+                        click.echo(f"failed: {e}", err=True)
+                        sys.exit(1)
+                else:
+                    click.echo("Cancelled. Index with: eri-rpg index {name}")
+                    return
+
+            set_tier(project.path, "full")
+            click.echo(f"Tier set to full ({TIER_CONFIG['full']['description']})")
+
+        # Handle mode changes
         if set_bootstrap:
             set_mode(project.path, "bootstrap")
             click.echo(f"Mode set to bootstrap. Enforcement disabled.")
-            return
 
-        # Set maintain mode
         if set_maintain:
             # Warn if never graduated
             if not config.graduated_at:
@@ -295,9 +373,12 @@ def register(cli):
             if hasattr(learning, 'is_stale') and learning.is_stale():
                 stale_count += 1
 
+        current_tier = get_tier(project.path)
+
         click.echo(f"Project: {name}")
         click.echo(f"Path: {project.path}")
         click.echo(f"Language: {project.lang}")
+        click.echo(f"Tier: {current_tier} ({TIER_CONFIG[current_tier]['description']})")
         click.echo(f"Mode: {current_mode}")
 
         # Graduation info
@@ -327,3 +408,19 @@ def register(cli):
         else:
             click.echo(f"Preflight: enabled")
             click.echo(f"Auto-learn: enabled")
+
+        # Tier-specific status
+        click.echo("")
+        click.echo("Feature availability:")
+        if current_tier == "lite":
+            click.echo("  Workflow tracking: enabled")
+            click.echo("  Codebase awareness: disabled (upgrade to standard)")
+            click.echo("  Agent runs: disabled (upgrade to full)")
+        elif current_tier == "standard":
+            click.echo("  Workflow tracking: enabled")
+            click.echo("  Codebase awareness: enabled")
+            click.echo("  Agent runs: disabled (upgrade to full)")
+        else:
+            click.echo("  Workflow tracking: enabled")
+            click.echo("  Codebase awareness: enabled")
+            click.echo("  Agent runs: enabled")

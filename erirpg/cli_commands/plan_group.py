@@ -1,7 +1,7 @@
 """
 Plan Commands - Plan management for executable workflows.
 
-Commands:
+Commands (full tier):
 - plan generate: Generate plan from spec
 - plan show: Display plan contents
 - plan list: List plans in project
@@ -14,11 +14,14 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register plan group commands with CLI."""
 
     @cli.group("plan")
+    @tier_required("full")
     def plan_group():
         """Plan management commands.
 

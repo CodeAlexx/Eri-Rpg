@@ -1,7 +1,7 @@
 """
 Analyze Commands - Pattern analysis and implementation.
 
-Commands:
+Commands (full tier):
 - analyze: Analyze project for patterns, conventions, and extension points
 - implement: Implement a new feature using project patterns
 - transplant: Transplant a feature from one project to another
@@ -10,6 +10,8 @@ Commands:
 
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -21,6 +23,7 @@ def register(cli):
     @cli.command()
     @click.argument("project")
     @click.option("--force", "-f", is_flag=True, help="Re-analyze even if patterns exist")
+    @tier_required("full")
     def analyze(project: str, force: bool):
         """Analyze project for patterns, conventions, and extension points.
 

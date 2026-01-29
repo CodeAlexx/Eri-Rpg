@@ -1,7 +1,7 @@
 """
 Exploration Commands - Project structure and module discovery.
 
-Commands:
+Commands (standard tier):
 - show: Show project structure and metadata
 - find: Find modules matching a query
 - impact: Analyze impact of changing a module
@@ -11,12 +11,15 @@ import sys
 import click
 from datetime import datetime
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register exploration commands with CLI."""
 
     @cli.command()
     @click.argument("project")
+    @tier_required("standard")
     def show(project: str):
         """Show project structure and metadata."""
         from erirpg.registry import Registry
@@ -104,6 +107,7 @@ def register(cli):
     @click.argument("project")
     @click.argument("query")
     @click.option("-n", "--limit", default=10, help="Max results")
+    @tier_required("standard")
     def find(project: str, query: str, limit: int):
         """Find modules matching a query.
 
@@ -144,6 +148,7 @@ def register(cli):
     @cli.command()
     @click.argument("project")
     @click.argument("module_path")
+    @tier_required("standard")
     def impact(project: str, module_path: str):
         """Analyze impact of changing a module.
 

@@ -1,12 +1,14 @@
 """
 UI Commands - Web dashboard.
 
-Commands:
+Commands (full tier):
 - serve: Start the EriRPG web dashboard
 """
 
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -16,6 +18,7 @@ def register(cli):
     @click.option('--port', default=8080, help='Port to serve on')
     @click.option('--host', default='127.0.0.1', help='Host to bind to')
     @click.option('--open', 'open_browser', is_flag=True, help='Open browser automatically')
+    @tier_required("full")
     def serve(port: int, host: str, open_browser: bool):
         """Start the EriRPG web dashboard (v0.0.1-alpha).
 

@@ -1,7 +1,7 @@
 """
 Spec Commands - Spec management for structured task definitions.
 
-Commands:
+Commands (full tier):
 - spec new: Create spec from template
 - spec validate: Validate a spec file
 - spec show: Display spec contents
@@ -13,11 +13,14 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register spec group commands with CLI."""
 
     @cli.group()
+    @tier_required("full")
     def spec():
         """Spec management commands.
 

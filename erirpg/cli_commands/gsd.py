@@ -1,7 +1,7 @@
 """
 GSD Commands - Decision logging and deferred ideas (GSD-style).
 
-Commands:
+Commands (standard tier):
 - log-decision: Log a decision with full rationale
 - list-decisions: List recent decisions
 - defer: Capture a deferred idea for later implementation
@@ -11,6 +11,8 @@ Commands:
 
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -24,6 +26,7 @@ def register(cli):
     @click.argument("context")
     @click.argument("choice")
     @click.argument("rationale")
+    @tier_required("standard")
     def log_decision_cmd(project: str, context: str, choice: str, rationale: str):
         """Log a decision with full rationale (GSD-style).
 

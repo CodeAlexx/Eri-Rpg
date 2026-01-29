@@ -1,7 +1,7 @@
 """
 Goal Commands - Spec-driven execution commands.
 
-Commands:
+Commands (full tier):
 - goal-plan: Generate a spec from a goal
 - goal-run: Execute a spec for a project
 - goal-status: Show spec execution status for a project
@@ -10,6 +10,8 @@ Commands:
 import os
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -22,6 +24,7 @@ def register(cli):
     @click.argument("project")
     @click.argument("goal")
     @click.option("-o", "--output", default=None, help="Output spec file path")
+    @tier_required("full")
     def goal_plan(project: str, goal: str, output: str):
         """Generate a spec from a goal.
 

@@ -1,7 +1,7 @@
 """
 Roadmap Commands - Roadmap progress and management.
 
-Commands:
+Commands (standard tier):
 - roadmap: Show roadmap progress for a project
 - roadmap-add: Add a phase to the roadmap
 - roadmap-next: Advance to the next roadmap phase
@@ -10,6 +10,8 @@ Commands:
 
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -20,6 +22,7 @@ def register(cli):
 
     @cli.command()
     @click.argument("project")
+    @tier_required("standard")
     def roadmap(project: str):
         """Show roadmap progress for a project.
 

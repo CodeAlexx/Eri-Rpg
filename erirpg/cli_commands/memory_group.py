@@ -1,7 +1,7 @@
 """
 Memory Commands - V2 knowledge storage management.
 
-Commands:
+Commands (full tier):
 - memory status: Show memory stats and staleness
 - memory search: Search learnings by keyword
 - memory stale: List stale learnings
@@ -14,11 +14,14 @@ import sys
 import click
 from datetime import datetime
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register memory group commands with CLI."""
 
     @cli.group()
+    @tier_required("full")
     def memory():
         """Memory management commands (v2 storage).
 

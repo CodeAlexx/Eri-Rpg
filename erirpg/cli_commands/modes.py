@@ -1,14 +1,16 @@
 """
 Mode Commands - Core workflow commands for EriRPG.
 
-Commands:
+Commands (lite tier):
 - take: Transplant a feature from one project to another
 - work: Modify an existing project
 - done: Mark current work as complete
+- next: Advance to next chunk in new project
+
+Commands (full tier):
 - research: Run research phase for a goal
 - execute: Execute a plan in waves
 - new: Create a new project from scratch
-- next: Advance to next chunk in new project
 """
 
 import json
@@ -16,12 +18,15 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register mode commands with CLI."""
     from erirpg.registry import Registry
     from erirpg.state import State
 
+    # Lite tier commands
     @cli.command()
     @click.argument("description")
     @click.option("-v", "--verbose", is_flag=True, help="Show detailed progress")
@@ -116,11 +121,13 @@ def register(cli):
         click.echo("If you learned something new, store it:")
         click.echo("  eri-rpg learn <project> <module>")
 
+    # Full tier commands
     @cli.command()
     @click.argument("name")
     @click.option("--goal", default=None, help="Goal to research (loads from state if not provided)")
     @click.option("--level", type=int, default=None, help="Force discovery level (0-3)")
     @click.option("-v", "--verbose", is_flag=True, help="Show detailed progress")
+    @tier_required("full")
     def research(name: str, goal: str, level: int, verbose: bool):
         """Run research phase for a goal.
 
@@ -197,6 +204,7 @@ def register(cli):
     @click.option("--wave", type=int, default=None, help="Start from specific wave")
     @click.option("--no-resume", is_flag=True, help="Don't resume from checkpoint")
     @click.option("-v", "--verbose", is_flag=True, help="Show detailed progress")
+    @tier_required("full")
     def execute(name: str, plan_id: str, wave: int, no_resume: bool, verbose: bool):
         """Execute a plan in waves.
 
@@ -292,6 +300,7 @@ def register(cli):
     @click.argument("description")
     @click.option("-o", "--output", default=None, help="Where to create project")
     @click.option("-v", "--verbose", is_flag=True, help="Show detailed progress")
+    @tier_required("full")
     def new_project(description: str, output: str, verbose: bool):
         """Create a new project from scratch.
 

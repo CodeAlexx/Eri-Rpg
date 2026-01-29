@@ -1,7 +1,7 @@
 """
 Orchestration Commands - Task parsing and workflow coordination.
 
-Commands:
+Commands (full tier):
 - do: Smart mode - parse task and suggest steps
 - status: Show current status and next step
 - validate: Validate implementation
@@ -14,12 +14,15 @@ import re
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register orchestration commands with CLI."""
 
     @cli.command("do")
     @click.argument("task")
+    @tier_required("full")
     def do_task(task: str):
         """Smart mode - figure out steps for a task.
 

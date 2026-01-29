@@ -12,7 +12,7 @@ import sys
 import click
 
 from erirpg.registry import Registry, detect_project_language
-from erirpg.config import get_mode
+from erirpg.config import get_mode, get_tier
 from erirpg.indexer import index_project
 
 
@@ -78,9 +78,11 @@ def register(cli):
             return
 
         for p in projects:
-            # Get mode
+            # Get mode and tier
             mode_str = get_mode(p.path)
+            tier_str = get_tier(p.path)
             mode_badge = "[BOOTSTRAP]" if mode_str == "bootstrap" else "[MAINTAIN]"
+            tier_badge = f"[{tier_str.upper()}]"
 
             status = "indexed" if p.is_indexed() else "not indexed"
             age = ""
@@ -91,7 +93,7 @@ def register(cli):
                 else:
                     age = f" ({int(days)} days ago)"
 
-            click.echo(f"{p.name} {mode_badge}: {p.path} ({p.lang}, {status}{age})")
+            click.echo(f"{p.name} {tier_badge} {mode_badge}: {p.path} ({p.lang}, {status}{age})")
 
     @cli.command()
     @click.argument("name")

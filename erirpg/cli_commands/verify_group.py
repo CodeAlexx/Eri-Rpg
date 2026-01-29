@@ -1,7 +1,7 @@
 """
 Verify Commands - Code verification and quality checks.
 
-Commands:
+Commands (full tier):
 - verify run: Run verification for a run
 - verify config: Show/create verification config
 - verify results: Show verification results
@@ -12,11 +12,14 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register verify group commands with CLI."""
 
     @cli.group("verify")
+    @tier_required("full")
     def verify_group():
         """Verification commands.
 

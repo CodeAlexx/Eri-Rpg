@@ -1,7 +1,7 @@
 """
 Cleanup Commands - Run management and housekeeping.
 
-Commands:
+Commands (full tier):
 - cleanup: List and prune abandoned runs
 - runs: List runs for a project
 """
@@ -12,6 +12,8 @@ import click
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register cleanup commands with CLI."""
@@ -21,6 +23,7 @@ def register(cli):
     @click.option("--prune", is_flag=True, help="Delete stale/abandoned runs")
     @click.option("--days", default=7, help="Consider runs older than N days as stale (default: 7)")
     @click.option("--force", is_flag=True, help="Delete without confirmation")
+    @tier_required("full")
     def cleanup_cmd(project: str, prune: bool, days: int, force: bool):
         """List and optionally prune abandoned runs.
 

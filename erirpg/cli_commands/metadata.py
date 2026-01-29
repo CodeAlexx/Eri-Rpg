@@ -1,7 +1,7 @@
 """
 Metadata Commands - Project metadata management.
 
-Commands:
+Commands (standard tier):
 - describe: Set project description
 - todo: Manage project TODOs
 - notes: Manage project notes
@@ -15,6 +15,8 @@ import sys
 import click
 from datetime import datetime
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register metadata commands with CLI."""
@@ -22,6 +24,7 @@ def register(cli):
     @cli.command("describe")
     @click.argument("project")
     @click.argument("description")
+    @tier_required("standard")
     def set_description(project: str, description: str):
         """Set project description.
 

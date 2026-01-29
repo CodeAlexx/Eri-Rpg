@@ -1,7 +1,7 @@
 """
 Persona Commands - Persona and context management (SuperClaude replacement).
 
-Commands:
+Commands (full tier):
 - persona: Show or set persona for context generation
 - workflow: Show workflow stages and their default personas
 - ctx: Generate dynamic CLAUDE.md context
@@ -12,6 +12,8 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register persona commands with CLI."""
@@ -20,6 +22,7 @@ def register(cli):
     @cli.command(name="persona")
     @click.argument("name", required=False)
     @click.option("--list", "-l", "list_all", is_flag=True, help="List available personas")
+    @tier_required("full")
     def persona_cmd(name: str = None, list_all: bool = False):
         """Show or set persona for context generation.
 

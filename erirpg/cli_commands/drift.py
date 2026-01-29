@@ -1,7 +1,7 @@
 """
 Drift Commands - Drift integration and pattern synchronization.
 
-Commands:
+Commands (full tier):
 - drift-status: Check Drift integration status for a project
 - enrich-learnings: Enrich stored learnings with Drift pattern data
 - sync-patterns: Sync patterns between EriRPG and Drift
@@ -15,6 +15,8 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register drift commands with CLI."""
@@ -24,6 +26,7 @@ def register(cli):
 
     @cli.command(name="drift-status")
     @click.argument("project", required=False)
+    @tier_required("full")
     def drift_status_cmd(project: str = None):
         """Check Drift integration status for a project.
 

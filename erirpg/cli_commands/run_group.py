@@ -1,7 +1,7 @@
 """
 Run Commands - Execution management for plans.
 
-Commands:
+Commands (full tier):
 - run start: Start executing a plan
 - run resume: Resume a paused run
 - run list: List all runs
@@ -15,11 +15,14 @@ import os
 import sys
 import click
 
+from erirpg.cli_commands.guards import tier_required
+
 
 def register(cli):
     """Register run group commands with CLI."""
 
     @cli.group("run")
+    @tier_required("full")
     def run_group():
         """Run management commands.
 

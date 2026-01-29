@@ -1,7 +1,7 @@
 """
 Discuss Commands - Goal clarification and discussion management.
 
-Commands:
+Commands (standard tier):
 - discuss: Start or continue a goal clarification discussion
 - discuss-answer: Answer a discussion question
 - discuss-resolve: Mark a discussion as resolved
@@ -11,6 +11,8 @@ Commands:
 
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -23,6 +25,7 @@ def register(cli):
     @click.argument("project")
     @click.argument("goal")
     @click.option("--force", is_flag=True, help="Force discussion even if not needed")
+    @tier_required("standard")
     def discuss(project: str, goal: str, force: bool):
         """Start or continue a goal clarification discussion.
 

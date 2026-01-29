@@ -1,7 +1,7 @@
 """
 Transplant Commands - Feature extraction and transplant operations.
 
-Commands:
+Commands (standard tier):
 - extract: Extract a feature from a project
 - plan: Plan transplant to target project (note: this shadows plan_group's plan command)
 - context: Generate context for Claude Code
@@ -10,6 +10,8 @@ Commands:
 import os
 import sys
 import click
+
+from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
@@ -23,6 +25,7 @@ def register(cli):
     @click.argument("query")
     @click.option("-o", "--output", required=True, help="Output file path")
     @click.option("-n", "--name", default=None, help="Feature name")
+    @tier_required("standard")
     def extract(project: str, query: str, output: str, name: str):
         """Extract a feature from a project.
 
