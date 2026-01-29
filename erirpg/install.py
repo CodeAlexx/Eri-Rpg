@@ -35,16 +35,28 @@ def install_claude_code(verbose: bool = True) -> bool:
     # Create directories
     commands_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy command files
-    src_commands = erirpg_root / ".claude" / "commands" / "eri"
+    # Copy command files from commands/eri/ in repo
+    src_commands = erirpg_root / "commands" / "eri"
     commands_installed = []
 
     if src_commands.exists():
+        # Copy top-level commands
         for cmd in src_commands.glob("*.md"):
             shutil.copy(cmd, commands_dir / cmd.name)
             commands_installed.append(f"/eri:{cmd.stem}")
             if verbose:
                 print(f"  Installed: /eri:{cmd.stem}")
+
+        # Copy help subdirectory if it exists
+        src_help = src_commands / "help"
+        if src_help.exists():
+            dest_help = commands_dir / "help"
+            dest_help.mkdir(parents=True, exist_ok=True)
+            for cmd in src_help.glob("*.md"):
+                shutil.copy(cmd, dest_help / cmd.name)
+                commands_installed.append(f"/eri:help:{cmd.stem}")
+                if verbose:
+                    print(f"  Installed: /eri:help:{cmd.stem}")
     else:
         # Create default commands if source doesn't exist
         _create_default_commands(commands_dir, verbose)
@@ -256,6 +268,54 @@ eri-rpg cleanup <project> --prune
         print("  Created: /eri:execute")
         print("  Created: /eri:quick")
         print("  Created: /eri:status")
+
+
+def install_commands(verbose: bool = True) -> bool:
+    """
+    Install/sync only slash commands (no hooks).
+
+    Copies commands from repo's commands/eri/ to ~/.claude/commands/eri/
+
+    Returns:
+        True if successful
+    """
+    home = Path.home()
+    commands_dir = home / ".claude" / "commands" / "eri"
+    erirpg_root = get_erirpg_root()
+    src_commands = erirpg_root / "commands" / "eri"
+
+    if not src_commands.exists():
+        if verbose:
+            print(f"Source not found: {src_commands}")
+        return False
+
+    # Create target directory
+    commands_dir.mkdir(parents=True, exist_ok=True)
+
+    commands_installed = []
+
+    # Copy top-level commands
+    for cmd in src_commands.glob("*.md"):
+        shutil.copy(cmd, commands_dir / cmd.name)
+        commands_installed.append(f"/eri:{cmd.stem}")
+        if verbose:
+            print(f"  Synced: /eri:{cmd.stem}")
+
+    # Copy help subdirectory
+    src_help = src_commands / "help"
+    if src_help.exists():
+        dest_help = commands_dir / "help"
+        dest_help.mkdir(parents=True, exist_ok=True)
+        for cmd in src_help.glob("*.md"):
+            shutil.copy(cmd, dest_help / cmd.name)
+            commands_installed.append(f"/eri:help:{cmd.stem}")
+            if verbose:
+                print(f"  Synced: /eri:help:{cmd.stem}")
+
+    if verbose:
+        print(f"\nSynced {len(commands_installed)} commands to {commands_dir}")
+
+    return True
 
 
 def check_installation() -> dict:

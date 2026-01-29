@@ -39,3 +39,16 @@ def register(cli):
             click.echo(f"  Hooks: {', '.join(status['hooks'])}")
         else:
             click.echo("  Hooks: Not installed")
+
+    @cli.command("install-commands")
+    def install_commands_cmd():
+        """Sync slash commands from repo to ~/.claude/commands/eri/.
+
+        Use this after pulling updates to sync new/changed commands.
+        Does not modify hooks or other settings.
+
+        Example:
+            eri-rpg install-commands
+        """
+        from erirpg.install import install_commands
+        install_commands()
