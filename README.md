@@ -136,7 +136,7 @@ This persists across sessions. Claude resumes where it left off.
 
 ## Status
 
-Production-ready for personal use. v2.0.
+Alpha v0.56 - usable but evolving.
 
 ### Working
 - ✅ Knowledge storage and recall
