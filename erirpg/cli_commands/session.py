@@ -364,8 +364,9 @@ def register(cli):
 
     @cli.command(name="snapshot")
     @click.option("--note", "-n", default=None, help="Note about this checkpoint")
+    @click.option("--alias", "-a", default=None, help="Human-readable session name")
     @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
-    def snapshot_cmd(note: str, project: str):
+    def snapshot_cmd(note: str, alias: str, project: str):
         """Save a checkpoint before risky operations.
 
         Creates a snapshot of current session state. Useful before
@@ -373,7 +374,7 @@ def register(cli):
 
         Example:
             eri-rpg snapshot --note "Before auth refactor"
-            eri-rpg snapshot -n "Testing new approach"
+            eri-rpg snapshot --alias "auth-rework" -n "Testing new approach"
         """
         try:
             from erirpg import storage
@@ -389,8 +390,12 @@ def register(cli):
         # Ensure session exists in SQLite
         existing = storage.get_session(session_id)
         if not existing:
-            storage.create_session(session_id, project_name)
-            click.echo(f"Created session: {session_id}")
+            storage.create_session(session_id, project_name, alias=alias)
+            click.echo(f"Created session: {session_id}" + (f" ({alias})" if alias else ""))
+        elif alias and not existing.alias:
+            # Update alias if provided and not already set
+            storage.update_session(session_id, alias=alias)
+            click.echo(f"Session alias set: {alias}")
 
         # Generate CONTEXT.md as snapshot
         context_path = Path(project_path) / ".eri-rpg" / "CONTEXT.md"
@@ -452,7 +457,7 @@ def register(cli):
     @cli.command(name="add-blocker")
     @click.argument("description")
     @click.option("--severity", "-s", type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-                  default="MEDIUM", help="Blocker severity")
+                  default=None, help="Blocker severity (optional)")
     @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
     def add_blocker_cmd(description: str, severity: str, project: str):
         """Add a blocker to current session.
@@ -478,7 +483,8 @@ def register(cli):
 
         # Add blocker
         blocker = storage.add_blocker(session_id, description, severity)
-        click.echo(f"✓ Blocker added [{severity}]")
+        severity_str = f" [{severity}]" if severity else ""
+        click.echo(f"✓ Blocker added{severity_str}")
         click.echo(f"  ID: {blocker.id}")
         click.echo(f"  {description}")
 
@@ -562,16 +568,16 @@ def register(cli):
             raise SystemExit(1)
 
     @cli.command(name="recall-decision")
-    @click.argument("context_query", required=False, default=None)
+    @click.option("--last", "-n", type=int, default=10, help="Show last N decisions")
+    @click.option("--session", "-s", default=None, help="Filter by session ID")
     @click.option("--project", "-p", default=None, help="Project path (default: current directory)")
-    @click.option("--limit", "-n", type=int, default=10, help="Max results")
-    def recall_decision_cmd(context_query: str, project: str, limit: int):
-        """Recall decisions by context keyword.
+    def recall_decision_cmd(last: int, session: str, project: str):
+        """List recent decisions chronologically.
 
         Example:
-            eri-rpg recall-decision "auth"
-            eri-rpg recall-decision "storage"
-            eri-rpg recall-decision  # Lists all recent
+            eri-rpg recall-decision              # Last 10 decisions
+            eri-rpg recall-decision --last 20   # Last 20 decisions
+            eri-rpg recall-decision -s abc123   # Decisions from session abc123
         """
         try:
             from erirpg import storage
@@ -582,10 +588,10 @@ def register(cli):
         project_path = project or os.getcwd()
         project_name = _get_project_name(project_path)
 
-        if context_query:
-            decisions = storage.search_decisions(project_name, context_query)
+        if session:
+            decisions = storage.get_session_decisions(session)
         else:
-            decisions = storage.get_recent_decisions(project_name, limit=limit)
+            decisions = storage.get_recent_decisions(project_name, limit=last)
 
         if not decisions:
             click.echo("No decisions found")
@@ -593,7 +599,7 @@ def register(cli):
 
         click.echo(f"Decisions ({len(decisions)} found):")
         click.echo("")
-        for d in decisions[:limit]:
+        for d in decisions:
             date_str = d.timestamp.strftime("%Y-%m-%d %H:%M")
             click.echo(f"[{date_str}] {d.context}")
             click.echo(f"  → {d.decision}")

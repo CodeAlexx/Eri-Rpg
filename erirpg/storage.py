@@ -164,7 +164,9 @@ def init_db(db_path: Optional[str] = None) -> None:
                 step TEXT,   -- e.g., '2/5 - Add SQLite session storage'
                 progress_pct INTEGER DEFAULT 0,
                 summary TEXT,  -- Brief summary of what was accomplished
-                files_modified TEXT  -- JSON array of modified files
+                files_modified TEXT,  -- JSON array of modified files
+                alias TEXT,  -- Human-readable session name (optional)
+                branch TEXT  -- Git branch at session start
             );
 
             -- Decisions made during sessions
@@ -183,7 +185,7 @@ def init_db(db_path: Optional[str] = None) -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
                 description TEXT NOT NULL,
-                severity TEXT DEFAULT 'MEDIUM',  -- LOW, MEDIUM, HIGH, CRITICAL
+                severity TEXT,  -- Optional: LOW, MEDIUM, HIGH, CRITICAL
                 resolved INTEGER DEFAULT 0,
                 resolved_at TEXT,
                 resolution TEXT,  -- How it was resolved
@@ -772,6 +774,8 @@ class Session:
     progress_pct: int = 0
     summary: Optional[str] = None
     files_modified: Optional[List[str]] = None
+    alias: Optional[str] = None  # Human-readable name
+    branch: Optional[str] = None  # Git branch at session start
 
 
 @dataclass
@@ -792,7 +796,7 @@ class Blocker:
     id: int
     session_id: str
     description: str
-    severity: str
+    severity: Optional[str]  # Optional: LOW, MEDIUM, HIGH, CRITICAL
     resolved: bool
     resolved_at: Optional[datetime]
     resolution: Optional[str]
@@ -816,6 +820,8 @@ def create_session(
     project_name: str,
     phase: Optional[str] = None,
     step: Optional[str] = None,
+    alias: Optional[str] = None,
+    branch: Optional[str] = None,
     db_path: Optional[str] = None,
 ) -> Session:
     """Create a new session record."""
@@ -824,9 +830,9 @@ def create_session(
 
     with get_connection(db_path) as conn:
         conn.execute("""
-            INSERT INTO sessions (id, project_name, started_at, phase, step)
-            VALUES (?, ?, ?, ?, ?)
-        """, (session_id, project_name, now.isoformat(), phase, step))
+            INSERT INTO sessions (id, project_name, started_at, phase, step, alias, branch)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (session_id, project_name, now.isoformat(), phase, step, alias, branch))
         conn.commit()
 
     return Session(
@@ -835,6 +841,8 @@ def create_session(
         started_at=now,
         phase=phase,
         step=step,
+        alias=alias,
+        branch=branch,
     )
 
 
@@ -862,6 +870,8 @@ def get_session(session_id: str, db_path: Optional[str] = None) -> Optional[Sess
             progress_pct=row["progress_pct"],
             summary=row["summary"],
             files_modified=files,
+            alias=row["alias"] if "alias" in row.keys() else None,
+            branch=row["branch"] if "branch" in row.keys() else None,
         )
 
 
@@ -892,6 +902,8 @@ def get_latest_session(project_name: str, db_path: Optional[str] = None) -> Opti
             progress_pct=row["progress_pct"],
             summary=row["summary"],
             files_modified=files,
+            alias=row["alias"] if "alias" in row.keys() else None,
+            branch=row["branch"] if "branch" in row.keys() else None,
         )
 
 
@@ -903,6 +915,8 @@ def update_session(
     summary: Optional[str] = None,
     files_modified: Optional[List[str]] = None,
     ended_at: Optional[datetime] = None,
+    alias: Optional[str] = None,
+    branch: Optional[str] = None,
     db_path: Optional[str] = None,
 ) -> bool:
     """Update session fields. Only non-None values are updated."""
@@ -928,6 +942,12 @@ def update_session(
     if ended_at is not None:
         updates.append("ended_at = ?")
         params.append(ended_at.isoformat())
+    if alias is not None:
+        updates.append("alias = ?")
+        params.append(alias)
+    if branch is not None:
+        updates.append("branch = ?")
+        params.append(branch)
 
     if not updates:
         return False
@@ -1090,7 +1110,7 @@ def archive_session_decisions(session_id: str, db_path: Optional[str] = None) ->
 def add_blocker(
     session_id: str,
     description: str,
-    severity: str = "MEDIUM",
+    severity: Optional[str] = None,
     db_path: Optional[str] = None,
 ) -> Blocker:
     """Add a blocker to a session."""
@@ -1352,6 +1372,8 @@ def get_session_context(
             "progress_pct": session.progress_pct,
             "summary": session.summary,
             "files_modified": session.files_modified,
+            "alias": session.alias,
+            "branch": session.branch,
         },
         "decisions": [
             {
@@ -1409,6 +1431,8 @@ def get_project_context_summary(
         "has_context": True,
         "last_session": {
             "id": latest.id,
+            "alias": latest.alias,
+            "branch": latest.branch,
             "phase": latest.phase,
             "step": latest.step,
             "progress_pct": latest.progress_pct,
@@ -1417,6 +1441,6 @@ def get_project_context_summary(
         },
         "decisions_count": len(recent_decisions),
         "blockers_count": len(unresolved_blockers),
-        "blockers_high": len([b for b in unresolved_blockers if b.severity in ("HIGH", "CRITICAL")]),
+        "blockers_high": len([b for b in unresolved_blockers if b.severity and b.severity in ("HIGH", "CRITICAL")]),
         "pending_actions": len(pending_actions),
     }

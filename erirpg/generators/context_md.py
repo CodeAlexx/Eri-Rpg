@@ -77,6 +77,13 @@ def _generate_context_content(project_name: str, ctx: dict) -> str:
     # Session status
     lines.append("## Session Status")
     lines.append("")
+    # Show alias or ID
+    if session.get("alias"):
+        lines.append(f"- **Session**: {session['alias']} (`{session['id']}`)")
+    else:
+        lines.append(f"- **Session**: `{session['id']}`")
+    if session.get("branch"):
+        lines.append(f"- **Branch**: {session['branch']}")
     if session.get("phase"):
         lines.append(f"- **Phase**: {session['phase']}")
     if session.get("step"):
@@ -160,8 +167,8 @@ def _generate_context_content(project_name: str, ctx: dict) -> str:
 def generate_compact_summary(project_name: str) -> str:
     """Generate a compact one-line summary for SessionStart hook.
 
-    Format: EriRPG: {project} | Phase: {phase} | Step: {step}
-            Last session: {time} | Decisions: {n} | Blockers: {n} {severity}
+    Format: EriRPG: {project} | Branch: {branch} | Phase: {phase}
+            Last session: {time} | Decisions: {n} | Blockers: {n}
     """
     summary = storage.get_project_context_summary(project_name)
 
@@ -181,10 +188,13 @@ def generate_compact_summary(project_name: str) -> str:
 
     parts = [f"EriRPG: {project_name}"]
 
+    # Show alias or branch for identification
+    if last.get("alias"):
+        parts.append(f"Session: {last['alias']}")
+    if last.get("branch"):
+        parts.append(f"Branch: {last['branch']}")
     if last.get("phase"):
         parts.append(f"Phase: {last['phase']}")
-    if last.get("step"):
-        parts.append(f"Step: {last['step']}")
 
     line1 = " | ".join(parts)
 

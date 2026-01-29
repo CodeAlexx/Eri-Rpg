@@ -171,6 +171,24 @@ def get_sqlite_context_summary(project_path: str) -> str:
         return None
 
 
+def get_git_branch(project_path: str) -> str:
+    """Get current git branch name."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception as e:
+        log(f"Git branch error: {e}")
+    return None
+
+
 def start_new_sqlite_session(project_path: str) -> str:
     """Start a new SQLite session for this project."""
     try:
@@ -178,13 +196,15 @@ def start_new_sqlite_session(project_path: str) -> str:
 
         project_name = get_project_name(project_path)
         session_id = create_new_session_id(project_path)
+        branch = get_git_branch(project_path)
 
         # Create session in SQLite
         storage.create_session(
             session_id=session_id,
             project_name=project_name,
+            branch=branch,
         )
-        log(f"Created new session {session_id} for {project_name}")
+        log(f"Created new session {session_id} for {project_name} on branch {branch}")
         return session_id
     except ImportError as e:
         log(f"Import error (storage not available): {e}")
