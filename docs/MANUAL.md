@@ -198,7 +198,7 @@ eri-rpg roadmap-next myproject
 
 ### Decisions
 
-**Decisions** are logged choices with context and rationale (GSD-style).
+**Decisions** are logged choices with context and rationale.
 
 ```bash
 # Log a decision with full context
@@ -395,7 +395,7 @@ eri-rpg roadmap-next myproject  # Advance to next phase
 | `eri-rpg roadmap-next <project>` | Advance to next phase |
 | `eri-rpg roadmap-edit <project> <index> "<name>" "<desc>"` | Edit milestone |
 
-### Decision Logging (GSD-style)
+### Decision Logging
 
 | Command | Description |
 |---------|-------------|
@@ -742,7 +742,7 @@ pytest tests/
 See [CHANGELOG.md](CHANGELOG.md) and [CHANGES.md](../CHANGES.md) for detailed release notes.
 
 **v2.1** (Current - January 27, 2026)
-- GSD-inspired decision logging and deferred ideas
+- Decision logging and deferred ideas
 - Domain detection and gray area questions
 - Rich session state with handoff support
 - Gap closure for verification failures

@@ -1,7 +1,7 @@
 """
 Benchmarking system for EriRPG.
 
-Provides tools for measuring performance, comparing with GSD,
+Provides tools for measuring performance, comparing with baselines,
 and generating benchmark reports.
 
 Usage:
@@ -62,7 +62,7 @@ class BenchmarkStep:
 class Benchmark:
     """A benchmark run measuring performance of a workflow."""
     name: str
-    tool: str = "erirpg"  # "erirpg" or "gsd"
+    tool: str = "erirpg"  # "erirpg" or "baseline"
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     steps: List[BenchmarkStep] = field(default_factory=list)
@@ -166,22 +166,22 @@ class Benchmark:
 class BenchmarkComparison:
     """Comparison between two benchmark runs."""
     erirpg: Benchmark
-    gsd: Benchmark
+    baseline: Benchmark
     improvement_metrics: Dict[str, float] = field(default_factory=dict)
 
     def calculate_improvements(self) -> None:
         """Calculate improvement metrics."""
         # Duration improvement (negative = faster)
-        if self.gsd.total_duration > 0:
-            duration_pct = (self.erirpg.total_duration - self.gsd.total_duration) / self.gsd.total_duration * 100
+        if self.baseline.total_duration > 0:
+            duration_pct = (self.erirpg.total_duration - self.baseline.total_duration) / self.baseline.total_duration * 100
         else:
             duration_pct = 0
 
         # Success rate improvement
-        success_diff = self.erirpg.success_rate - self.gsd.success_rate
+        success_diff = self.erirpg.success_rate - self.baseline.success_rate
 
         # Manual fix reduction (negative = fewer fixes needed)
-        manual_fix_diff = self.erirpg.total_manual_fixes - self.gsd.total_manual_fixes
+        manual_fix_diff = self.erirpg.total_manual_fixes - self.baseline.total_manual_fixes
 
         self.improvement_metrics = {
             "duration_pct": duration_pct,
@@ -198,30 +198,30 @@ class BenchmarkComparison:
             "=" * 50,
             f"Workflow: {self.erirpg.name}",
             "",
-            "                    EriRPG      GSD         Change",
+            "                    EriRPG      Baseline    Change",
             "-" * 50,
         ]
 
         # Duration
         eri_dur = f"{self.erirpg.total_duration:.1f}s"
-        gsd_dur = f"{self.gsd.total_duration:.1f}s"
+        baseline_dur = f"{self.baseline.total_duration:.1f}s"
         dur_change = self.improvement_metrics["duration_pct"]
         dur_indicator = "↓" if dur_change < 0 else "↑" if dur_change > 0 else "→"
-        lines.append(f"Duration:           {eri_dur:11} {gsd_dur:11} {dur_indicator} {abs(dur_change):.1f}%")
+        lines.append(f"Duration:           {eri_dur:11} {baseline_dur:11} {dur_indicator} {abs(dur_change):.1f}%")
 
         # Success rate
         eri_sr = f"{self.erirpg.success_rate:.0%}"
-        gsd_sr = f"{self.gsd.success_rate:.0%}"
+        baseline_sr = f"{self.baseline.success_rate:.0%}"
         sr_change = self.improvement_metrics["success_rate_diff"] * 100
         sr_indicator = "↑" if sr_change > 0 else "↓" if sr_change < 0 else "→"
-        lines.append(f"Success Rate:       {eri_sr:11} {gsd_sr:11} {sr_indicator} {abs(sr_change):.1f}%")
+        lines.append(f"Success Rate:       {eri_sr:11} {baseline_sr:11} {sr_indicator} {abs(sr_change):.1f}%")
 
         # Manual fixes
         eri_fixes = str(self.erirpg.total_manual_fixes)
-        gsd_fixes = str(self.gsd.total_manual_fixes)
+        baseline_fixes = str(self.baseline.total_manual_fixes)
         fix_change = self.improvement_metrics["manual_fix_diff"]
         fix_indicator = "↓" if fix_change < 0 else "↑" if fix_change > 0 else "→"
-        lines.append(f"Manual Fixes:       {eri_fixes:11} {gsd_fixes:11} {fix_indicator} {abs(fix_change)}")
+        lines.append(f"Manual Fixes:       {eri_fixes:11} {baseline_fixes:11} {fix_indicator} {abs(fix_change)}")
 
         lines.extend([
             "",

@@ -791,14 +791,14 @@ class StoredDecision:
         )
 
 # ============================================================================
-# GSD-Style Decision Logging
+# Decision Logging
 # ============================================================================
 
 @dataclass
 class Decision:
     """A decision made during discussion or execution.
 
-    GSD-inspired decision logging for tracking choices with rationale.
+    Decision logging for tracking choices with rationale.
     Auto-logged when users answer discussion questions.
     """
     id: str                           # "DEC-001" format
@@ -876,7 +876,7 @@ class DeferredIdea:
         )
 
 # ============================================================================
-# Rich Session State (GSD-inspired)
+# Rich Session State
 # ============================================================================
 
 @dataclass
@@ -915,7 +915,7 @@ class Blocker:
 class SessionState:
     """Rich session state for handoff between sessions.
 
-    GSD-inspired STATE.md equivalent - tracks decisions, blockers,
+    STATE.md equivalent - tracks decisions, blockers,
     deferred ideas, and next actions for seamless session continuity.
     """
     run_id: str
@@ -1061,7 +1061,7 @@ class SessionState:
 
 
 # ============================================================================
-# Gap Closure (GSD-inspired)
+# Gap Closure
 # ============================================================================
 
 @dataclass
@@ -1333,7 +1333,7 @@ class KnowledgeStore:
     patterns: Dict[str, str] = field(default_factory=dict)
     discussions: Dict[str, Discussion] = field(default_factory=dict)  # keyed by id
     runs: List[RunRecord] = field(default_factory=list)
-    # GSD-style additions
+    # Session tracking additions
     user_decisions: List["Decision"] = field(default_factory=list)  # Decision logging
     deferred_ideas: List["DeferredIdea"] = field(default_factory=list)  # Deferred ideas
 
@@ -1484,7 +1484,7 @@ class KnowledgeStore:
 
 
     # ============================================================================
-    # CRUD for user decisions (GSD-style)
+    # CRUD for user decisions
     # ============================================================================
 
     def add_user_decision(self, decision: "Decision") -> None:

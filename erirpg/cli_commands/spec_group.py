@@ -20,7 +20,6 @@ def register(cli):
     """Register spec group commands with CLI."""
 
     @cli.group()
-    @tier_required("full")
     def spec():
         """Spec management commands.
 
@@ -32,7 +31,10 @@ def register(cli):
             spec validate <path>  - Validate a spec file
             spec show <path>      - Display spec contents
             spec list             - List specs in project
+
+        Requires: full tier
         """
+        # Tier check moved to subcommands for project context detection
         pass
 
     @spec.command("new")
@@ -196,23 +198,32 @@ def register(cli):
             sys.exit(1)
 
     @spec.command("list")
+    @click.argument("name", required=False)
     @click.option("-t", "--type", "spec_type", type=click.Choice(["task", "project", "transplant"]),
                   help="Filter by spec type")
-    @click.option("-p", "--path", default=None, help="Project path (default: current directory)")
-    def spec_list(spec_type: str, path: str):
+    @tier_required("full")
+    def spec_list(name: str, spec_type: str):
         """List specs in a project.
 
         Shows all specs stored in the project's .eri-rpg/specs/ directory.
 
         \b
         Example:
-            eri-rpg spec list
-            eri-rpg spec list -t task
-            eri-rpg spec list -p /path/to/project
+            eri-rpg spec list myproject
+            eri-rpg spec list myproject -t task
         """
         from erirpg.specs import list_specs, load_spec
+        from erirpg.registry import Registry
 
-        project_path = path or os.getcwd()
+        if name:
+            registry = Registry.get_instance()
+            proj = registry.get(name)
+            if not proj:
+                click.echo(f"Error: Project '{name}' not found", err=True)
+                sys.exit(1)
+            project_path = proj.path
+        else:
+            project_path = os.getcwd()
         specs = list_specs(project_path, spec_type=spec_type)
 
         if not specs:

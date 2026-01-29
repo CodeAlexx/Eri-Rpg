@@ -1,5 +1,5 @@
 """
-Session Commands - Session state and gap closure (GSD-inspired).
+Session Commands - Session state and gap closure.
 
 Commands:
 - session: Show or update current session state

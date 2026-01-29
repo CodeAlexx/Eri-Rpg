@@ -28,7 +28,7 @@ from erirpg.memory import (
 )
 
 # ============================================================================
-# Domain Detection and Gray Areas (GSD-inspired)
+# Domain Detection and Gray Areas
 # ============================================================================
 
 DOMAIN_GRAY_AREAS = {
@@ -131,7 +131,7 @@ def detect_domain(goal: str, project_path: str) -> str:
 def get_gray_area_questions(goal: str, domain: str) -> List[str]:
     """Generate questions about common ambiguities for a domain.
 
-    GSD-inspired gray area detection - asks about common decision points
+    Gray area detection - asks about common decision points
     that are often left ambiguous.
 
     Returns:

@@ -139,7 +139,8 @@ def register(cli):
             eri-rpg research myproj --goal "add oauth login"
             eri-rpg research myproj --level 2
         """
-        from erirpg.research import ResearchPhase, detect_discovery_level
+        from erirpg.research import ResearchPhase
+        from erirpg.discovery import detect_discovery_level
 
         registry = Registry.get_instance()
         project = registry.get(name)

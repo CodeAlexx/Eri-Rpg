@@ -2,7 +2,7 @@
 Tests for EriRPG benchmarking system.
 
 Phase 8: Evaluation and Iteration
-- P8-001: Benchmark against GSD
+- P8-001: Benchmark against baseline
 - P8-002: Failure analysis backlog
 - P8-003: Iterate and retest
 """
@@ -164,11 +164,11 @@ class TestBenchmarkComparison:
         eri.record_step("step1", 3.0, True)
         eri.record_step("step2", 2.0, True, manual_fixes=1)
 
-        gsd = Benchmark(name="test", tool="gsd")
-        gsd.record_step("step1", 5.0, True)
-        gsd.record_step("step2", 3.0, False, manual_fixes=3)
+        baseline = Benchmark(name="test", tool="baseline")
+        baseline.record_step("step1", 5.0, True)
+        baseline.record_step("step2", 3.0, False, manual_fixes=3)
 
-        comparison = BenchmarkComparison(erirpg=eri, gsd=gsd)
+        comparison = BenchmarkComparison(erirpg=eri, baseline=baseline)
         comparison.calculate_improvements()
 
         # EriRPG should be faster (5s vs 8s = -37.5%)
@@ -185,16 +185,16 @@ class TestBenchmarkComparison:
         eri = Benchmark(name="test-workflow", tool="erirpg")
         eri.record_step("planning", 3.0, True)
 
-        gsd = Benchmark(name="test-workflow", tool="gsd")
-        gsd.record_step("planning", 5.0, True)
+        baseline = Benchmark(name="test-workflow", tool="baseline")
+        baseline.record_step("planning", 5.0, True)
 
-        comparison = BenchmarkComparison(erirpg=eri, gsd=gsd)
+        comparison = BenchmarkComparison(erirpg=eri, baseline=baseline)
         report = comparison.format_report()
 
         assert "Benchmark Comparison Report" in report
         assert "test-workflow" in report
         assert "EriRPG" in report
-        assert "GSD" in report
+        assert "Baseline" in report
 
 
 class TestBacklogItem:
@@ -402,22 +402,22 @@ class TestIntegration:
         eri_bench.record_step("verify", 2.0, True)
         eri_bench.finish()
 
-        # 2. Run GSD benchmark (simulated)
-        gsd_bench = Benchmark(name="transplant-auth", tool="gsd")
-        gsd_bench.start()
-        gsd_bench.record_step("index", 3.0, True)
-        gsd_bench.record_step("extract", 5.0, True)
-        gsd_bench.record_step("plan", 2.0, False, error="Context limit", manual_fixes=2)
-        gsd_bench.record_step("execute", 15.0, True, manual_fixes=3)
-        gsd_bench.record_step("verify", 3.0, False, error="Tests failed")
-        gsd_bench.finish()
+        # 2. Run baseline benchmark (simulated)
+        baseline_bench = Benchmark(name="transplant-auth", tool="baseline")
+        baseline_bench.start()
+        baseline_bench.record_step("index", 3.0, True)
+        baseline_bench.record_step("extract", 5.0, True)
+        baseline_bench.record_step("plan", 2.0, False, error="Context limit", manual_fixes=2)
+        baseline_bench.record_step("execute", 15.0, True, manual_fixes=3)
+        baseline_bench.record_step("verify", 3.0, False, error="Tests failed")
+        baseline_bench.finish()
 
         # 3. Save both benchmarks
         save_benchmark(str(tmp_path), eri_bench)
-        save_benchmark(str(tmp_path), gsd_bench)
+        save_benchmark(str(tmp_path), baseline_bench)
 
         # 4. Compare results
-        comparison = BenchmarkComparison(erirpg=eri_bench, gsd=gsd_bench)
+        comparison = BenchmarkComparison(erirpg=eri_bench, baseline=baseline_bench)
         comparison.calculate_improvements()
 
         # EriRPG should be better
@@ -425,9 +425,9 @@ class TestIntegration:
         assert comparison.improvement_metrics["success_rate_diff"] > 0  # Higher success
         assert comparison.improvement_metrics["manual_fix_diff"] < 0  # Fewer fixes
 
-        # 5. Generate backlog from GSD failures
+        # 5. Generate backlog from baseline failures
         backlog = Backlog()
-        created = backlog.categorize_from_benchmark(gsd_bench)
+        created = backlog.categorize_from_benchmark(baseline_bench)
         assert created == 2  # Two failed steps
 
         # 6. Save and reload backlog

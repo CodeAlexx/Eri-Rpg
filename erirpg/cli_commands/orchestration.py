@@ -97,12 +97,58 @@ def register(cli):
         click.echo("  - what uses <module> in <project>")
 
     @cli.command()
-    def status():
-        """Show current status and next step."""
-        from erirpg.state import State
+    @click.argument("project", required=False)
+    def status(project: str = None):
+        """Show current status and next step.
 
-        state = State.load()
-        click.echo(state.format_status())
+        If PROJECT is provided, shows project-specific status.
+        Otherwise shows global state.
+        """
+        from erirpg.state import State
+        from erirpg.registry import Registry
+
+        if project:
+            registry = Registry.get_instance()
+            proj = registry.get(project)
+            if not proj:
+                click.echo(f"Error: Project '{project}' not found", err=True)
+                sys.exit(1)
+
+            # Load config for tier/mode
+            from erirpg.config import load_config
+            config = load_config(proj.path)
+
+            # Show project-specific status
+            click.echo(f"Project: {project}")
+            click.echo(f"  Path: {proj.path}")
+            click.echo(f"  Tier: {config.tier}")
+            click.echo(f"  Mode: {config.mode}")
+
+            # Check for active specs
+            specs_dir = os.path.join(proj.path, ".eri-rpg", "specs")
+            if os.path.exists(specs_dir):
+                specs = [f for f in os.listdir(specs_dir) if f.endswith('.yaml')]
+                if specs:
+                    click.echo(f"  Active specs: {len(specs)}")
+
+            # Check for active discussions
+            knowledge_file = os.path.join(proj.path, ".eri-rpg", "knowledge.json")
+            if os.path.exists(knowledge_file):
+                import json
+                with open(knowledge_file) as f:
+                    knowledge = json.load(f)
+                discussions = knowledge.get("discussions", {})
+                active = [d for d in discussions.values() if not d.get("resolved")]
+                if active:
+                    click.echo(f"  Active discussions: {len(active)}")
+
+            # Check for research
+            research_file = os.path.join(proj.path, ".eri-rpg", "research", "RESEARCH.md")
+            if os.path.exists(research_file):
+                click.echo("  Research: available")
+        else:
+            state = State.load()
+            click.echo(state.format_status())
 
     @cli.command()
     def validate():

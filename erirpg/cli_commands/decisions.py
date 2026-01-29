@@ -1,5 +1,5 @@
 """
-GSD Commands - Decision logging and deferred ideas (GSD-style).
+Decision Commands - Decision logging and deferred ideas.
 
 Commands (standard tier):
 - log-decision: Log a decision with full rationale
@@ -16,7 +16,7 @@ from erirpg.cli_commands.guards import tier_required
 
 
 def register(cli):
-    """Register GSD commands with CLI."""
+    """Register decision commands with CLI."""
     from erirpg.registry import Registry
 
     registry = Registry.get_instance()
@@ -28,7 +28,7 @@ def register(cli):
     @click.argument("rationale")
     @tier_required("standard")
     def log_decision_cmd(project: str, context: str, choice: str, rationale: str):
-        """Log a decision with full rationale (GSD-style).
+        """Log a decision with full rationale.
 
         Unlike 'decide' (architectural decisions), this logs user decisions
         made during discussion or execution with detailed context.
@@ -62,7 +62,7 @@ def register(cli):
     @click.option("--search", "-s", default=None, help="Search decisions by keyword")
     @click.option("--limit", "-n", default=20, help="Number of decisions to show")
     def list_decisions_cmd(project: str, search: str, limit: int):
-        """List recent decisions (GSD-style).
+        """List recent decisions.
 
         Example:
             eri-rpg list-decisions myproj

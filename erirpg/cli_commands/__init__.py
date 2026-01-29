@@ -28,7 +28,7 @@ Structure (26 modules, 91+ commands):
     ├── goal.py          # goal-plan, goal-run, goal-status
     ├── discuss.py       # discuss, discuss-answer, discuss-resolve, discuss-show, discuss-clear
     ├── roadmap.py       # roadmap, roadmap-add, roadmap-next, roadmap-edit
-    ├── gsd.py           # log-decision, list-decisions, defer, deferred, promote
+    ├── decisions.py     # log-decision, list-decisions, defer, deferred, promote
     ├── session.py       # session, handoff, gaps
     ├── analyze_cmd.py   # analyze, implement, transplant-feature, describe-feature
     ├── persona_cmd.py   # persona, workflow, ctx, commands
@@ -81,7 +81,7 @@ def register_all(cli: "click.Group") -> None:
     from . import goal
     from . import discuss
     from . import roadmap
-    from . import gsd
+    from . import decisions
     from . import session
     from . import analyze_cmd
     from . import persona_cmd
@@ -108,7 +108,7 @@ def register_all(cli: "click.Group") -> None:
     goal.register(cli)
     discuss.register(cli)
     roadmap.register(cli)
-    gsd.register(cli)
+    decisions.register(cli)
     session.register(cli)
     analyze_cmd.register(cli)
     persona_cmd.register(cli)

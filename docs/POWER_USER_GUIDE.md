@@ -6,6 +6,97 @@ This guide helps you tap the full power of EriRPG and SuperClaude at every skill
 
 ---
 
+## Quick Commands (Emergency Reference)
+
+### `/eri:fix` - Report Bugs During Workflow
+
+When you hit a bug during EriRPG workflow execution:
+
+```bash
+/eri:fix "description of the bug"
+```
+
+This command:
+1. Reads STATE.md for current context (phase, project)
+2. Logs the bug to TASKS.md under "Bugs/Issues"
+3. Investigates and fixes the issue
+4. Logs resolution and provides resume command
+
+**Alternative**: Open a new Claude Code terminal and describe the issue directly.
+
+**Example:**
+```bash
+/eri:fix "goal-plan creates duplicate phases in ROADMAP.md"
+```
+
+---
+
+## Status Line Customization
+
+Claude Code supports a customizable status line. Run `/statusline` to configure.
+
+**Available Data Fields:**
+| Field | Description |
+|-------|-------------|
+| `context_window.used_percentage` | Context used (e.g., "45%") |
+| `context_window.remaining_percentage` | Context remaining |
+| `current_usage` | Current token usage |
+| `session_cost` | Session cost (API users) |
+
+**EriRPG Status Line Suggestions:**
+```
+📍 Phase 3/6 | 🔄 45% ctx | 🎯 backend | ⏱️ 12m
+```
+
+| Element | Shows | Why Useful |
+|---------|-------|------------|
+| `Phase X/Y` | Current phase progress | Know where you are in workflow |
+| `% ctx` | Context window usage | Plan when to compact |
+| `🎯 task` | Active task name | Focus reminder |
+| `⏱️ time` | Session duration | Track work time |
+
+**Configure via** `/eri:settings` - toggle elements on/off individually.
+
+---
+
+## Design Philosophy
+
+### The Simple Premise
+
+1. **Design the app fully first** - Spec, plan, roadmap, design map. The entire app, broken into parts.
+2. **Build in phases** - Implement each part, test, verify, continue until done.
+3. **Code graph eliminates re-reading** - Index once, recall when needed. No searching over and over.
+
+### Why This Works
+
+**For You:**
+- Think through the whole app before writing code
+- One phase at a time, verified before moving on
+- Natural commands: `/eri:init myapp`, `/eri:spec new`, `/eri:execute`
+
+**For Claude:**
+- Specs are structured data, not vague prompts
+- The CLI is Claude's tool - you say `/eri:recall auth`, Claude executes the command
+- Graph means Claude doesn't re-read files - it calls the CLI and gets structured data back
+
+**The Token Efficiency:**
+```
+Without EriRPG: Claude reads file → forgets → reads again → forgets → reads again...
+With EriRPG:    Claude calls CLI → gets JSON → continues working
+```
+
+**How It Actually Works:**
+```
+You:    /eri:recall auth
+Claude: python3 -m erirpg.cli recall myproject auth  (executes)
+CLI:    Returns structured knowledge about auth module
+Claude: Continues working with that knowledge
+```
+
+You describe what you want. Claude calls the CLI. App gets built.
+
+---
+
 ## Quick Reference Card
 
 | Your Level | Start Here | Graduate To |
@@ -329,17 +420,17 @@ eri-rpg enrich-learnings myproject  # Add pattern data to learnings
 
 ---
 
-## Part 5: GSD Workflow (Get Stuff Done)
+## Part 5: Decision Workflow
 
-GSD is a *workflow philosophy* built into EriRPG - not a separate tool. These are all `eri-rpg` commands that implement decision tracking and idea capture to prevent "decision amnesia."
+EriRPG includes decision tracking and idea capture to prevent "decision amnesia" across sessions.
 
-### The GSD Philosophy
+### The Workflow Philosophy
 
 ```
 Discuss → Decide → Defer (what you can't do now) → Do → Document
 ```
 
-### EriRPG's GSD Commands
+### Decision Commands
 
 **Decision Logging (Track WHY you chose things):**
 ```bash
@@ -364,7 +455,7 @@ eri-rpg deferred myproject --tag v2
 eri-rpg promote myproject IDEA-001 --goal "Build v2"
 ```
 
-### GSD Workflow Example
+### Workflow Example
 
 ```bash
 # 1. Start discussing a feature
@@ -388,10 +479,10 @@ eri-rpg goal-run myproject
 eri-rpg list-decisions myproject --search "auth"
 ```
 
-### Why GSD Matters
+### Why This Matters
 
-| Problem | GSD Solution |
-|---------|--------------|
+| Problem | Solution |
+|---------|----------|
 | "Why did I choose X?" | `list-decisions` shows rationale |
 | "I had a great idea but forgot" | `defer` captures it immediately |
 | "What's planned for v2?" | `deferred --tag v2` shows backlog |
@@ -399,20 +490,20 @@ eri-rpg list-decisions myproject --search "auth"
 
 ### Standard Tier Required
 
-These GSD-style commands require **standard tier** because they integrate with:
+These commands require **standard tier** because they integrate with:
 - Discussion system (tracking what you're deciding)
 - Roadmap (where promoted ideas go)
 - Learning (decisions become project knowledge)
 
 ```bash
-# Upgrade to use GSD
+# Upgrade to standard
 eri-rpg mode myproject --standard
 ```
 
 ### Session State with Decisions
 
 ```bash
-# See current session with all GSD tracking
+# See current session with decision tracking
 eri-rpg session myproject
 
 # Generate handoff with decisions included
@@ -421,7 +512,7 @@ eri-rpg handoff myproject
 
 ### Planned Additions (Roadmap)
 
-Future GSD-style features:
+Future features:
 - **Research phase**: Dedicated step before planning (prevent wheel reinvention)
 - **Wave execution**: Parallel task execution
 - **Must-haves derivation**: Goal → observable truths → required files
@@ -480,13 +571,13 @@ Future GSD-style features:
 | Learning/recall | ❌ | ✅ | ✅ |
 | Discussion mode | ❌ | ✅ | ✅ |
 | Roadmap management | ❌ | ✅ | ✅ |
-| Decision logging (GSD-style) | ❌ | ✅ | ✅ |
-| Defer/promote ideas (GSD-style) | ❌ | ✅ | ✅ |
+| Decision logging | ❌ | ✅ | ✅ |
+| Defer/promote ideas | ❌ | ✅ | ✅ |
 | Agent runs | ❌ | ❌ | ✅ |
 | Spec/plan system | ❌ | ❌ | ✅ |
 | Verification | ❌ | ❌ | ✅ |
 | Memory management | ❌ | ❌ | ✅ |
-| Research phase (GSD-style) | ❌ | ❌ | ✅ |
+| Research phase | ❌ | ❌ | ✅ |
 | Drift integration | ❌ | ❌ | ✅ |
 | Web dashboard | ❌ | ❌ | ✅ |
 
@@ -624,7 +715,7 @@ eri-rpg verify run proj               # Never ship broken
 /sc:analyze --ultrathink --wave-mode  # Deep analysis
 ```
 
-### Decision & Idea Tracking (GSD-style)
+### Decision & Idea Tracking
 ```
 eri-rpg log-decision proj "context" "choice" "why"  # Track decisions
 eri-rpg list-decisions proj                          # Review decisions

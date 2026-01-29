@@ -4,6 +4,66 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ---
 
+## January 29, 2026
+
+### Session Status Auto-Update
+
+**New Command:**
+| Command | Description |
+|---------|-------------|
+| `goal-update <project>` | Auto-update STATE.md, ROADMAP.md, TASKS.md based on file state |
+
+**Features:**
+- Auto-detects phase completion from existing deliverable files
+- `--phase N` flag for manual phase completion (non-file phases like Integration, Testing)
+- `--activity "..."` flag for custom last activity description
+- Updates all three session files in sync
+
+**New Slash Command:**
+- `/eri:update` - Update session status files
+
+### Caller Control Tool
+
+**New Tool:** `tools/caller-control/`
+
+Web app to control Claude Code from phone:
+- PTY wrapper spawns real Claude Code CLI
+- WebSocket streams terminal I/O in real-time
+- Mobile-optimized xterm.js UI with touch controls
+- Works with cloudflared tunnel for remote access
+
+**Files:**
+- `main.py` - FastAPI backend with PTY management
+- `static/index.html` - Mobile terminal UI
+- `requirements.txt` - Python dependencies
+- `README.md` - Usage documentation
+
+### GSD Renamed to Decisions
+
+Removed all "GSD" (Get Stuff Done) references:
+- `cli_commands/gsd.py` → `cli_commands/decisions.py`
+- Updated imports and registrations
+- Cleaned up docs and comments
+
+### New Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/eri:fix` | Report bugs during workflow execution |
+| `/eri:update` | Update session status files |
+| `/eri:settings` | Configure EriRPG features and UI |
+
+### Status Line Script
+
+**New Module:** `statusline.py`
+
+Script for Claude Code status line integration:
+- Reads STATE.md for phase progress
+- Shows: Phase X/Y, context %, task name
+- Configurable via `~/.eri-rpg/settings.json`
+
+---
+
 ## January 27, 2026
 
 ### Enhanced Learning and Implementation System (latest)
@@ -46,9 +106,9 @@ Major feature addition for pattern-aware implementation:
 **New Storage:**
 - `.eri-rpg/patterns.json` - Project-level patterns (from analyze)
 
-### GSD-Inspired Features (commit `269b019`)
+### Decision Tracking Features (commit `269b019`)
 
-Major feature addition inspired by GSD (Get Shit Done) tool:
+Major feature addition for decision tracking and session management:
 
 **New Classes (memory.py):**
 - `Decision` - Track choices with context, rationale, alternatives, source
@@ -265,7 +325,7 @@ New verification feature:
 
 ### Planning Directory (commit `2a15c88`)
 
-Added GSD-style `.planning/` directory:
+Added `.planning/` directory for session persistence:
 - `PROJECT.md` - Project vision
 - `ROADMAP.md` - Future plans
 - `phases-v1/` - 6 completed development phases

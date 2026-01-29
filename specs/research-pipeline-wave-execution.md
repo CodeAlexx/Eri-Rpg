@@ -2,7 +2,7 @@
 
 ## Objective
 
-Add GSD-style research phase and wave execution to EriRPG. Research prevents reinventing wheels. Waves enable parallel execution.
+Add research phase and wave execution to EriRPG. Research prevents reinventing wheels. Waves enable parallel execution.
 
 ---
 
