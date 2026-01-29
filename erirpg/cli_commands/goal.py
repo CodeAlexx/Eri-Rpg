@@ -103,6 +103,68 @@ def _parse_research_for_phases(research_content: str, goal: str):
     return phases, files_needed
 
 
+def _is_modification_task(spec) -> bool:
+    """Detect modification task vs greenfield project."""
+    if not spec or not getattr(spec, 'steps', None):
+        return False
+    modification_actions = {"learn", "modify", "refactor", "delete", "verify"}
+    return any(s.action in modification_actions for s in spec.steps)
+
+
+def _build_phase(name: str, steps: list) -> dict:
+    """Build phase dict from spec steps."""
+    files = [(t, s.description[:50]) for s in steps for t in s.targets]
+    return {
+        "name": name,
+        "files": files,
+        "success_criteria": [s.verification for s in steps if s.verification],
+        "deliverables": list(dict.fromkeys(t for s in steps for t in s.targets)),
+        "steps": steps,
+        "step_ids": [s.id for s in steps],
+        "is_complete": all(s.status == "completed" for s in steps),
+    }
+
+
+def _phases_from_spec(spec) -> tuple:
+    """Extract phases from spec steps instead of guessing from research."""
+    if not spec or not spec.steps:
+        return [], []
+
+    phases = []
+    files_needed = []
+
+    action_to_phase = {
+        "learn": "Understand",
+        "modify": "Implement",
+        "refactor": "Refactor",
+        "create": "Create",
+        "delete": "Cleanup",
+        "verify": "Verify",
+    }
+
+    # Group consecutive same-action steps
+    current_type = None
+    current_steps = []
+
+    for step in spec.steps:
+        phase_type = action_to_phase.get(step.action, "Execute")
+
+        if phase_type != current_type and current_steps:
+            phases.append(_build_phase(current_type, current_steps))
+            current_steps = []
+
+        current_type = phase_type
+        current_steps.append(step)
+
+        for target in step.targets:
+            files_needed.append((target, step.description[:50]))
+
+    if current_steps:
+        phases.append(_build_phase(current_type, current_steps))
+
+    return phases, files_needed
+
+
 def _generate_progress_bar(completed: int, total: int, width: int = 25) -> str:
     """Generate a text progress bar."""
     if total == 0:
@@ -172,14 +234,34 @@ def update_session_files(project_path: str, project_name: str = None, completed_
         print(f"[EriRPG] Could not parse STATE.md", file=sys.stderr)
         return False
 
-    # Load research to get phases
-    research_path = os.path.join(project_path, ".eri-rpg", "research", "RESEARCH.md")
-    research_content = ""
-    if os.path.exists(research_path):
-        with open(research_path) as f:
-            research_content = f.read()
+    # Try to load spec for spec-aware phase detection
+    spec = None
+    spec_dir = os.path.join(project_path, ".eri-rpg", "specs")
+    if os.path.exists(spec_dir):
+        from erirpg.spec import Spec
+        specs = sorted([
+            os.path.join(spec_dir, f)
+            for f in os.listdir(spec_dir)
+            if f.endswith(".yaml")
+        ], key=os.path.getmtime, reverse=True)
+        if specs:
+            try:
+                spec = Spec.load(specs[0])
+            except Exception:
+                pass
 
-    phases, files_needed = _parse_research_for_phases(research_content, goal)
+    # Use spec-aware phase detection for modification tasks
+    if spec and _is_modification_task(spec):
+        phases, files_needed = _phases_from_spec(spec)
+    else:
+        # Fallback for greenfield projects
+        research_path = os.path.join(project_path, ".eri-rpg", "research", "RESEARCH.md")
+        research_content = ""
+        if os.path.exists(research_path):
+            with open(research_path) as f:
+                research_content = f.read()
+        phases, files_needed = _parse_research_for_phases(research_content, goal)
+
     total_phases = len(phases)
 
     # Check which phases are complete based on file existence
@@ -460,8 +542,13 @@ def _generate_session_files(project_path: str, project_name: str, goal: str, spe
             discussion = d
             break
 
-    # Parse research to extract phases
-    phases, files_needed = _parse_research_for_phases(research_content, goal)
+    # Use spec-aware phase detection for modification tasks
+    if spec and _is_modification_task(spec):
+        phases, files_needed = _phases_from_spec(spec)
+    else:
+        # Fallback for greenfield projects
+        phases, files_needed = _parse_research_for_phases(research_content, goal)
+
     total_phases = len(phases)
 
     # Check which phases are already complete
@@ -540,6 +627,21 @@ def _generate_session_files(project_path: str, project_name: str, goal: str, spe
             status = "Not Started"
         state_lines.append(f"| {i} | {phase['name']} | {status} |")
 
+    # Add Spec Steps table for modification tasks
+    if spec and spec.steps:
+        state_lines.extend([
+            "",
+            "## Spec Steps",
+            "",
+            "| Step | Action | Status | Targets |",
+            "|------|--------|--------|---------|",
+        ])
+        status_icons = {"pending": "⏳", "in_progress": "🔄", "completed": "✅", "failed": "❌"}
+        for step in spec.steps:
+            icon = status_icons.get(step.status, "?")
+            targets = ", ".join(step.targets[:2]) or "-"
+            state_lines.append(f"| {step.id} | {step.action} | {icon} | `{targets}` |")
+
     state_lines.extend([
         "",
         "## Session Continuity",
@@ -577,7 +679,17 @@ def _generate_session_files(project_path: str, project_name: str, goal: str, spe
                 roadmap_lines.append(f"- [ ] `{fname}` - {desc}")
             roadmap_lines.append("")
 
-        if phase['success_criteria']:
+        # Show spec steps with verification for modification tasks
+        if phase.get("steps"):
+            roadmap_lines.append("**Steps:**")
+            for step in phase["steps"]:
+                check = "x" if step.status == "completed" else " "
+                roadmap_lines.append(f"- [{check}] `{step.id}`: {step.description}")
+                if step.verification:
+                    roadmap_lines.append(f"  - Verify: {step.verification}")
+            roadmap_lines.append("")
+
+        if phase.get('success_criteria'):
             roadmap_lines.append("**Success Criteria:**")
             for criterion in phase['success_criteria']:
                 if criterion:
@@ -643,8 +755,25 @@ def _generate_session_files(project_path: str, project_name: str, goal: str, spe
         "",
     ]
 
-    # Create tasks from phases
-    if phases:
+    # Derive tasks from spec steps for modification tasks
+    active_spec_tasks = []
+    backlog_spec_tasks = []
+    if spec and spec.steps:
+        found_current = False
+        for step in spec.steps:
+            if step.status == "in_progress":
+                active_spec_tasks.append(f"- [ ] **{step.id}**: {step.description}")
+                found_current = True
+            elif step.status == "pending" and not found_current:
+                active_spec_tasks.append(f"- [ ] **{step.id}**: {step.description}")
+                found_current = True
+            elif step.status == "pending":
+                backlog_spec_tasks.append(f"- [ ] **{step.id}**: {step.description}")
+
+    # Create tasks from phases or spec steps
+    if active_spec_tasks:
+        tasks_lines.extend(active_spec_tasks)
+    elif phases:
         first_phase = phases[0]
         if first_phase['files']:
             for fname, desc in first_phase['files']:
@@ -664,11 +793,15 @@ def _generate_session_files(project_path: str, project_name: str, goal: str, spe
         "",
     ])
 
-    # Add remaining phases as backlog
-    for i, phase in enumerate(phases[1:], 2):
-        tasks_lines.append(f"- [ ] **Phase {i}: {phase['name']}**")
-        for fname, desc in phase.get('files', []):
-            tasks_lines.append(f"  - [ ] Create `{fname}` - {desc}")
+    # Add backlog from spec steps or phases
+    if backlog_spec_tasks:
+        tasks_lines.extend(backlog_spec_tasks)
+    else:
+        # Add remaining phases as backlog
+        for i, phase in enumerate(phases[1:], 2):
+            tasks_lines.append(f"- [ ] **Phase {i}: {phase['name']}**")
+            for fname, desc in phase.get('files', []):
+                tasks_lines.append(f"  - [ ] Create `{fname}` - {desc}")
 
     tasks_lines.extend([
         "",
