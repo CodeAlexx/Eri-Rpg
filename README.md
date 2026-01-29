@@ -80,6 +80,19 @@ eri-rpg show <project>          # Show project structure
 eri-rpg impact <project> <file> # Analyze change impact
 ```
 
+### Cross-Project Search (SQLite)
+```bash
+eri-rpg db-stats                      # Show database statistics
+eri-rpg db-migrate                    # Migrate JSON graphs to SQLite
+eri-rpg find-interface "AuthManager"  # Find class/function across ALL projects
+eri-rpg find-interface "%Config" -t class  # Find all Config classes
+eri-rpg find-package torch            # Find all usages of a package
+eri-rpg find-dependents utils.py      # Find dependents across projects
+eri-rpg db-export myproject out.json  # Export to JSON for sharing
+```
+
+Cross-project queries use a global SQLite database (`~/.eri-rpg/graphs.db`) for O(log n) indexed lookups across all registered projects.
+
 ### Run Management
 ```bash
 eri-rpg goal-plan <project> "<goal>"  # Generate spec from goal
@@ -160,7 +173,8 @@ erirpg/
 ├── cli_commands/    # 26 modular command modules (91+ commands)
 ├── registry.py      # Project registry
 ├── indexer.py       # Code indexing
-├── graph.py         # Dependency graph
+├── graph.py         # Dependency graph (dataclasses)
+├── storage.py       # SQLite storage for cross-project queries
 ├── memory.py        # Knowledge storage (v2)
 ├── discuss.py       # Discussion mode & roadmaps
 ├── preflight.py     # Preflight checks
@@ -229,6 +243,7 @@ This is a personal project. Issues and PRs welcome but response time may vary.
 ### Working
 - ✅ Project registration and indexing
 - ✅ Module search (`find`)
+- ✅ Cross-project search (SQLite, <1ms queries)
 - ✅ Learning storage and recall (v2 knowledge)
 - ✅ Quick fix mode (single-file edits)
 - ✅ Cleanup command (list/prune stale runs)
