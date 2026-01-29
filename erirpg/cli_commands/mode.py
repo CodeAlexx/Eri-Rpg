@@ -29,7 +29,7 @@ def register(cli):
     @click.argument("name")
     @click.option("--path", "-p", type=click.Path(), default=None,
                   help="Path to project root (defaults to current directory)")
-    @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo"]),
+    @click.option("--lang", default=None, type=click.Choice(["python", "rust", "c", "mojo", "dart"]),
                   help="Programming language (auto-detected if not specified)")
     def init_project(name: str, path: str, lang: str):
         """Initialize a new EriRPG project in bootstrap mode.
