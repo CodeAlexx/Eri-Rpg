@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.57.0-alpha (2026-01-29)
+
+Adversarial plan verification with model escalation.
+
+### New Features
+
+**Plan Verification** - Find gaps between specs and plans
+- `eri-rpg plan verify <project|plan-path>` - Run adversarial verification
+- Quantifier audit: catches "all X" claims that only partially cover X
+- Gap severity levels: critical (blocks), moderate (notable), minor (deferrable)
+- Auto-verify after `plan generate` (use `--no-verify` to skip)
+
+**Model Selection**
+- `--model auto` (default): Sonnet first, escalate to Opus if needed
+- `--model sonnet`: Force Sonnet only
+- `--model opus`: Force Opus only
+- `--no-escalate`: Skip auto-escalation
+
+**Auto-Escalation Triggers**
+- Verdict is PASS with 0 gaps (suspicious)
+- Confidence is low or medium
+- Gaps contain ambiguity-related findings
+
+**Status Line** - Shows current model during verification
+```
+───────────────────────────────────────────────────────────
+ PERSONA: Verifier │ MODEL: sonnet │ TASK: eri:verify
+───────────────────────────────────────────────────────────
+```
+
+**Model Comparison** - When escalation occurs, compares Sonnet vs Opus findings
+
+### New Files
+- `erirpg/verifier.py` - Verification engine with Claude API integration
+- Updated `commands/eri/verify.md` - Skill documentation
+
+### CLI Changes
+- `plan generate` now has `--verify/--no-verify` flag (default: verify)
+- `plan verify` command with `--model` and `--no-escalate` options
+- Plan commands changed from "full" tier to "standard" tier
+
+---
+
 ## v0.56.0-alpha (2026-01-29)
 
 Debug persona, persona auto-detection, and status line enhancements.
