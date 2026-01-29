@@ -20,8 +20,9 @@ class TestCLILanguageSupport:
 
     def test_cli_add_command_languages(self):
         """Verify add command only allows supported languages."""
-        from erirpg.cli import add
+        from erirpg.cli import cli
 
+        add = cli.commands['add']
         # Get the --lang option from the add command
         lang_option = None
         for param in add.params:
