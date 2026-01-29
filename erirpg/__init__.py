@@ -24,12 +24,30 @@ __author__ = "Alex"
 
 from erirpg.graph import Graph, Module, Interface, Edge
 from erirpg.registry import Registry, Project
+from erirpg.persona import Persona, PersonaConfig, get_persona, detect_persona_from_input
+from erirpg.workflow import Stage, get_persona_for_stage, get_stage_description
+from erirpg.commands import parse_command, is_command, get_help_text
 
 __all__ = [
+    # Graph
     "Graph",
     "Module",
     "Interface",
     "Edge",
+    # Registry
     "Registry",
     "Project",
+    # Persona system
+    "Persona",
+    "PersonaConfig",
+    "get_persona",
+    "detect_persona_from_input",
+    # Workflow
+    "Stage",
+    "get_persona_for_stage",
+    "get_stage_description",
+    # Commands
+    "parse_command",
+    "is_command",
+    "get_help_text",
 ]

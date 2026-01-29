@@ -2,9 +2,31 @@
 
 ## v0.55.0-alpha (2026-01-28)
 
-Knowledge sync and instant preflight.
+Knowledge sync, instant preflight, and persona system (SuperClaude replacement).
 
 ### New Features
+
+**Persona System** (replaces SuperClaude's static ~20k token prompts)
+- 5 focused personas: architect, dev, critic, analyst, mentor
+- Auto-detection from user input triggers
+- Stage-to-persona mapping (implement→dev, review→critic, etc.)
+- `eri-rpg persona --list` - Show available personas
+- `eri-rpg workflow --list` - Show stages and their default personas
+- `eri-rpg ctx` - Generate dynamic CLAUDE.md (~400 tokens vs 20k)
+- `eri-rpg commands` - Show slash commands
+
+**Slash Commands**
+- Workflow: `/analyze`, `/discuss`, `/implement`, `/review`, `/debug`
+- Personas: `/architect`, `/dev`, `/critic`, `/analyst`, `/mentor`
+- Management: `/roadmap`, `/status`, `/learn`, `/context`, `/help`
+- Aliases: `/a`, `/i`, `/r`, `/db`, `/arch`, etc.
+
+**New Modules**
+- `erirpg/persona.py` - Persona definitions and detection
+- `erirpg/workflow.py` - Stage management with persona mapping
+- `erirpg/commands.py` - Slash command parsing
+- `erirpg/session_context.py` - Dynamic context builder
+- `erirpg/claudemd.py` - CLAUDE.md generator
 
 **Knowledge Sync Command**
 - `eri-rpg sync [project]` - Compare codebase files against knowledge.json
@@ -18,16 +40,17 @@ Knowledge sync and instant preflight.
 - ~12ms lookup time instead of computing file hashes per-file
 - Run `eri-rpg sync --learn` to populate cache for instant preflight
 
-**New Module**
-- `erirpg/sync.py` - Knowledge synchronization logic
-- `SyncResult` dataclass for reporting
-- `sync_knowledge()` - Compare files vs knowledge
-- `sync_and_learn()` - Sync + auto-populate knowledge
-- `learn_file()` - Parse single file into StoredLearning
+### Why This Replaces SuperClaude
+
+| SuperClaude | EriRPG |
+|-------------|--------|
+| ~20k static tokens always loaded | ~400 dynamic tokens from project |
+| Manual `/persona:architect` switch | Auto-detect from context |
+| Generic rules for any project | Patterns learned from THIS codebase |
+| No memory between sessions | StoredLearning persists |
 
 ### Version Cleanup
 - Corrected version strings across all modules to 0.55.0-alpha
-- Files updated: cli.py, memory.py, graph.py, analyze.py, registry.py, ui/*, pyproject.toml
 
 ---
 
