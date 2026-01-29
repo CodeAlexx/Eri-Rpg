@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.56.0-alpha (2026-01-29)
+
+Debug persona, persona auto-detection, and status line enhancements.
+
+### New Features
+
+**Debug Persona** - Triage-first debugging workflow
+- `/eri:debug "problem"` - Start debug session with triage questions
+- Triage checklist: Origin (internal/external), Symptom, What changed
+- Integration debugging: Detects known external tools (diffusers, pytorch, etc.)
+- `/eri:debug-config` - Configure known externals per project
+- Debug session stored separately, doesn't lock persona
+
+**Persona Auto-Detection**
+- PreToolUse hook detects persona from tool usage
+- Read/Grep/Glob → analyzer
+- Edit .py/.js/.ts → backend
+- Edit .jsx/.tsx/.css → frontend
+- Bash with pytest/jest → qa
+- Bash with git → devops
+- Edit .md/docs → scribe
+- Security files → security
+- Task tool → architect
+
+**Status Line** (two-line display)
+- Line 1: Project | Phase | Persona | Context %
+- Line 2: Branch | Tier | (more coming)
+- Persona auto-updates as Claude works
+
+### Bug Fixes
+
+- Fixed persona detection overriding explicit debug sessions
+- Status line now reads from correct config locations
+
+---
+
 ## v0.55.0-alpha (2026-01-28)
 
 Knowledge sync, instant preflight, and persona system (SuperClaude replacement).

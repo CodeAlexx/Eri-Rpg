@@ -81,6 +81,7 @@ Talk to Claude using these commands:
 | `/eri:start` | Begin a coding session |
 | `/eri:execute "goal"` | Execute a goal with full workflow |
 | `/eri:quick file.py "desc"` | Quick single-file edit |
+| `/eri:debug "problem"` | Start triage-first debugging |
 | `/eri:status` | Check current state |
 | `/eri:resume` | Continue from last session |
 | `/eri:recall module` | Get Claude's stored knowledge |
@@ -88,6 +89,7 @@ Talk to Claude using these commands:
 | `/eri:discuss "goal"` | Clarify a vague goal |
 | `/eri:roadmap` | View project milestones |
 | `/eri:decide "choice"` | Log a decision |
+| `/eri:persona` | Set or show active persona |
 | `/eri:help` | Get help |
 
 ## Tiers
@@ -158,6 +160,59 @@ Claude: Last session: Adding auth to the API
 You: Continue
 
 Claude: [Picks up where it left off]
+```
+
+### Debugging
+
+```
+You: /eri:debug "diffusers pipeline crashes with OOM"
+
+Claude: Debug triage:
+  1. Origin: Is this internal code or ported from external source?
+  2. Symptom: What's happening vs expected?
+  3. Changed: What changed recently?
+
+  Integration debugging flagged: diffusers
+  Comparing our implementation vs their docs...
+
+You: It's ported from their example code
+
+Claude: [Checks version compatibility, API usage, then diagnoses]
+```
+
+## Personas
+
+Claude automatically adapts its persona based on what it's doing:
+
+| Persona | Auto-triggers when |
+|---------|-------------------|
+| analyzer | Reading/searching code |
+| backend | Editing .py, .js, .ts files |
+| frontend | Editing .jsx, .tsx, .css files |
+| qa | Running tests |
+| devops | Git operations, Docker, deploy |
+| scribe | Editing docs/markdown |
+| security | Working with auth/crypto files |
+| architect | Using Task tool, planning |
+| debug | Running `/eri:debug` |
+
+The persona shows in your status line: `🎭 analyzer`
+
+You can manually set it: `/eri:persona architect`
+
+But usually auto-detection is best - it adapts as you work.
+
+## Known Externals (Integration Debugging)
+
+When debugging, Claude checks for known external tools. If your problem mentions one, it flags for integration debugging.
+
+Default externals: onetrainer, simpletuner, ai-toolkit, kohya, diffusers, transformers, accelerate, pytorch
+
+Configure per project:
+```
+/eri:debug-config --list           # Show known tools
+/eri:debug-config --add comfyui    # Add one
+/eri:debug-config --remove pytorch # Remove one
 ```
 
 ---
