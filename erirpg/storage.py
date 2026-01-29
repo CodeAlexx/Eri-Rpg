@@ -212,12 +212,15 @@ def save_graph(graph: Graph, db_path: Optional[str] = None) -> None:
                 """, (module_id, iface.name, iface.type, iface.signature, iface.docstring, iface.line))
                 iface_id = cursor.lastrowid
 
-                # Insert methods for classes
+                # Insert methods for classes (deduplicate)
+                seen_methods = set()
                 for method in iface.methods:
-                    conn.execute("""
-                        INSERT INTO interface_methods (interface_id, method_name)
-                        VALUES (?, ?)
-                    """, (iface_id, method))
+                    if method not in seen_methods:
+                        seen_methods.add(method)
+                        conn.execute("""
+                            INSERT OR IGNORE INTO interface_methods (interface_id, method_name)
+                            VALUES (?, ?)
+                        """, (iface_id, method))
 
             # Insert external deps
             for pkg in module.deps_external:
