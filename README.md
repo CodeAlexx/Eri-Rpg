@@ -110,17 +110,13 @@ Everything else? Claude handles it.
 
 EriRPG adds a status line to Claude Code showing current context:
 
-```
-🎭 analyzer | 📊 58%
-🌿 main | ⚡⚡⚡ full | Project: eri-rpg | 🖊 X
-```
+![Status Line](docs/images/status-line.png)
 
 - **Persona** - Auto-detected from tool usage (analyzer, backend, frontend, etc.)
 - **Context %** - How much of the context window is used
 - **Branch** - Current git branch
-- **Tier** - lite/standard/full
+- **Tier** - lite/standard/full (⚡ indicators)
 - **Project** - Active EriRPG project
-- **Edit indicator** - Shows when edits are pending
 
 ## How It Works
 
