@@ -148,3 +148,123 @@ def register(cli):
             if g.fix_spec_id:
                 click.echo(f"  Fix spec: {g.fix_spec_id}")
             click.echo("")
+
+    @cli.command(name="switch")
+    @click.argument("project")
+    def switch_cmd(project: str):
+        """Switch active project context.
+
+        Saves current session (if any) and switches to the target project.
+        State persists across /clear and new sessions.
+
+        Example:
+            eri-rpg switch myapp
+            eri-rpg switch eritrainer
+        """
+        from erirpg.state import State
+        from erirpg.memory import get_latest_session, save_session_state
+
+        state = State.load()
+
+        # Validate target project exists
+        target_proj = registry.get(project)
+        if not target_proj:
+            click.echo(f"Project '{project}' not found in registry")
+            click.echo("")
+            click.echo("Registered projects:")
+            for p in registry.list():
+                click.echo(f"  - {p.name}: {p.path}")
+            raise SystemExit(1)
+
+        # Check if switching to same project
+        if state.active_project == project:
+            click.echo(f"Already on project: {project}")
+            session = get_latest_session(target_proj.path)
+            if session:
+                click.echo("")
+                click.echo(session.format_handoff())
+            return
+
+        # Save current session if we have an active project
+        if state.active_project:
+            current_proj = registry.get(state.active_project)
+            if current_proj:
+                session = get_latest_session(current_proj.path)
+                if session:
+                    session.touch()
+                    save_session_state(current_proj.path, session)
+                    click.echo(f"Saved session for '{state.active_project}'")
+
+        # Switch to new project
+        state.set_active_project(project)
+        click.echo(f"Switched to: {project}")
+        click.echo(f"Path: {target_proj.path}")
+
+        # Show handoff from target project
+        session = get_latest_session(target_proj.path)
+        if session:
+            click.echo("")
+            click.echo(session.format_handoff())
+        else:
+            click.echo("")
+            click.echo("No previous session found")
+            click.echo("Start a run with: eri-rpg goal-run " + project)
+
+    @cli.command(name="resume")
+    @click.option("--project", "-p", default=None, help="Project to resume (default: active)")
+    def resume_cmd(project: str):
+        """Resume work on active or specified project.
+
+        Shows the latest session handoff for quick context recovery.
+        Use at the start of a new Claude Code session.
+
+        Example:
+            eri-rpg resume
+            eri-rpg resume -p myapp
+        """
+        from erirpg.state import State
+        from erirpg.memory import get_latest_session
+
+        state = State.load()
+
+        # Determine which project to resume
+        target_name = project or state.active_project
+
+        if not target_name:
+            click.echo("No active project set")
+            click.echo("")
+            click.echo("Registered projects:")
+            for p in registry.list():
+                marker = " (active)" if p.name == state.active_project else ""
+                click.echo(f"  - {p.name}{marker}: {p.path}")
+            click.echo("")
+            click.echo("Switch with: eri-rpg switch <project>")
+            raise SystemExit(1)
+
+        # Get the project
+        proj = registry.get(target_name)
+        if not proj:
+            click.echo(f"Project '{target_name}' not found in registry")
+            raise SystemExit(1)
+
+        # Update active project if resuming a specific one
+        if project and project != state.active_project:
+            state.set_active_project(project)
+            click.echo(f"Switched to: {project}")
+
+        click.echo(f"Project: {target_name}")
+        click.echo(f"Path: {proj.path}")
+
+        # Show session handoff
+        try:
+            session = get_latest_session(proj.path)
+            if session:
+                click.echo("")
+                click.echo(session.format_handoff())
+            else:
+                click.echo("")
+                click.echo("No previous session found")
+                click.echo(f"Start a run with: eri-rpg goal-run {target_name}")
+        except Exception as e:
+            click.echo(f"Error loading session: {e}")
+            click.echo(f"Start fresh with: eri-rpg goal-run {target_name}")

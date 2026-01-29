@@ -26,6 +26,7 @@ class State:
     - "validating": Validating implementation
     - "done": Task complete
     """
+    active_project: Optional[str] = None  # Currently active project name
     current_task: Optional[str] = None
     phase: str = "idle"
     waiting_on: Optional[str] = None  # "user" | "claude" | None
@@ -67,7 +68,17 @@ class State:
         self.context_file = None
         self.feature_file = None
         self.plan_file = None
+        # Note: active_project is NOT reset - it persists across sessions
         self.save()
+
+    def set_active_project(self, name: str) -> None:
+        """Set the active project."""
+        self.active_project = name
+        self.save()
+
+    def get_active_project(self) -> Optional[str]:
+        """Get the active project name."""
+        return self.active_project
 
     def get_next_step(self) -> str:
         """Get recommended next step based on current state."""
@@ -108,6 +119,7 @@ class State:
         os.makedirs(self._state_dir, exist_ok=True)
 
         data = {
+            "active_project": self.active_project,
             "current_task": self.current_task,
             "phase": self.phase,
             "waiting_on": self.waiting_on,
@@ -131,6 +143,7 @@ class State:
         if os.path.exists(state_path):
             with open(state_path, "r") as f:
                 data = json.load(f)
+            state.active_project = data.get("active_project")
             state.current_task = data.get("current_task")
             state.phase = data.get("phase", "idle")
             state.waiting_on = data.get("waiting_on")
@@ -144,6 +157,9 @@ class State:
     def format_status(self) -> str:
         """Format current status for display."""
         lines = []
+
+        if self.active_project:
+            lines.append(f"Active project: {self.active_project}")
 
         if self.current_task:
             lines.append(f"Current task: {self.current_task}")
