@@ -3,14 +3,19 @@ Code indexer for building dependency graphs.
 
 Walks project directories, parses files, builds module graph
 with interfaces and dependencies.
+
+Storage:
+- Primary: SQLite database at ~/.eri-rpg/graphs.db (fast cross-project queries)
+- Fallback: JSON at .eri-rpg/graph.json (backward compatibility)
 """
 
 import os
 from pathlib import Path
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 from datetime import datetime
 
 from erirpg.graph import Graph, Module, Interface, Edge
+from erirpg import storage
 from erirpg.parsers.python import (
     parse_python_file,
     resolve_import_to_module,
@@ -225,6 +230,17 @@ def index_project(project: Project, verbose: bool = False) -> Graph:
 
     # Save graph
     graph.indexed_at = datetime.now()
+
+    # Save to SQLite (primary storage)
+    try:
+        storage.save_graph(graph)
+        if verbose:
+            print(f"  Saved to SQLite: ~/.eri-rpg/graphs.db")
+    except Exception as e:
+        if verbose:
+            print(f"  Warning: SQLite save failed: {e}")
+
+    # Also save to JSON for backward compatibility
     graph.save(project.graph_path)
 
     if verbose:
@@ -350,8 +366,30 @@ def _find_mojo_files(root: str) -> List[str]:
     return mojo_files
 
 
-def get_or_load_graph(project: Project) -> Graph:
-    """Get project graph, loading from disk if exists."""
+def get_or_load_graph(project: Project, prefer_sqlite: bool = True) -> Graph:
+    """Get project graph, loading from SQLite or JSON.
+
+    Args:
+        project: Project to load graph for
+        prefer_sqlite: If True, try SQLite first then fall back to JSON
+
+    Returns:
+        The loaded Graph
+
+    Raises:
+        ValueError: If project is not indexed
+    """
+    if prefer_sqlite:
+        # Try SQLite first
+        try:
+            graph = storage.load_graph(project.name)
+            if graph:
+                return graph
+        except Exception:
+            pass  # Fall through to JSON
+
+    # Fall back to JSON
     if project.is_indexed() and os.path.exists(project.graph_path):
         return Graph.load(project.graph_path)
+
     raise ValueError(f"Project '{project.name}' is not indexed. Run: eri-rpg index {project.name}")
