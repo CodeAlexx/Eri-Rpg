@@ -268,3 +268,17 @@ def register(cli):
         except Exception as e:
             click.echo(f"Error loading session: {e}")
             click.echo(f"Start fresh with: eri-rpg goal-run {target_name}")
+
+        # Also show decisions from latest run
+        try:
+            from erirpg.agent.run import get_latest_run
+            run = get_latest_run(proj.path)
+            if run and run.decisions:
+                click.echo("")
+                click.echo(f"### Key Decisions ({len(run.decisions)})")
+                for d in run.decisions[-5:]:  # Last 5
+                    click.echo(f"- **{d.decision}**")
+                    if d.rationale:
+                        click.echo(f"  ↳ {d.rationale}")
+        except Exception:
+            pass  # No run decisions to show

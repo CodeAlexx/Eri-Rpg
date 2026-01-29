@@ -929,6 +929,7 @@ class SessionState:
 
     # Context
     decision_ids: List[str] = field(default_factory=list)  # Decision IDs made this session
+    decisions: List[Dict[str, str]] = field(default_factory=list)  # Full decision records {decision, rationale}
     blockers: List[Blocker] = field(default_factory=list)  # Known issues
     deferred_this_session: List[str] = field(default_factory=list)  # Idea IDs punted
 
@@ -936,10 +937,22 @@ class SessionState:
     next_actions: List[str] = field(default_factory=list)  # What to do next
     notes: str = ""  # Freeform notes
 
-    def add_decision(self, decision_id: str) -> None:
-        """Track a decision made this session."""
+    def add_decision(self, decision_id: str, decision_text: str = "", rationale: str = "") -> None:
+        """Track a decision made this session.
+
+        Args:
+            decision_id: Unique ID for the decision
+            decision_text: What was decided
+            rationale: Why this decision was made
+        """
         if decision_id not in self.decision_ids:
             self.decision_ids.append(decision_id)
+            if decision_text:
+                self.decisions.append({
+                    "id": decision_id,
+                    "decision": decision_text,
+                    "rationale": rationale,
+                })
 
     def add_blocker(self, description: str, severity: str = "medium") -> Blocker:
         """Add a blocker."""
@@ -995,9 +1008,17 @@ class SessionState:
             lines.append(f"Step: {self.current_step}/{self.total_steps}")
             lines.append("")
 
-        if self.decision_ids:
+        if self.decisions:
+            lines.append(f"### Key Decisions ({len(self.decisions)})")
+            for dec in self.decisions[-5:]:  # Last 5
+                lines.append(f"- **{dec['decision']}**")
+                if dec.get('rationale'):
+                    lines.append(f"  ↳ {dec['rationale']}")
+            lines.append("")
+        elif self.decision_ids:
+            # Fallback to IDs if no full decisions stored
             lines.append(f"### Decisions Made ({len(self.decision_ids)})")
-            for d_id in self.decision_ids[-5:]:  # Last 5
+            for d_id in self.decision_ids[-5:]:
                 lines.append(f"- {d_id}")
             lines.append("")
 
@@ -1037,6 +1058,7 @@ class SessionState:
             "current_step": self.current_step,
             "total_steps": self.total_steps,
             "decision_ids": self.decision_ids,
+            "decisions": self.decisions,
             "blockers": [b.to_dict() for b in self.blockers],
             "deferred_this_session": self.deferred_this_session,
             "next_actions": self.next_actions,
@@ -1053,6 +1075,7 @@ class SessionState:
             current_step=d.get("current_step", 0),
             total_steps=d.get("total_steps", 0),
             decision_ids=d.get("decision_ids", []),
+            decisions=d.get("decisions", []),
             blockers=[Blocker.from_dict(b) for b in d.get("blockers", [])],
             deferred_this_session=d.get("deferred_this_session", []),
             next_actions=d.get("next_actions", []),
