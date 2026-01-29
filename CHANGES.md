@@ -6,6 +6,37 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ## January 29, 2026
 
+### Personal Todo List
+
+Quick task tracking that persists across sessions and projects.
+
+**New CLI Commands:**
+| Command | Description |
+|---------|-------------|
+| `todo [text]` | Add or list todos |
+| `todo-done <id>` | Mark a todo complete |
+| `todo-rm <id>` | Remove a todo |
+| `todo-clear` | Clear completed todos |
+
+**Options:**
+- `-p, --project <name>` - Associate with project
+- `--priority <level>` - urgent/high/normal/low
+- `-t, --tag <tag>` - Add tags (repeatable)
+- `--all` - Show completed too
+
+**Priority Icons:**
+- 🔴 urgent - Do now
+- 🟠 high - Do today
+- ⚪ normal - Default
+- 🔵 low - Whenever
+
+**Session Integration:**
+- Pending todos shown at session start
+- Storage: `~/.eri-rpg/todos.json`
+
+**New Slash Command:**
+- `/eri:todo` - Personal task tracking
+
 ### Per-Project Environment Configuration
 
 Store environment settings per project to avoid wasting tokens guessing how to run tests, lint, etc.
