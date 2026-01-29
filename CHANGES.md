@@ -6,6 +6,34 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ## January 29, 2026
 
+### Spec-Driven Session File Generation
+
+Session files now reflect actual spec execution steps for modification tasks:
+
+**New Helper Functions:**
+- `_is_modification_task(spec)` - Detect modification vs greenfield specs
+- `_phases_from_spec(spec)` - Extract phases from spec steps
+- `_build_phase(name, steps)` - Build phase dict from spec steps
+
+**Phase Mapping:**
+| Spec Action | Phase Name |
+|-------------|------------|
+| learn | Understand |
+| modify | Implement |
+| refactor | Refactor |
+| create | Create |
+| delete | Cleanup |
+| verify | Verify |
+
+**Enhanced Session Files:**
+- **STATE.md** - Now includes Spec Steps table with step ID, action, status icon, targets
+- **ROADMAP.md** - Shows Steps section with verification criteria per phase
+- **TASKS.md** - Derives active/backlog from spec steps (first pending = active)
+
+**Backward Compatible:**
+- Greenfield projects continue using research-based phase detection
+- Modification detection: specs with learn/modify/refactor/delete/verify actions
+
 ### Session Status Auto-Update
 
 **New Command:**
