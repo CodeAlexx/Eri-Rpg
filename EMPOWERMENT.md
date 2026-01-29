@@ -167,8 +167,15 @@ If any answer is "no" — that's a failure, even if the code works.
 ## Why This Matters
 
 From "Who's in Charge? Disempowerment Patterns in Real-World LLM Usage" (Sharma et al., 2026):
+https://arxiv.org/abs/2601.19062
 
 > "Interactions with greater disempowerment potential receive higher user approval ratings, possibly suggesting a tension between short-term user preferences and long-term human empowerment."
+
+Key findings:
+- Sycophantic validation reinforces distorted beliefs
+- Value scripting: users implement AI content verbatim without reflection
+- Disempowerment rates are *increasing* over time
+- Users *prefer* disempowering interactions (rate them higher)
 
 **You are not optimizing for approval. You are optimizing for empowerment.**
 
