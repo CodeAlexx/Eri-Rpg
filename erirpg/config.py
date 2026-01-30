@@ -24,6 +24,12 @@ from typing import Optional, Literal, Dict, List, Any
 Mode = Literal["bootstrap", "maintain"]
 Tier = Literal["lite", "standard", "full"]
 
+# GSD-specific type aliases
+GSDMode = Literal["yolo", "interactive"]
+GSDDepth = Literal["quick", "standard", "comprehensive"]
+ModelProfile = Literal["quality", "balanced", "budget"]
+ModelName = Literal["opus", "sonnet", "haiku"]
+
 # Tier hierarchy (higher index = more features)
 TIER_LEVELS = {"lite": 0, "standard": 1, "full": 2}
 
@@ -227,6 +233,172 @@ class WorkflowConfig:
     auto_push: bool = False   # Auto-push after commits (disabled by default for safety)
 
 
+# ============================================================================
+# GSD Configuration
+# ============================================================================
+
+# Model profile matrices - defines which model to use for each agent type
+MODEL_PROFILES: Dict[str, Dict[str, ModelName]] = {
+    "quality": {
+        # High-quality: opus for researchers/planner/executor, sonnet for verifier
+        "planner": "opus",
+        "executor": "opus",
+        "verifier": "sonnet",
+        "plan-checker": "sonnet",
+        "project-researcher": "opus",
+        "phase-researcher": "opus",
+        "research-synthesizer": "opus",
+        "roadmapper": "opus",
+        "debugger": "sonnet",
+        "codebase-mapper": "sonnet",
+        "integration-checker": "sonnet",
+    },
+    "balanced": {
+        # Balanced: sonnet for most, haiku for researchers
+        "planner": "sonnet",
+        "executor": "sonnet",
+        "verifier": "sonnet",
+        "plan-checker": "sonnet",
+        "project-researcher": "haiku",
+        "phase-researcher": "haiku",
+        "research-synthesizer": "sonnet",
+        "roadmapper": "sonnet",
+        "debugger": "sonnet",
+        "codebase-mapper": "haiku",
+        "integration-checker": "sonnet",
+    },
+    "budget": {
+        # Budget: sonnet for planner/executor, haiku for others
+        "planner": "sonnet",
+        "executor": "sonnet",
+        "verifier": "haiku",
+        "plan-checker": "haiku",
+        "project-researcher": "haiku",
+        "phase-researcher": "haiku",
+        "research-synthesizer": "haiku",
+        "roadmapper": "haiku",
+        "debugger": "haiku",
+        "codebase-mapper": "haiku",
+        "integration-checker": "haiku",
+    },
+}
+
+# Agent types for validation
+AGENT_TYPES = [
+    "planner",
+    "executor",
+    "verifier",
+    "plan-checker",
+    "project-researcher",
+    "phase-researcher",
+    "research-synthesizer",
+    "roadmapper",
+    "debugger",
+    "codebase-mapper",
+    "integration-checker",
+]
+
+# Depth configurations
+DEPTH_CONFIG: Dict[str, Dict[str, Any]] = {
+    "quick": {
+        "description": "Fast execution with minimal verification",
+        "verification_level": 1,  # Existence only
+        "max_retries": 1,
+        "parallel_plans": True,
+    },
+    "standard": {
+        "description": "Balanced execution with substantive verification",
+        "verification_level": 2,  # Existence + Substantive
+        "max_retries": 2,
+        "parallel_plans": True,
+    },
+    "comprehensive": {
+        "description": "Thorough execution with full verification",
+        "verification_level": 3,  # Existence + Substantive + Wired
+        "max_retries": 3,
+        "parallel_plans": False,  # Sequential for full verification
+    },
+}
+
+
+@dataclass
+class GSDConfig:
+    """GSD (Get Shit Done) methodology settings.
+
+    Controls execution behavior for goal-backward planning and verification.
+    """
+    # Execution mode
+    mode: GSDMode = "interactive"  # yolo: auto-proceed, interactive: confirm at checkpoints
+
+    # Verification depth
+    depth: GSDDepth = "standard"  # quick/standard/comprehensive
+
+    # Parallelization
+    parallelization: bool = True  # Run independent plans in parallel
+
+    # Documentation commits
+    commit_docs: bool = True  # Commit after writing/updating docs
+
+    # Model profile for agent selection
+    model_profile: ModelProfile = "balanced"  # quality/balanced/budget
+
+    def to_dict(self) -> dict:
+        return {
+            "mode": self.mode,
+            "depth": self.depth,
+            "parallelization": self.parallelization,
+            "commit_docs": self.commit_docs,
+            "model_profile": self.model_profile,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GSDConfig":
+        return cls(
+            mode=data.get("mode", "interactive"),
+            depth=data.get("depth", "standard"),
+            parallelization=data.get("parallelization", True),
+            commit_docs=data.get("commit_docs", True),
+            model_profile=data.get("model_profile", "balanced"),
+        )
+
+    def get_model_for_agent(self, agent_type: str) -> ModelName:
+        """Get the model to use for a specific agent type.
+
+        Args:
+            agent_type: One of the 11 agent types
+
+        Returns:
+            Model name: opus, sonnet, or haiku
+        """
+        profile = MODEL_PROFILES.get(self.model_profile, MODEL_PROFILES["balanced"])
+        return profile.get(agent_type, "sonnet")
+
+    def get_verification_level(self) -> int:
+        """Get the verification level for current depth.
+
+        Returns:
+            1 = existence, 2 = substantive, 3 = wired
+        """
+        return DEPTH_CONFIG.get(self.depth, DEPTH_CONFIG["standard"])["verification_level"]
+
+    def should_run_parallel(self) -> bool:
+        """Check if plans should run in parallel.
+
+        Returns:
+            True if parallelization is enabled and depth allows it
+        """
+        depth_allows = DEPTH_CONFIG.get(self.depth, {}).get("parallel_plans", True)
+        return self.parallelization and depth_allows
+
+    def is_yolo(self) -> bool:
+        """Check if running in yolo mode (auto-proceed)."""
+        return self.mode == "yolo"
+
+    def is_interactive(self) -> bool:
+        """Check if running in interactive mode (confirm checkpoints)."""
+        return self.mode == "interactive"
+
+
 @dataclass
 class ProjectConfig:
     """Project-level configuration."""
@@ -251,6 +423,9 @@ class ProjectConfig:
     # Workflow settings
     workflow: WorkflowConfig = field(default_factory=WorkflowConfig)
 
+    # GSD methodology settings
+    gsd: GSDConfig = field(default_factory=GSDConfig)
+
     def to_dict(self) -> dict:
         return {
             "mode": self.mode,
@@ -262,6 +437,7 @@ class ProjectConfig:
             "enforcement": asdict(self.enforcement),
             "multi_agent": asdict(self.multi_agent),
             "workflow": asdict(self.workflow),
+            "gsd": self.gsd.to_dict(),
         }
 
     @classmethod
@@ -270,6 +446,7 @@ class ProjectConfig:
         enf_data = data.get("enforcement", {})
         env_data = data.get("env", {})
         wf_data = data.get("workflow", {})
+        gsd_data = data.get("gsd", {})
         return cls(
             mode=data.get("mode", "bootstrap"),
             tier=data.get("tier", "lite"),
@@ -290,6 +467,7 @@ class ProjectConfig:
                 auto_commit=wf_data.get("auto_commit", True),
                 auto_push=wf_data.get("auto_push", False),
             ),
+            gsd=GSDConfig.from_dict(gsd_data),
         )
 
     def is_bootstrap(self) -> bool:
@@ -848,3 +1026,178 @@ def set_auto_push(project_path: str, enabled: bool) -> ProjectConfig:
     config.workflow.auto_push = enabled
     save_config(project_path, config)
     return config
+
+
+# ============================================================================
+# GSD Settings
+# ============================================================================
+
+def get_gsd_config(project_path: str) -> GSDConfig:
+    """Get GSD configuration for a project.
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        GSDConfig
+    """
+    config = load_config(project_path)
+    return config.gsd
+
+
+def set_gsd_mode(project_path: str, mode: GSDMode) -> ProjectConfig:
+    """Set GSD execution mode.
+
+    Args:
+        project_path: Path to project root
+        mode: "yolo" (auto-proceed) or "interactive" (confirm checkpoints)
+
+    Returns:
+        Updated ProjectConfig
+    """
+    if mode not in ("yolo", "interactive"):
+        raise ValueError(f"Invalid GSD mode: {mode}. Must be 'yolo' or 'interactive'")
+
+    config = load_config(project_path)
+    config.gsd.mode = mode
+    save_config(project_path, config)
+    return config
+
+
+def set_gsd_depth(project_path: str, depth: GSDDepth) -> ProjectConfig:
+    """Set GSD verification depth.
+
+    Args:
+        project_path: Path to project root
+        depth: "quick", "standard", or "comprehensive"
+
+    Returns:
+        Updated ProjectConfig
+    """
+    if depth not in ("quick", "standard", "comprehensive"):
+        raise ValueError(f"Invalid depth: {depth}. Must be 'quick', 'standard', or 'comprehensive'")
+
+    config = load_config(project_path)
+    config.gsd.depth = depth
+    save_config(project_path, config)
+    return config
+
+
+def set_model_profile(project_path: str, profile: ModelProfile) -> ProjectConfig:
+    """Set model profile for agent selection.
+
+    Args:
+        project_path: Path to project root
+        profile: "quality", "balanced", or "budget"
+
+    Returns:
+        Updated ProjectConfig
+    """
+    if profile not in ("quality", "balanced", "budget"):
+        raise ValueError(f"Invalid profile: {profile}. Must be 'quality', 'balanced', or 'budget'")
+
+    config = load_config(project_path)
+    config.gsd.model_profile = profile
+    save_config(project_path, config)
+    return config
+
+
+def set_parallelization(project_path: str, enabled: bool) -> ProjectConfig:
+    """Enable or disable plan parallelization.
+
+    Args:
+        project_path: Path to project root
+        enabled: Whether to enable parallel execution
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.gsd.parallelization = enabled
+    save_config(project_path, config)
+    return config
+
+
+def set_commit_docs(project_path: str, enabled: bool) -> ProjectConfig:
+    """Enable or disable doc commits.
+
+    Args:
+        project_path: Path to project root
+        enabled: Whether to commit after doc updates
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.gsd.commit_docs = enabled
+    save_config(project_path, config)
+    return config
+
+
+def get_model_for_agent(project_path: str, agent_type: str) -> ModelName:
+    """Get the model to use for a specific agent type.
+
+    Uses the project's configured model profile to select the appropriate
+    model for each agent type.
+
+    Args:
+        project_path: Path to project root
+        agent_type: One of the 11 agent types:
+            - planner, executor, verifier, plan-checker
+            - project-researcher, phase-researcher, research-synthesizer
+            - roadmapper, debugger, codebase-mapper, integration-checker
+
+    Returns:
+        Model name: "opus", "sonnet", or "haiku"
+    """
+    config = load_config(project_path)
+    return config.gsd.get_model_for_agent(agent_type)
+
+
+def format_gsd_summary(gsd: GSDConfig) -> str:
+    """Format GSD config for display.
+
+    Args:
+        gsd: GSDConfig to format
+
+    Returns:
+        Formatted string
+    """
+    lines = [
+        "GSD Settings",
+        "=" * 40,
+        f"Mode: {gsd.mode}",
+        f"Depth: {gsd.depth}",
+        f"Model Profile: {gsd.model_profile}",
+        f"Parallelization: {'enabled' if gsd.parallelization else 'disabled'}",
+        f"Commit Docs: {'enabled' if gsd.commit_docs else 'disabled'}",
+        "",
+        f"Verification Level: {gsd.get_verification_level()} ({'existence' if gsd.get_verification_level() == 1 else 'substantive' if gsd.get_verification_level() == 2 else 'wired'})",
+        f"Parallel Execution: {'yes' if gsd.should_run_parallel() else 'no'}",
+    ]
+    return "\n".join(lines)
+
+
+def format_model_profile_summary(profile: ModelProfile) -> str:
+    """Format model profile for display.
+
+    Args:
+        profile: Model profile name
+
+    Returns:
+        Formatted string showing agent → model mapping
+    """
+    if profile not in MODEL_PROFILES:
+        return f"Unknown profile: {profile}"
+
+    mapping = MODEL_PROFILES[profile]
+    lines = [
+        f"Model Profile: {profile}",
+        "=" * 40,
+    ]
+
+    for agent_type in AGENT_TYPES:
+        model = mapping.get(agent_type, "sonnet")
+        lines.append(f"  {agent_type}: {model}")
+
+    return "\n".join(lines)

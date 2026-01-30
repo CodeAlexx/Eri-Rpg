@@ -92,6 +92,7 @@ def register_all(cli: "click.Group") -> None:
     from . import todo_cmd
     from . import new_project
     from . import task_list_cmd
+    from . import gsd
 
     setup.register(cli)
     mode.register(cli)
@@ -124,3 +125,4 @@ def register_all(cli: "click.Group") -> None:
     todo_cmd.register(cli)
     new_project.register(cli)
     task_list_cmd.register(cli)
+    gsd.register(cli)
