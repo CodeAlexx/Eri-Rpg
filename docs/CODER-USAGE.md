@@ -145,10 +145,11 @@ When you run `/coder:new-project`, Claude executes:
 
 ### Starting Projects
 
-| Command | What to Type |
-|---------|--------------|
-| New project | `/coder:new-project my-app "Description"` |
-| Existing code | `/coder:map-codebase` |
+| Command | When to Use | What to Type |
+|---------|-------------|--------------|
+| New project (greenfield) | Starting from scratch | `/coder:new-project my-app "Description"` |
+| Map existing code | Understanding a codebase | `/coder:map-codebase` |
+| Add feature (brownfield) | Adding to existing project | `/coder:add-feature auth "User authentication"` |
 
 ### Building Phases
 
@@ -269,6 +270,68 @@ Mid-project changes are fine:
 > "Actually, let's add dark mode support to the requirements"
 
 Claude will update the roadmap and continue.
+
+---
+
+## Working with Existing Codebases (Brownfield)
+
+Most real projects aren't greenfield - you're adding to existing code. Eri-coder handles this.
+
+### Map First, Then Modify
+
+Before adding features to an existing project:
+
+```
+cd ~/my-existing-project
+/coder:map-codebase
+```
+
+This creates `.planning/codebase/` with:
+- **STACK.md** - Languages, frameworks, dependencies
+- **ARCHITECTURE.md** - How the code is organized
+- **CONVENTIONS.md** - Coding style to follow
+- **CONCERNS.md** - Tech debt and issues
+- **SUMMARY.md** - Quick overview
+
+### Add Features
+
+Once mapped, add features that fit the existing architecture:
+
+```
+/coder:add-feature payments "Stripe payment processing"
+```
+
+Claude will:
+1. Read your codebase mapping
+2. Plan the feature to match existing patterns
+3. Integrate at the right places
+4. Follow your conventions
+
+### When to Use What
+
+| Scenario | Command |
+|----------|---------|
+| Brand new project | `/coder:new-project` |
+| Add feature to existing code | `/coder:add-feature` |
+| Just understand a codebase | `/coder:map-codebase` |
+| Major restructuring | `/coder:new-project` (will detect brownfield) |
+
+### Example: Adding Auth to Existing App
+
+```
+# Step 1: Map what's there
+cd ~/my-app
+/coder:map-codebase
+
+# Step 2: Add the feature
+/coder:add-feature auth "User authentication with email/password"
+
+# Claude will:
+# - Check ARCHITECTURE.md for where auth should go
+# - Follow patterns from CONVENTIONS.md
+# - Use the right framework patterns from STACK.md
+# - Avoid issues listed in CONCERNS.md
+```
 
 ---
 
