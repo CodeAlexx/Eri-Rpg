@@ -100,6 +100,63 @@ def track_modified_file(file_path: str, project_path: str) -> None:
     save_modified_files(data)
 
 
+def run_verification_and_commit(project_path: str) -> None:
+    """Run verification and auto-commit if it passes."""
+    try:
+        from erirpg.verification import (
+            Verifier,
+            load_verification_config,
+            get_default_python_config,
+        )
+
+        # Load or auto-detect verification config
+        config = load_verification_config(project_path)
+        if not config:
+            # Auto-detect Python project
+            if (Path(project_path) / "pyproject.toml").exists() or \
+               (Path(project_path) / "tests").exists():
+                config = get_default_python_config()
+
+        if not config:
+            # No verification - just commit
+            _auto_commit_no_verify(project_path)
+            return
+
+        # Run verification with auto-commit enabled
+        verifier = Verifier(config, project_path)
+        result = verifier.run_verification("post-edit", auto_commit=True)
+
+        if result.passed:
+            log(f"Verification passed, auto-committed in {project_path}")
+        else:
+            log(f"Verification failed in {project_path}, no commit")
+
+    except Exception as e:
+        log(f"Verification error: {e}")
+
+
+def _auto_commit_no_verify(project_path: str) -> None:
+    """Auto-commit when no verification is configured."""
+    import subprocess
+    try:
+        # Stage all changes
+        subprocess.run(["git", "add", "-A"], cwd=project_path, capture_output=True, timeout=30)
+
+        # Check if anything to commit
+        result = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=project_path, capture_output=True, timeout=10)
+        if result.returncode == 0:
+            return  # Nothing to commit
+
+        # Commit
+        subprocess.run(
+            ["git", "commit", "-m", "chore: auto-commit (no verification configured)"],
+            cwd=project_path, capture_output=True, timeout=30
+        )
+        log(f"Auto-committed (no verify) in {project_path}")
+    except Exception as e:
+        log(f"Auto-commit error: {e}")
+
+
 def main():
     """Process PostToolUse hook - track modified files."""
     try:
@@ -133,6 +190,9 @@ def main():
 
         # Track the file
         track_modified_file(file_path, project_path)
+
+        # Run verification and auto-commit if passes
+        run_verification_and_commit(project_path)
 
         print(json.dumps({"continue": True}))
 
