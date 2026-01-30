@@ -1,20 +1,21 @@
 """
-Central status file synchronization.
+Central status file synchronization with auto-commit.
 
 This module provides a single entry point for regenerating status files
-(STATUS.md, ROADMAP.md, TASKS.md) after any state change. All state-changing
-functions should call sync_status_files() after committing their changes.
+(STATUS.md, ROADMAP.md, TASKS.md) after any state change, then automatically
+committing those changes.
 
 Design: Never fail on status update - this is a best-effort operation
 that should not interrupt the primary workflow.
 """
 
+import subprocess
 from pathlib import Path
 from typing import Optional
 
 
-def sync_status_files(project_path: str, project_name: Optional[str] = None) -> bool:
-    """Regenerate all status files after a state change.
+def sync_status_files(project_path: str, project_name: Optional[str] = None, auto_commit: bool = True) -> bool:
+    """Regenerate all status files after a state change and auto-commit.
 
     This is the central function that should be called after ANY state change
     that affects session data, decisions, blockers, actions, or run state.
@@ -22,6 +23,7 @@ def sync_status_files(project_path: str, project_name: Optional[str] = None) -> 
     Args:
         project_path: Path to the project directory
         project_name: Project name (auto-detected if not provided)
+        auto_commit: Whether to automatically commit status file changes (default: True)
 
     Returns:
         True if sync succeeded, False otherwise (never raises)
@@ -37,11 +39,71 @@ def sync_status_files(project_path: str, project_name: Optional[str] = None) -> 
         from erirpg.generators.status_md import regenerate_status
 
         regenerate_status(project_name, project_path)
+
+        # Auto-commit the status file changes
+        if auto_commit:
+            _auto_commit_status(project_path)
+
         return True
 
     except Exception:
         # Never fail on status update - this is a best-effort operation
         return False
+
+
+def _auto_commit_status(project_path: str) -> bool:
+    """Automatically commit status file changes.
+
+    Only commits .eri-rpg/*.md files to avoid committing unrelated changes.
+
+    Returns:
+        True if commit succeeded or nothing to commit, False on error
+    """
+    try:
+        eri_dir = Path(project_path) / ".eri-rpg"
+        if not eri_dir.exists():
+            return False
+
+        # Find status files that exist
+        status_files = []
+        for md_file in ["STATUS.md", "ROADMAP.md", "TASKS.md"]:
+            if (eri_dir / md_file).exists():
+                status_files.append(f".eri-rpg/{md_file}")
+
+        if not status_files:
+            return True  # Nothing to commit
+
+        # Stage only status files
+        subprocess.run(
+            ["git", "add"] + status_files,
+            cwd=project_path,
+            capture_output=True,
+            timeout=10,
+        )
+
+        # Check if there's anything staged
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=project_path,
+            capture_output=True,
+            timeout=10,
+        )
+
+        if result.returncode == 0:
+            return True  # Nothing to commit
+
+        # Commit with auto-generated message
+        subprocess.run(
+            ["git", "commit", "-m", "chore: auto-update status files"],
+            cwd=project_path,
+            capture_output=True,
+            timeout=30,
+        )
+
+        return True
+
+    except Exception:
+        return False  # Never fail
 
 
 def _get_project_name(project_path: str) -> Optional[str]:
