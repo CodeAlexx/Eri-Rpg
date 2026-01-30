@@ -132,11 +132,18 @@ When you run `/coder:new-project`, Claude executes:
 ├── REQUIREMENTS.md   # Feature list with REQ-IDs
 ├── ROADMAP.md        # Phased implementation plan
 ├── STATE.md          # Progress tracker
-└── research/         # Research findings
+├── config.json       # Workflow preferences
+├── research/         # Research findings (greenfield)
+│   ├── STACK.md
+│   ├── FEATURES.md
+│   ├── ARCHITECTURE.md
+│   └── PITFALLS.md
+└── codebase/         # Codebase analysis (brownfield)
     ├── STACK.md
-    ├── FEATURES.md
     ├── ARCHITECTURE.md
-    └── PITFALLS.md
+    ├── CONVENTIONS.md
+    ├── CONCERNS.md
+    └── SUMMARY.md
 ```
 
 ---
