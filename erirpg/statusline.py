@@ -153,13 +153,26 @@ def get_model_provider_info(project_path: str) -> Tuple[str, str]:
 
 
 def get_project_info(registry: dict, cwd: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-    """Get project name, path, and tier from registry based on cwd."""
+    """Get project name, path, and tier from registry based on cwd.
+
+    Only matches if cwd is inside the project path (not the reverse).
+    Finds the most specific (longest) matching project path.
+    """
+    best_match = (None, None, None)
+    best_len = 0
+
     for name, info in registry.items():
         proj_path = info.get("path", "")
-        if cwd.startswith(proj_path) or proj_path.startswith(cwd):
-            tier = get_project_tier(proj_path)
-            return name, proj_path, tier
-    return None, None, None
+        # Only match if cwd is inside this project (cwd starts with proj_path)
+        # NOT the reverse (that was the bug - matching any project containing cwd as prefix)
+        if proj_path and cwd.startswith(proj_path):
+            # Prefer longer (more specific) matches
+            if len(proj_path) > best_len:
+                tier = get_project_tier(proj_path)
+                best_match = (name, proj_path, tier)
+                best_len = len(proj_path)
+
+    return best_match
 
 
 def get_knowledge_count(project_path: Optional[str]) -> int:
@@ -204,6 +217,97 @@ def get_project_state(project_path: Optional[str]) -> dict:
         except:
             pass
     return {}
+
+
+def get_coder_phase_info(cwd: str) -> Tuple[Optional[int], Optional[int], Optional[str]]:
+    """Get coder phase info from .planning/STATE.md in cwd or parent dirs.
+
+    Returns:
+        Tuple of (current_phase, total_phases, status) or (None, None, None)
+    """
+    import re
+
+    # Search from cwd upward for .planning/STATE.md
+    search_path = Path(cwd)
+    for _ in range(5):  # Max 5 levels up
+        state_file = search_path / ".planning" / "STATE.md"
+        if state_file.exists():
+            try:
+                content = state_file.read_text()
+                # Parse "Phase: X of Y" pattern
+                match = re.search(r'\*\*Phase:\*\*\s*(\d+)\s+of\s+(\d+)', content)
+                if match:
+                    current = int(match.group(1))
+                    total = int(match.group(2))
+                    # Check if complete
+                    if "ALL COMPLETE" in content or "Ready" in content:
+                        status = "done"
+                    else:
+                        status = "active"
+                    return current, total, status
+            except:
+                pass
+            break
+        search_path = search_path.parent
+        if search_path == search_path.parent:  # Hit root
+            break
+
+    return None, None, None
+
+
+def get_coder_project_name(cwd: str) -> Optional[str]:
+    """Get project name from .planning/STATE.md or PROJECT.md for unregistered coder projects.
+
+    Returns:
+        Project name or None
+    """
+    import re
+
+    search_path = Path(cwd)
+    for _ in range(5):  # Max 5 levels up
+        planning_dir = search_path / ".planning"
+        if planning_dir.exists():
+            # Try STATE.md first (has "Project State: <name>")
+            state_file = planning_dir / "STATE.md"
+            if state_file.exists():
+                try:
+                    content = state_file.read_text()
+                    match = re.search(r'#\s*Project State:\s*(\S+)', content)
+                    if match:
+                        return match.group(1)
+                except:
+                    pass
+
+            # Try PROJECT.md (has "# <name>")
+            project_file = planning_dir / "PROJECT.md"
+            if project_file.exists():
+                try:
+                    content = project_file.read_text()
+                    match = re.search(r'^#\s*(.+)$', content, re.MULTILINE)
+                    if match:
+                        return match.group(1).strip()
+                except:
+                    pass
+
+            # Fallback to directory name
+            return search_path.name
+
+        search_path = search_path.parent
+        if search_path == search_path.parent:  # Hit root
+            break
+
+    return None
+
+
+def format_progress_bar(current: int, total: int, width: int = 10) -> str:
+    """Format a progress bar like [████░░░░░░] 40%"""
+    if total <= 0:
+        return ""
+    pct = min(100, int((current / total) * 100))
+    filled = int((current / total) * width)
+    empty = width - filled
+    bar = "█" * filled + "░" * empty
+    return f"[{bar}] {pct}%"
 
 
 def format_tokens(tokens: Optional[int]) -> str:
@@ -252,7 +356,15 @@ def main():
     # Get project info - PRIORITIZE cwd-based detection over stale state
     project_name, project_path, tier = get_project_info(registry, cwd)
 
-    # Only use active_project from state if cwd detection failed
+    # If no registry match, check for coder project (.planning/ directory)
+    if not project_name:
+        coder_name = get_coder_project_name(cwd)
+        if coder_name:
+            project_name = coder_name
+            project_path = cwd  # Use cwd as project path
+            tier = None  # Coder projects don't have tiers
+
+    # Only use active_project from state as LAST resort
     if not project_name:
         state_project = global_state.get("active_project")
         if state_project and state_project in registry:
@@ -270,6 +382,9 @@ def main():
     # Get project-specific state for current_task
     project_state = get_project_state(project_path)
 
+    # Get coder phase info (from .planning/STATE.md)
+    coder_current, coder_total, coder_status = get_coder_phase_info(cwd)
+
     # Get model provider info for the project
     model_provider, model_display = "claude", "balanced"
     if project_path:
@@ -285,7 +400,14 @@ def main():
     elif model_name:
         line1_parts.append(f"🤖 {model_name}")
 
-    if phase and phase != "idle":
+    # Show coder phase with progress bar (takes priority over eri phase)
+    if coder_current is not None and coder_total is not None:
+        progress = format_progress_bar(coder_current, coder_total, width=8)
+        if coder_status == "done":
+            line1_parts.append(f"✅ Phase {coder_current}/{coder_total} {progress}")
+        else:
+            line1_parts.append(f"🔨 Phase {coder_current}/{coder_total} {progress}")
+    elif phase and phase != "idle":
         line1_parts.append(f"📍 {phase}")
 
     line1_parts.append(f"🎭 {persona}")
