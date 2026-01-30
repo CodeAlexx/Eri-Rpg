@@ -1,377 +1,357 @@
-# ERI-CODER Usage Guide
+# Eri-Coder: Build Apps Without Writing Code
 
-**Vibe code new projects from zero to production.**
+**Describe what you want. Claude builds it.**
 
-## Quick Start
+Eri-coder is a vibe coding workflow where you describe your app in plain English and Claude handles all the coding, testing, and deployment.
 
+---
+
+## Real Example: We Built This
+
+Using eri-coder, we built a complete **Rust chat application** in one session:
+
+![Working App](https://raw.githubusercontent.com/CodeAlexx/rust-llm-chat-interface/main/docs/screenshot-app.png)
+
+**Result:**
+- 995 lines of Rust code
+- egui desktop UI
+- SQLite database
+- Streaming API integration
+- 7 unit tests
+- Full documentation
+
+**Time:** Single Claude Code session
+**Code written by human:** Zero
+
+See the repo: [rust-llm-chat-interface](https://github.com/CodeAlexx/rust-llm-chat-interface)
+
+---
+
+## How It Works (No Coding Required)
+
+### Step 1: Start a New Project
+
+Open Claude Code and type:
+
+```
+/coder:new-project my-app "A task management app with due dates"
+```
+
+That's it. Claude runs 8 initialization phases automatically.
+
+### Step 2: Answer Questions
+
+Claude will ask you questions like:
+- "What problem does this solve?"
+- "Who are the users?"
+- "What's explicitly out of scope?"
+
+Just answer in plain English. Be specific about what you want.
+
+### Step 3: Choose Your Mode
+
+Claude will ask: **YOLO or Interactive?**
+
+| Mode | What Happens |
+|------|--------------|
+| **YOLO** | Claude builds everything without stopping for approval |
+| **Interactive** | Claude asks for approval at each step |
+
+For your first project, try YOLO - it's faster.
+
+### Step 4: Watch Claude Research
+
+Claude spawns 4 parallel research agents:
+
+![Research Agents](https://raw.githubusercontent.com/CodeAlexx/rust-llm-chat-interface/main/docs/screenshot-agents.png)
+
+These research:
+- **Stack** - Best technologies for your app
+- **Features** - What features similar apps have
+- **Architecture** - How to structure the code
+- **Pitfalls** - Common mistakes to avoid
+
+You don't do anything - just watch.
+
+### Step 5: Select Features
+
+Claude presents features in categories:
+- **Must Have** - Core functionality
+- **Should Have** - Important but not critical
+- **Nice to Have** - Future enhancements
+
+Pick what you want for v1. Say something like:
+> "All the must-haves, the first two should-haves, skip the nice-to-haves for now"
+
+### Step 6: Approve the Roadmap
+
+Claude creates a phased roadmap. Review it and say:
+> "Looks good, proceed"
+
+### Step 7: Let Claude Build
+
+Claude will:
+```
+/coder:plan-phase 1    # Create detailed plans
+/coder:execute-phase 1 # Write all the code
+/coder:verify-work 1   # Test everything
+```
+
+Repeat for each phase until done.
+
+### Step 8: Run Your App
+
+Claude tells you how to run it:
 ```bash
-# Start a new project
-/coder:new-project my-app "A task management app"
-
-# Follow the 8-phase initialization...
-# Then build phase by phase:
-/coder:plan-phase 1
-/coder:execute-phase 1
-/coder:verify-work 1
-
-# Repeat for each phase until done
-/coder:complete-milestone v1.0
+cargo run        # For Rust apps
+npm start        # For Node apps
+python app.py    # For Python apps
 ```
 
 ---
 
-## Two Systems, One Workflow
+## The 8 Initialization Phases
 
-| System | Purpose | When to Use |
-|--------|---------|-------------|
-| `/coder:*` | Vibe coding new projects | Building from scratch |
-| `/eri:*` | Tracking existing projects | Maintaining mature codebases |
+When you run `/coder:new-project`, Claude executes:
 
-**Lifecycle:** Build with `/coder:*` → Mature → Onboard with `/eri:index` → Maintain with `/eri:*`
+| Phase | What Happens | Your Input |
+|-------|--------------|------------|
+| 1. Setup | Creates project folder and git repo | None |
+| 2. Brownfield | Checks for existing code | None |
+| 3. Questioning | Deep Q&A about requirements | Answer questions |
+| 4. PROJECT.md | Documents vision and constraints | Review and approve |
+| 5. Preferences | Sets workflow mode | Choose YOLO or Interactive |
+| 6. Research | 4 parallel agents gather info | Watch and wait |
+| 7. Requirements | Generates feature list with IDs | Select v1 features |
+| 8. Roadmap | Creates phased plan | Approve or revise |
+
+**Output:** A `.planning/` folder with all documentation:
+```
+.planning/
+├── PROJECT.md        # Vision and constraints
+├── REQUIREMENTS.md   # Feature list with REQ-IDs
+├── ROADMAP.md        # Phased implementation plan
+├── STATE.md          # Progress tracker
+└── research/         # Research findings
+    ├── STACK.md
+    ├── FEATURES.md
+    ├── ARCHITECTURE.md
+    └── PITFALLS.md
+```
 
 ---
 
-## The Coder Workflow
+## Commands You'll Use
 
-### Phase 1: Start a New Project
+### Starting Projects
 
-```bash
-/coder:new-project my-app "Description of what you're building"
-```
+| Command | What to Type |
+|---------|--------------|
+| New project | `/coder:new-project my-app "Description"` |
+| Existing code | `/coder:map-codebase` |
 
-This runs 8 initialization phases:
-1. **Setup** - Creates `.planning/` directory, checks for existing code
-2. **Brownfield** - If code exists, offers `/coder:map-codebase`
-3. **Questioning** - Deep Q&A to surface requirements
-4. **PROJECT.md** - Synthesizes vision, constraints, decisions
-5. **Preferences** - Mode (yolo/interactive), depth, parallelization
-6. **Research** - Parallel agents research stack, features, pitfalls
-7. **Requirements** - User selects v1 scope, generates REQ-IDs
-8. **Roadmap** - Derives phases from requirements
+### Building Phases
 
-**Output:** `.planning/` directory with PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md
+| Command | What to Type |
+|---------|--------------|
+| Plan a phase | `/coder:plan-phase 1` |
+| Build a phase | `/coder:execute-phase 1` |
+| Test a phase | `/coder:verify-work 1` |
 
----
+### Managing Work
 
-### Phase 2: Optional - Discuss Implementation
-
-```bash
-/coder:discuss-phase 1
-```
-
-Before planning, capture your preferences:
-- UI density and layout choices
-- API response formats
-- Database decisions
-- Error handling approaches
-
-**Output:** `.planning/phases/01-foundation/01-CONTEXT.md`
+| Command | What to Type |
+|---------|--------------|
+| Stop for today | `/coder:pause "stopping for the day"` |
+| Continue tomorrow | `/coder:resume` |
+| Finish version | `/coder:complete-milestone v1.0` |
 
 ---
 
-### Phase 3: Plan the Phase
+## Example Conversation
 
-```bash
-/coder:plan-phase 1
+Here's what a real session looks like:
+
+**You:**
+```
+/coder:new-project llm-chat "A chat interface for local LLMs"
 ```
 
-Creates executable PLAN.md files with:
-- **Goal-backward methodology**: Observable truths, artifacts, key links
-- **2-3 tasks per plan** (keeps context manageable)
-- **Wave assignments** for parallel execution
-- **Verification commands**
+**Claude:** *Creates project, asks questions*
 
-**Output:** `.planning/phases/01-foundation/01-01-PLAN.md`, etc.
+**You:**
+> "It's for personal use and dev testing. I want streaming responses, conversation history, and it should work offline with my local LLM server."
+
+**Claude:** *Runs research agents, presents features*
+
+**You:**
+> "All the must-haves. Use egui for the UI - I've heard it's good. YOLO mode please."
+
+**Claude:** *Creates roadmap with 4 phases*
+
+**You:**
+> "Looks good, build it"
+
+**Claude:** *Executes all phases, tests everything*
+
+**You:**
+```
+cargo run
+```
+
+**Result:** Working chat app.
 
 ---
 
-### Phase 4: Execute the Phase
+## Tips for Best Results
 
-```bash
-/coder:execute-phase 1
-```
+### Be Specific About What You Want
 
-Executes plans using wave-based parallelization:
-- **Wave 1** plans run in parallel
-- Wait for completion
-- **Wave 2** plans run in parallel
-- And so on...
+❌ Bad: "Make a chat app"
+✅ Good: "Make a chat app that connects to localhost:8000, streams responses token by token, and saves conversations to SQLite"
 
-**Deviation Rules:**
-| Rule | Action | Example |
-|------|--------|---------|
-| 1. Bug found | Auto-fix | Logic error, type error |
-| 2. Missing critical | Auto-add | Error handling, validation |
-| 3. Blocking issue | Auto-fix | Missing import, config |
-| 4. Architecture change | **STOP** | New DB table, switching libs |
+### Tell Claude Your Constraints
 
-**Output:** `.planning/phases/01-foundation/01-01-SUMMARY.md`, etc.
+❌ Bad: "Build it however"
+✅ Good: "Use Python with FastAPI, no external databases, must work offline"
 
----
+### Trust YOLO Mode
 
-### Phase 5: Verify the Work
+For most projects, YOLO mode is faster and produces the same quality. Claude knows when to stop and ask (like for major architecture decisions).
 
-```bash
-/coder:verify-work 1
-```
+### Don't Interrupt During Research
 
-Three-level verification:
-1. **Exists** - Does the file exist?
-2. **Substantive** - Real code (not stubs)?
-3. **Wired** - Connected to the system?
+The 4 parallel research agents take 1-2 minutes. Let them finish - they're gathering important context.
 
-Then manual UAT:
-- Claude guides you through testing each deliverable
-- You report pass/fail
-- Failures trigger debugger for root cause
+### Verify After Each Phase
 
-**Output:** `.planning/phases/01-foundation/01-VERIFICATION.md`, `01-UAT.md`
+Even in YOLO mode, run `/coder:verify-work` after each phase. Catching issues early is easier than fixing them later.
 
 ---
 
-### Phase 6: Repeat or Complete
+## What Claude Creates
 
-**If more phases:**
-```bash
-/coder:plan-phase 2
-/coder:execute-phase 2
-/coder:verify-work 2
+After `/coder:new-project`, your folder looks like:
+
+```
+my-app/
+├── .planning/           # All documentation
+│   ├── PROJECT.md       # Vision
+│   ├── REQUIREMENTS.md  # Features with IDs
+│   ├── ROADMAP.md       # Phases
+│   └── research/        # Research docs
+├── src/                 # Source code
+├── tests/               # Test files
+├── Cargo.toml           # Or package.json, pyproject.toml, etc.
+└── README.md            # Documentation
 ```
 
-**If all phases done:**
-```bash
-/coder:complete-milestone v1.0
-```
-
-This:
-- Archives milestone to `.planning/archive/`
-- Creates git tag
-- Prepares STATE.md for next version
+Everything is tracked in git automatically.
 
 ---
 
-## Roadmap Management
+## When Things Go Wrong
+
+### Claude Stops and Asks
+
+If Claude encounters a major decision (new database table, switching libraries), it stops and asks. This is intentional - these decisions need your input.
+
+Just tell Claude what you prefer:
+> "Use SQLite, not PostgreSQL"
+
+### Tests Fail
+
+Claude will debug and fix. If it can't figure it out, it'll ask you for more context.
+
+### You Change Your Mind
+
+Mid-project changes are fine:
+> "Actually, let's add dark mode support to the requirements"
+
+Claude will update the roadmap and continue.
+
+---
+
+## Advanced: Adding Phases Later
 
 ### Add a Phase
-```bash
-/coder:add-phase "API-Integration" "Connect to external payment API"
+```
+/coder:add-phase "API-Integration" "Connect to payment processor"
 ```
 
 ### Insert Urgent Phase
-```bash
-/coder:insert-phase 2 "Hotfix" "Fix critical security issue"
-# Renumbers subsequent phases
+```
+/coder:insert-phase 2 "Hotfix" "Fix security issue"
 ```
 
 ### Remove Future Phase
-```bash
+```
 /coder:remove-phase 5
-# Can't remove completed/in-progress phases
 ```
 
 ---
 
-## Session Management
+## Moving to Maintenance Mode
 
-### Pause Work
-```bash
-/coder:pause "EOD - continuing tomorrow"
+Once your app is built and stable, switch to EriRPG tracking mode:
+
+```
+/eri:index .           # Index the codebase
+/eri:start             # Start a session
+/eri:recall auth       # Recall what Claude learned
 ```
 
-Creates `.planning/.continue-here.md` with:
-- Current position
-- Uncommitted changes
-- What was happening
-- Next steps
-
-### Resume Work
-```bash
-/coder:resume
-```
+Now use `/eri:*` commands for bug fixes and small changes.
 
 ---
 
-## Starting a New Version
+## FAQ
 
-```bash
-/coder:new-milestone v2.0
-```
+**Q: Do I need to know how to code?**
+A: No. You describe what you want, Claude writes all the code.
 
-This:
-- Loads deferred v2 requirements
-- Lets you add/remove requirements
-- Creates new roadmap phases
-- Resets STATE.md for new milestone
+**Q: Can I see what Claude is writing?**
+A: Yes, everything is visible in real-time. You can stop and ask questions anytime.
 
----
+**Q: What languages does this support?**
+A: Any language Claude knows - Python, JavaScript, Rust, Go, etc.
 
-## Brownfield Projects
+**Q: How long does it take?**
+A: Small apps (few hundred lines): 15-30 minutes. Medium apps (1000+ lines): 1-2 hours.
 
-For existing codebases:
+**Q: What if I want to modify the code later?**
+A: The code is yours. Edit it directly or ask Claude to make changes.
 
-```bash
-/coder:map-codebase all
-```
-
-Focus options: `tech`, `arch`, `quality`, `concerns`, `all`
-
-Creates `.planning/codebase/` with:
-- STACK.md - Languages, frameworks, dependencies
-- ARCHITECTURE.md - Structure, patterns, data flow
-- CONVENTIONS.md - Coding style, naming patterns
-- CONCERNS.md - Tech debt, security issues, risks
-
-Then continue with `/coder:new-project` to add features.
+**Q: Does this cost money?**
+A: Claude Code has usage costs. Or use a local LLM for free (see Local Model Support below).
 
 ---
 
-## Directory Structure
+## Local Model Support (Free)
 
+Use a local LLM instead of Claude API:
+
+1. Start a local server:
+```bash
+llama-server -m model.gguf --port 8000
 ```
-.planning/
-├── PROJECT.md          # Vision, constraints, decisions
-├── REQUIREMENTS.md     # REQ-IDs with priorities
-├── ROADMAP.md          # Phases with success criteria
-├── STATE.md            # Current position
-├── config.json         # Workflow preferences
-├── .continue-here.md   # Resume state (if paused)
-├── research/           # Research artifacts
-│   ├── STACK.md
-│   ├── FEATURES.md
-│   ├── ARCHITECTURE.md
-│   ├── PITFALLS.md
-│   └── SUMMARY.md
-├── codebase/           # Brownfield analysis
-│   ├── STACK.md
-│   ├── ARCHITECTURE.md
-│   └── CONCERNS.md
-├── phases/
-│   ├── 01-foundation/
-│   │   ├── 01-CONTEXT.md
-│   │   ├── 01-01-PLAN.md
-│   │   ├── 01-01-SUMMARY.md
-│   │   ├── 01-VERIFICATION.md
-│   │   └── 01-UAT.md
-│   └── 02-core-features/
-│       └── ...
-└── archive/
-    └── v1.0/
-        ├── STATE.md
-        └── ROADMAP.md
+
+2. Launch Claude Code with local backend:
+```bash
+ANTHROPIC_BASE_URL=http://localhost:8000 claude
 ```
+
+Now all generation is free and offline.
 
 ---
 
-## Transitioning to Maintenance Mode
+## Summary
 
-When your project matures and you want to switch from vibe-coding to tracking:
+1. `/coder:new-project my-app "description"` - Start
+2. Answer questions about what you want
+3. Choose YOLO mode for automatic building
+4. Watch Claude research, plan, and build
+5. `/coder:verify-work` after each phase
+6. Run your app
 
-```bash
-# Index the codebase into eri-rpg
-/eri:index .
-
-# Now use eri commands for maintenance
-/eri:start
-/eri:recall auth      # Recall what you learned
-/eri:plan fix-bug     # Plan changes
-/eri:execute          # Execute with verification
-```
-
----
-
-## Command Reference
-
-| Command | Description |
-|---------|-------------|
-| `/coder:new-project <name> [desc]` | Start new project (8 phases) |
-| `/coder:map-codebase [focus]` | Analyze existing codebase |
-| `/coder:discuss-phase <N>` | Capture implementation decisions |
-| `/coder:plan-phase <N> [--gaps]` | Create executable plans |
-| `/coder:execute-phase <N>` | Execute with wave parallelization |
-| `/coder:verify-work <N>` | Manual UAT with debugging |
-| `/coder:add-phase <name> <goal>` | Append phase to roadmap |
-| `/coder:insert-phase <after> <name> <goal>` | Insert urgent phase |
-| `/coder:remove-phase <N>` | Remove future phase |
-| `/coder:pause [reason]` | Create handoff state |
-| `/coder:resume` | Resume from handoff |
-| `/coder:new-milestone <name>` | Start new version |
-| `/coder:complete-milestone [name]` | Archive and tag release |
-
----
-
-## Tips
-
-1. **Let questioning go deep** - The more you clarify upfront, the better the plans
-2. **Use discuss-phase for gray areas** - Lock decisions before planning
-3. **Trust the deviation rules** - Rules 1-3 auto-fix, only rule 4 stops
-4. **Verify after each phase** - Don't accumulate unverified code
-5. **Pause before stopping** - Your future self will thank you
-
----
-
-## Status Line Indicators
-
-When active:
-- `🎸 coder` = Vibe coding mode (building new)
-- `🔧 eri` = Tracking mode (maintaining existing)
-- `🤖 opus/sonnet` = Using Claude via Anthropic API
-- `🏠 GLM` = Using local model (no API charges!)
-
----
-
-## Local Model Support (Backup/Offline)
-
-Use a local LLM when Claude tokens run out or for offline work.
-
-### Setup Local Model
-
-1. Start llama.cpp server:
-```bash
-# Example with GLM-4.7-Flash
-llama-server -m GLM-4.7-Flash.gguf -c 8192 --port 8000
-```
-
-2. Configure project for local:
-```bash
-eri-rpg config myproject --provider local
-eri-rpg config myproject --local-url http://localhost:8000
-eri-rpg config myproject --local-model unsloth/GLM-4.7-Flash
-```
-
-3. Launch Claude Code with local backend:
-```bash
-# Use the helper script (NO API charges!)
-eri-local
-
-# Or manually:
-ANTHROPIC_BASE_URL=http://localhost:8000 claude --model unsloth/GLM-4.7-Flash
-```
-
-### How It Works
-
-When `ANTHROPIC_BASE_URL` is set, Claude Code sends ALL requests to your local
-server instead of api.anthropic.com. This means:
-- **Zero API charges** - Everything runs locally
-- **Offline capable** - No internet needed
-- **Same interface** - Claude Code works identically
-
-### Configuration Commands
-
-```bash
-# Switch to local model
-eri-rpg config myproject --provider local
-
-# Switch back to Claude API
-eri-rpg config myproject --provider claude
-
-# Show current config
-eri-rpg config myproject --show
-```
-
-### Recommended Local Models
-
-| Model | Size | Best For |
-|-------|------|----------|
-| GLM-4.7-Flash | ~9GB | Fast coding tasks |
-| Qwen2.5-Coder-32B | ~20GB | Complex reasoning |
-| DeepSeek-Coder-V2 | ~16GB | Code generation |
+**That's it.** No coding required.

@@ -205,6 +205,37 @@ Based on: [Who's in Charge? Disempowerment Patterns in Real-World LLM Usage](htt
 
 EriRPG optimizes for your growth, not your approval.
 
+## Eri-Coder: Vibe Code New Projects
+
+EriRPG includes **eri-coder** - a workflow for building new projects from scratch without writing code yourself.
+
+```bash
+/coder:new-project my-app "A task management app"
+```
+
+This runs an 8-phase workflow:
+1. **Setup** - Project initialization
+2. **Brownfield** - Detect existing code
+3. **Questioning** - Deep requirements gathering
+4. **PROJECT.md** - Vision documentation
+5. **Preferences** - YOLO or interactive mode
+6. **Research** - 4 parallel agents research stack, features, architecture, pitfalls
+7. **Requirements** - Generate REQ-IDs
+8. **Roadmap** - Create phased implementation plan
+
+Then execute phase by phase:
+```bash
+/coder:plan-phase 1
+/coder:execute-phase 1
+/coder:verify-work 1
+```
+
+**Real Example:** We built a complete Rust chat application (995 lines, egui UI, SQLite, streaming API) in one session using this workflow. See: [rust-llm-chat-interface](https://github.com/CodeAlexx/rust-llm-chat-interface)
+
+![Parallel Research Agents](https://raw.githubusercontent.com/CodeAlexx/rust-llm-chat-interface/main/docs/screenshot-agents.png)
+
+**Full Guide:** [docs/CODER-USAGE.md](docs/CODER-USAGE.md) - Complete no-code guide
+
 ## Status
 
 Alpha v0.57 - usable but evolving.
@@ -218,6 +249,7 @@ Alpha v0.57 - usable but evolving.
 - ✅ Claude Code hooks
 - ✅ Session context persistence (SQLite)
 - ✅ Automatic git branch tracking
+- ✅ **Eri-Coder vibe coding workflow**
 
 ### In Progress
 - ⚠️ Multi-agent parallel execution
