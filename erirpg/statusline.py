@@ -125,6 +125,33 @@ def get_project_tier(project_path: str) -> str:
     return "lite"
 
 
+def get_model_provider_info(project_path: str) -> Tuple[str, str]:
+    """Get model provider and display name from project config.
+
+    Returns:
+        Tuple of (provider: "claude"|"local", display_name)
+    """
+    config_path = Path(project_path) / ".eri-rpg" / "config.json"
+    if config_path.exists():
+        try:
+            data = json.loads(config_path.read_text())
+            eri = data.get("eri", {})
+            provider = eri.get("model_provider", "claude")
+            if provider == "local":
+                local_model = eri.get("local_model", {})
+                model = local_model.get("model", "local")
+                # Extract short name from path
+                if "/" in model:
+                    model = model.split("/")[-1]
+                return "local", model
+            else:
+                profile = eri.get("model_profile", "balanced")
+                return "claude", profile
+        except:
+            pass
+    return "claude", "balanced"
+
+
 def get_project_info(registry: dict, cwd: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """Get project name, path, and tier from registry based on cwd."""
     for name, info in registry.items():
@@ -243,10 +270,19 @@ def main():
     # Get project-specific state for current_task
     project_state = get_project_state(project_path)
 
+    # Get model provider info for the project
+    model_provider, model_display = "claude", "balanced"
+    if project_path:
+        model_provider, model_display = get_model_provider_info(project_path)
+
     # === LINE 1: Model | Phase | Persona | Context | Task ===
     line1_parts = []
 
-    if model_name:
+    # Show model with appropriate icon
+    # 🤖 = Claude/Anthropic, 🏠 = local model
+    if model_provider == "local":
+        line1_parts.append(f"🏠 {model_display}")
+    elif model_name:
         line1_parts.append(f"🤖 {model_name}")
 
     if phase and phase != "idle":

@@ -1,0 +1,88 @@
+#!/bin/bash
+# eri-local - Launch Claude Code with LOCAL model (NO Anthropic API charges!)
+#
+# This script sets ANTHROPIC_BASE_URL to redirect ALL requests to your
+# local llama.cpp server. NO requests go to Anthropic = NO charges.
+#
+# Usage:
+#   eri-local                    # Use default local server
+#   eri-local --url URL          # Use custom server URL
+#   eri-local --model MODEL      # Use specific model
+#
+# Requirements:
+#   - llama.cpp server running on localhost:8000 (default)
+#   - Model loaded and serving OpenAI-compatible API
+#
+# NOTE: When ANTHROPIC_BASE_URL is set, Claude Code sends requests to YOUR
+# server instead of api.anthropic.com. This is 100% offline/local.
+
+set -e
+
+# Defaults
+LOCAL_URL="${ERI_LOCAL_URL:-http://localhost:8000}"
+LOCAL_MODEL="${ERI_LOCAL_MODEL:-unsloth/GLM-4.7-Flash}"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --url)
+            LOCAL_URL="$2"
+            shift 2
+            ;;
+        --model)
+            LOCAL_MODEL="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "eri-local - Launch Claude Code with local model backend"
+            echo ""
+            echo "Usage: eri-local [options]"
+            echo ""
+            echo "Options:"
+            echo "  --url URL      Local server URL (default: http://localhost:8000)"
+            echo "  --model MODEL  Model name (default: unsloth/GLM-4.7-Flash)"
+            echo "  --help         Show this help"
+            echo ""
+            echo "Environment variables:"
+            echo "  ERI_LOCAL_URL    Default server URL"
+            echo "  ERI_LOCAL_MODEL  Default model name"
+            echo ""
+            echo "Examples:"
+            echo "  eri-local"
+            echo "  eri-local --url http://192.168.1.100:8000"
+            echo "  eri-local --model Qwen/Qwen2.5-Coder-32B"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Check if server is reachable
+echo "🏠 Connecting to local model server..."
+if ! curl -s --connect-timeout 2 "${LOCAL_URL}/health" > /dev/null 2>&1; then
+    if ! curl -s --connect-timeout 2 "${LOCAL_URL}/v1/models" > /dev/null 2>&1; then
+        echo "⚠️  Warning: Cannot reach ${LOCAL_URL}"
+        echo "   Make sure llama.cpp server is running"
+        echo ""
+        read -p "Continue anyway? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+fi
+
+echo "🏠 LOCAL MODE - No Anthropic API charges!"
+echo "📡 Server: ${LOCAL_URL}"
+echo "🤖 Model: ${LOCAL_MODEL}"
+echo ""
+echo "All requests go to YOUR local server, not Anthropic."
+echo ""
+
+# Launch Claude Code with local backend
+# ANTHROPIC_BASE_URL redirects ALL requests to local server
+export ANTHROPIC_BASE_URL="${LOCAL_URL}"
+exec claude --model "${LOCAL_MODEL}" "$@"

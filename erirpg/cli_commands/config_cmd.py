@@ -19,16 +19,30 @@ def register(cli):
                   help="Enable or disable multi-agent mode")
     @click.option("--concurrency", type=int, default=None,
                   help="Max concurrent sub-agents (1-15)")
+    @click.option("--provider", type=click.Choice(["claude", "local"]), default=None,
+                  help="Model provider: claude (Anthropic API) or local (llama.cpp)")
+    @click.option("--local-url", type=str, default=None,
+                  help="Local model server URL (e.g., http://localhost:8000)")
+    @click.option("--local-model", type=str, default=None,
+                  help="Local model name (e.g., unsloth/GLM-4.7-Flash)")
     @click.option("--show", is_flag=True, help="Show current configuration")
-    def config_cmd(project: str, multi_agent: str, concurrency: int, show: bool):
+    def config_cmd(project: str, multi_agent: str, concurrency: int,
+                   provider: str, local_url: str, local_model: str, show: bool):
         """Configure project settings.
 
         Examples:
             eri-rpg config myproject --show
             eri-rpg config myproject --multi-agent on
             eri-rpg config myproject --concurrency 5
+            eri-rpg config myproject --provider local
+            eri-rpg config myproject --local-url http://localhost:8000
+            eri-rpg config myproject --local-model unsloth/GLM-4.7-Flash
         """
-        from erirpg.config import load_config, set_multi_agent, set_concurrency, format_env_summary
+        from erirpg.config import (
+            load_config, set_multi_agent, set_concurrency, format_env_summary,
+            set_model_provider, set_local_model_url, set_local_model_name,
+            format_model_provider_summary
+        )
         from erirpg.registry import Registry
 
         registry = Registry.get_instance()
@@ -39,12 +53,23 @@ def register(cli):
 
         config = load_config(proj.path)
 
-        if show or (multi_agent is None and concurrency is None):
+        # Show config if no options or --show
+        no_options = all(x is None for x in [multi_agent, concurrency, provider, local_url, local_model])
+        if show or no_options:
             click.echo(f"Configuration for {project}:")
             click.echo(f"  Mode: {config.mode}")
             click.echo(f"  Tier: {config.tier}")
             click.echo(f"  Multi-agent: {'enabled' if config.multi_agent.enabled else 'disabled'}")
             click.echo(f"  Max concurrency: {config.multi_agent.max_concurrency}")
+            click.echo("")
+            click.echo("Model Provider:")
+            provider_icon = "🏠" if config.eri.is_local() else "🤖"
+            click.echo(f"  {provider_icon} Provider: {config.eri.model_provider}")
+            if config.eri.is_local():
+                click.echo(f"  URL: {config.eri.local_model.base_url}")
+                click.echo(f"  Model: {config.eri.local_model.model}")
+            else:
+                click.echo(f"  Profile: {config.eri.model_profile}")
             click.echo("")
             click.echo("Environment:")
             env_summary = format_env_summary(config.env)
@@ -52,6 +77,7 @@ def register(cli):
                 click.echo(f"  {line}")
             return
 
+        # Apply settings
         if multi_agent is not None:
             enabled = multi_agent == "on"
             config = set_multi_agent(proj.path, enabled)
@@ -60,6 +86,19 @@ def register(cli):
         if concurrency is not None:
             config = set_concurrency(proj.path, concurrency)
             click.echo(f"Max concurrency: {config.multi_agent.max_concurrency}")
+
+        if provider is not None:
+            config = set_model_provider(proj.path, provider)
+            icon = "🏠" if provider == "local" else "🤖"
+            click.echo(f"{icon} Model provider: {provider}")
+
+        if local_url is not None:
+            config = set_local_model_url(proj.path, local_url)
+            click.echo(f"Local model URL: {local_url}")
+
+        if local_model is not None:
+            config = set_local_model_name(proj.path, local_model)
+            click.echo(f"Local model: {local_model}")
 
     @cli.command("env")
     @click.argument("project")

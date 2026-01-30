@@ -314,3 +314,64 @@ When your project matures and you want to switch from vibe-coding to tracking:
 When active:
 - `🎸 coder` = Vibe coding mode (building new)
 - `🔧 eri` = Tracking mode (maintaining existing)
+- `🤖 opus/sonnet` = Using Claude via Anthropic API
+- `🏠 GLM` = Using local model (no API charges!)
+
+---
+
+## Local Model Support (Backup/Offline)
+
+Use a local LLM when Claude tokens run out or for offline work.
+
+### Setup Local Model
+
+1. Start llama.cpp server:
+```bash
+# Example with GLM-4.7-Flash
+llama-server -m GLM-4.7-Flash.gguf -c 8192 --port 8000
+```
+
+2. Configure project for local:
+```bash
+eri-rpg config myproject --provider local
+eri-rpg config myproject --local-url http://localhost:8000
+eri-rpg config myproject --local-model unsloth/GLM-4.7-Flash
+```
+
+3. Launch Claude Code with local backend:
+```bash
+# Use the helper script (NO API charges!)
+eri-local
+
+# Or manually:
+ANTHROPIC_BASE_URL=http://localhost:8000 claude --model unsloth/GLM-4.7-Flash
+```
+
+### How It Works
+
+When `ANTHROPIC_BASE_URL` is set, Claude Code sends ALL requests to your local
+server instead of api.anthropic.com. This means:
+- **Zero API charges** - Everything runs locally
+- **Offline capable** - No internet needed
+- **Same interface** - Claude Code works identically
+
+### Configuration Commands
+
+```bash
+# Switch to local model
+eri-rpg config myproject --provider local
+
+# Switch back to Claude API
+eri-rpg config myproject --provider claude
+
+# Show current config
+eri-rpg config myproject --show
+```
+
+### Recommended Local Models
+
+| Model | Size | Best For |
+|-------|------|----------|
+| GLM-4.7-Flash | ~9GB | Fast coding tasks |
+| Qwen2.5-Coder-32B | ~20GB | Complex reasoning |
+| DeepSeek-Coder-V2 | ~16GB | Code generation |

@@ -29,6 +29,7 @@ EriMode = Literal["yolo", "interactive"]
 EriDepth = Literal["quick", "standard", "comprehensive"]
 ModelProfile = Literal["quality", "balanced", "budget"]
 ModelName = Literal["opus", "sonnet", "haiku"]
+ModelProvider = Literal["claude", "local"]
 
 # Tier hierarchy (higher index = more features)
 TIER_LEVELS = {"lite": 0, "standard": 1, "full": 2}
@@ -233,6 +234,39 @@ class WorkflowConfig:
     auto_push: bool = False   # Auto-push after commits (disabled by default for safety)
 
 
+@dataclass
+class LocalModelConfig:
+    """Local model backend configuration.
+
+    When model_provider is "local", Claude Code uses a local llama.cpp server
+    instead of Anthropic API. The server must expose an OpenAI-compatible endpoint.
+    """
+    base_url: str = "http://localhost:8000"  # llama.cpp server URL
+    model: str = "unsloth/GLM-4.7-Flash"     # Model identifier
+    api_key: str = "not-needed"               # Placeholder for OpenAI-compat API
+    timeout: int = 120                        # Request timeout in seconds
+    max_tokens: int = 4096                    # Max tokens per response
+
+    def to_dict(self) -> dict:
+        return {
+            "base_url": self.base_url,
+            "model": self.model,
+            "api_key": self.api_key,
+            "timeout": self.timeout,
+            "max_tokens": self.max_tokens,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LocalModelConfig":
+        return cls(
+            base_url=data.get("base_url", "http://localhost:8000"),
+            model=data.get("model", "unsloth/GLM-4.7-Flash"),
+            api_key=data.get("api_key", "not-needed"),
+            timeout=data.get("timeout", 120),
+            max_tokens=data.get("max_tokens", 4096),
+        )
+
+
 # ============================================================================
 # ERI Configuration
 # ============================================================================
@@ -342,6 +376,12 @@ class EriConfig:
     # Model profile for agent selection
     model_profile: ModelProfile = "balanced"  # quality/balanced/budget
 
+    # Model provider selection
+    model_provider: ModelProvider = "claude"  # claude: Anthropic API, local: llama.cpp server
+
+    # Local model configuration (used when model_provider == "local")
+    local_model: LocalModelConfig = field(default_factory=LocalModelConfig)
+
     def to_dict(self) -> dict:
         return {
             "mode": self.mode,
@@ -349,16 +389,21 @@ class EriConfig:
             "parallelization": self.parallelization,
             "commit_docs": self.commit_docs,
             "model_profile": self.model_profile,
+            "model_provider": self.model_provider,
+            "local_model": self.local_model.to_dict(),
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "EriConfig":
+        local_model_data = data.get("local_model", {})
         return cls(
             mode=data.get("mode", "interactive"),
             depth=data.get("depth", "standard"),
             parallelization=data.get("parallelization", True),
             commit_docs=data.get("commit_docs", True),
             model_profile=data.get("model_profile", "balanced"),
+            model_provider=data.get("model_provider", "claude"),
+            local_model=LocalModelConfig.from_dict(local_model_data),
         )
 
     def get_model_for_agent(self, agent_type: str) -> ModelName:
@@ -397,6 +442,31 @@ class EriConfig:
     def is_interactive(self) -> bool:
         """Check if running in interactive mode (confirm checkpoints)."""
         return self.mode == "interactive"
+
+    def is_local(self) -> bool:
+        """Check if using local model backend."""
+        return self.model_provider == "local"
+
+    def is_claude(self) -> bool:
+        """Check if using Claude/Anthropic API."""
+        return self.model_provider == "claude"
+
+    def get_local_endpoint(self) -> str:
+        """Get the full OpenAI-compatible endpoint URL."""
+        base = self.local_model.base_url.rstrip("/")
+        return f"{base}/v1/chat/completions"
+
+    def get_model_display_name(self) -> str:
+        """Get display name for current model configuration."""
+        if self.is_local():
+            # Extract short name from model path
+            model = self.local_model.model
+            if "/" in model:
+                model = model.split("/")[-1]
+            return model
+        else:
+            # Return profile-based default model
+            return self.model_profile
 
 
 @dataclass
@@ -1199,5 +1269,120 @@ def format_model_profile_summary(profile: ModelProfile) -> str:
     for agent_type in AGENT_TYPES:
         model = mapping.get(agent_type, "sonnet")
         lines.append(f"  {agent_type}: {model}")
+
+    return "\n".join(lines)
+
+
+# ============================================================================
+# Model Provider Settings
+# ============================================================================
+
+def get_model_provider(project_path: str) -> ModelProvider:
+    """Get the model provider for a project.
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        "claude" or "local"
+    """
+    config = load_config(project_path)
+    return config.eri.model_provider
+
+
+def set_model_provider(project_path: str, provider: ModelProvider) -> ProjectConfig:
+    """Set the model provider for a project.
+
+    Args:
+        project_path: Path to project root
+        provider: "claude" (Anthropic API) or "local" (llama.cpp server)
+
+    Returns:
+        Updated ProjectConfig
+    """
+    if provider not in ("claude", "local"):
+        raise ValueError(f"Invalid provider: {provider}. Must be 'claude' or 'local'")
+
+    config = load_config(project_path)
+    config.eri.model_provider = provider
+    save_config(project_path, config)
+    return config
+
+
+def set_local_model_url(project_path: str, url: str) -> ProjectConfig:
+    """Set the local model server URL.
+
+    Args:
+        project_path: Path to project root
+        url: Base URL for llama.cpp server (e.g., "http://localhost:8000")
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.eri.local_model.base_url = url.rstrip("/")
+    save_config(project_path, config)
+    return config
+
+
+def set_local_model_name(project_path: str, model: str) -> ProjectConfig:
+    """Set the local model name/identifier.
+
+    Args:
+        project_path: Path to project root
+        model: Model name (e.g., "unsloth/GLM-4.7-Flash")
+
+    Returns:
+        Updated ProjectConfig
+    """
+    config = load_config(project_path)
+    config.eri.local_model.model = model
+    save_config(project_path, config)
+    return config
+
+
+def get_local_model_config(project_path: str) -> LocalModelConfig:
+    """Get local model configuration.
+
+    Args:
+        project_path: Path to project root
+
+    Returns:
+        LocalModelConfig
+    """
+    config = load_config(project_path)
+    return config.eri.local_model
+
+
+def format_model_provider_summary(eri: EriConfig) -> str:
+    """Format model provider info for display.
+
+    Args:
+        eri: EriConfig to format
+
+    Returns:
+        Formatted string
+    """
+    lines = [
+        "Model Provider Settings",
+        "=" * 40,
+        f"Provider: {eri.model_provider}",
+    ]
+
+    if eri.is_local():
+        lines.extend([
+            "",
+            "Local Model Config:",
+            f"  Base URL: {eri.local_model.base_url}",
+            f"  Model: {eri.local_model.model}",
+            f"  Timeout: {eri.local_model.timeout}s",
+            f"  Max Tokens: {eri.local_model.max_tokens}",
+        ])
+    else:
+        lines.extend([
+            "",
+            f"Profile: {eri.model_profile}",
+            "(Using Anthropic API via Claude Code)",
+        ])
 
     return "\n".join(lines)
