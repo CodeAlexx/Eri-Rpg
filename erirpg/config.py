@@ -24,9 +24,9 @@ from typing import Optional, Literal, Dict, List, Any
 Mode = Literal["bootstrap", "maintain"]
 Tier = Literal["lite", "standard", "full"]
 
-# GSD-specific type aliases
-GSDMode = Literal["yolo", "interactive"]
-GSDDepth = Literal["quick", "standard", "comprehensive"]
+# ERI-specific type aliases
+EriMode = Literal["yolo", "interactive"]
+EriDepth = Literal["quick", "standard", "comprehensive"]
 ModelProfile = Literal["quality", "balanced", "budget"]
 ModelName = Literal["opus", "sonnet", "haiku"]
 
@@ -234,7 +234,7 @@ class WorkflowConfig:
 
 
 # ============================================================================
-# GSD Configuration
+# ERI Configuration
 # ============================================================================
 
 # Model profile matrices - defines which model to use for each agent type
@@ -322,16 +322,16 @@ DEPTH_CONFIG: Dict[str, Dict[str, Any]] = {
 
 
 @dataclass
-class GSDConfig:
-    """GSD (Get Shit Done) methodology settings.
+class EriConfig:
+    """ERI (EriRPG) methodology settings.
 
     Controls execution behavior for goal-backward planning and verification.
     """
     # Execution mode
-    mode: GSDMode = "interactive"  # yolo: auto-proceed, interactive: confirm at checkpoints
+    mode: EriMode = "interactive"  # yolo: auto-proceed, interactive: confirm at checkpoints
 
     # Verification depth
-    depth: GSDDepth = "standard"  # quick/standard/comprehensive
+    depth: EriDepth = "standard"  # quick/standard/comprehensive
 
     # Parallelization
     parallelization: bool = True  # Run independent plans in parallel
@@ -352,7 +352,7 @@ class GSDConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "GSDConfig":
+    def from_dict(cls, data: dict) -> "EriConfig":
         return cls(
             mode=data.get("mode", "interactive"),
             depth=data.get("depth", "standard"),
@@ -423,8 +423,8 @@ class ProjectConfig:
     # Workflow settings
     workflow: WorkflowConfig = field(default_factory=WorkflowConfig)
 
-    # GSD methodology settings
-    gsd: GSDConfig = field(default_factory=GSDConfig)
+    # ERI methodology settings
+    eri: EriConfig = field(default_factory=EriConfig)
 
     def to_dict(self) -> dict:
         return {
@@ -437,7 +437,7 @@ class ProjectConfig:
             "enforcement": asdict(self.enforcement),
             "multi_agent": asdict(self.multi_agent),
             "workflow": asdict(self.workflow),
-            "gsd": self.gsd.to_dict(),
+            "eri": self.eri.to_dict(),
         }
 
     @classmethod
@@ -446,7 +446,7 @@ class ProjectConfig:
         enf_data = data.get("enforcement", {})
         env_data = data.get("env", {})
         wf_data = data.get("workflow", {})
-        gsd_data = data.get("gsd", {})
+        eri_data = data.get("eri", {})
         return cls(
             mode=data.get("mode", "bootstrap"),
             tier=data.get("tier", "lite"),
@@ -467,7 +467,7 @@ class ProjectConfig:
                 auto_commit=wf_data.get("auto_commit", True),
                 auto_push=wf_data.get("auto_push", False),
             ),
-            gsd=GSDConfig.from_dict(gsd_data),
+            eri=EriConfig.from_dict(eri_data),
         )
 
     def is_bootstrap(self) -> bool:
@@ -1029,24 +1029,24 @@ def set_auto_push(project_path: str, enabled: bool) -> ProjectConfig:
 
 
 # ============================================================================
-# GSD Settings
+# ERI Settings
 # ============================================================================
 
-def get_gsd_config(project_path: str) -> GSDConfig:
-    """Get GSD configuration for a project.
+def get_eri_config(project_path: str) -> EriConfig:
+    """Get ERI configuration for a project.
 
     Args:
         project_path: Path to project root
 
     Returns:
-        GSDConfig
+        EriConfig
     """
     config = load_config(project_path)
-    return config.gsd
+    return config.eri
 
 
-def set_gsd_mode(project_path: str, mode: GSDMode) -> ProjectConfig:
-    """Set GSD execution mode.
+def set_eri_mode(project_path: str, mode: EriMode) -> ProjectConfig:
+    """Set ERI execution mode.
 
     Args:
         project_path: Path to project root
@@ -1056,16 +1056,16 @@ def set_gsd_mode(project_path: str, mode: GSDMode) -> ProjectConfig:
         Updated ProjectConfig
     """
     if mode not in ("yolo", "interactive"):
-        raise ValueError(f"Invalid GSD mode: {mode}. Must be 'yolo' or 'interactive'")
+        raise ValueError(f"Invalid ERI mode: {mode}. Must be 'yolo' or 'interactive'")
 
     config = load_config(project_path)
-    config.gsd.mode = mode
+    config.eri.mode = mode
     save_config(project_path, config)
     return config
 
 
-def set_gsd_depth(project_path: str, depth: GSDDepth) -> ProjectConfig:
-    """Set GSD verification depth.
+def set_eri_depth(project_path: str, depth: EriDepth) -> ProjectConfig:
+    """Set ERI verification depth.
 
     Args:
         project_path: Path to project root
@@ -1078,7 +1078,7 @@ def set_gsd_depth(project_path: str, depth: GSDDepth) -> ProjectConfig:
         raise ValueError(f"Invalid depth: {depth}. Must be 'quick', 'standard', or 'comprehensive'")
 
     config = load_config(project_path)
-    config.gsd.depth = depth
+    config.eri.depth = depth
     save_config(project_path, config)
     return config
 
@@ -1097,7 +1097,7 @@ def set_model_profile(project_path: str, profile: ModelProfile) -> ProjectConfig
         raise ValueError(f"Invalid profile: {profile}. Must be 'quality', 'balanced', or 'budget'")
 
     config = load_config(project_path)
-    config.gsd.model_profile = profile
+    config.eri.model_profile = profile
     save_config(project_path, config)
     return config
 
@@ -1113,7 +1113,7 @@ def set_parallelization(project_path: str, enabled: bool) -> ProjectConfig:
         Updated ProjectConfig
     """
     config = load_config(project_path)
-    config.gsd.parallelization = enabled
+    config.eri.parallelization = enabled
     save_config(project_path, config)
     return config
 
@@ -1129,7 +1129,7 @@ def set_commit_docs(project_path: str, enabled: bool) -> ProjectConfig:
         Updated ProjectConfig
     """
     config = load_config(project_path)
-    config.gsd.commit_docs = enabled
+    config.eri.commit_docs = enabled
     save_config(project_path, config)
     return config
 
@@ -1151,29 +1151,29 @@ def get_model_for_agent(project_path: str, agent_type: str) -> ModelName:
         Model name: "opus", "sonnet", or "haiku"
     """
     config = load_config(project_path)
-    return config.gsd.get_model_for_agent(agent_type)
+    return config.eri.get_model_for_agent(agent_type)
 
 
-def format_gsd_summary(gsd: GSDConfig) -> str:
-    """Format GSD config for display.
+def format_eri_summary(eri: EriConfig) -> str:
+    """Format ERI config for display.
 
     Args:
-        gsd: GSDConfig to format
+        eri: EriConfig to format
 
     Returns:
         Formatted string
     """
     lines = [
-        "GSD Settings",
+        "ERI Settings",
         "=" * 40,
-        f"Mode: {gsd.mode}",
-        f"Depth: {gsd.depth}",
-        f"Model Profile: {gsd.model_profile}",
-        f"Parallelization: {'enabled' if gsd.parallelization else 'disabled'}",
-        f"Commit Docs: {'enabled' if gsd.commit_docs else 'disabled'}",
+        f"Mode: {eri.mode}",
+        f"Depth: {eri.depth}",
+        f"Model Profile: {eri.model_profile}",
+        f"Parallelization: {'enabled' if eri.parallelization else 'disabled'}",
+        f"Commit Docs: {'enabled' if eri.commit_docs else 'disabled'}",
         "",
-        f"Verification Level: {gsd.get_verification_level()} ({'existence' if gsd.get_verification_level() == 1 else 'substantive' if gsd.get_verification_level() == 2 else 'wired'})",
-        f"Parallel Execution: {'yes' if gsd.should_run_parallel() else 'no'}",
+        f"Verification Level: {eri.get_verification_level()} ({'existence' if eri.get_verification_level() == 1 else 'substantive' if eri.get_verification_level() == 2 else 'wired'})",
+        f"Parallel Execution: {'yes' if eri.should_run_parallel() else 'no'}",
     ]
     return "\n".join(lines)
 

@@ -1,5 +1,5 @@
 """
-EriRPG Models - Data structures for GSD workflow.
+EriRPG Models - Data structures for ERI workflow.
 
 This module provides dataclasses and enums for:
 - Plans with goal-backward methodology

@@ -1,5 +1,5 @@
 """
-Plan model for GSD goal-backward methodology.
+Plan model for ERI goal-backward methodology.
 
 A Plan defines:
 - Goal statement (outcome, not task)

@@ -1,5 +1,5 @@
 """
-Agent spawning for GSD execution.
+Agent spawning for ERI execution.
 
 Spawns agents using Claude Code's Task tool with appropriate
 prompts and model selection based on configuration.

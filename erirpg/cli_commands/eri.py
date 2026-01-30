@@ -1,10 +1,10 @@
 """
-GSD Commands - Get Shit Done methodology commands.
+ERI Commands - EriRPG methodology commands.
 
 Commands:
-- gsd-config: Configure GSD settings (mode, depth, model profile)
-- gsd-status: Show current GSD state and configuration
-- spawn-agent: Spawn a GSD agent
+- eri-config: Configure ERI settings (mode, depth, model profile)
+- eri-status: Show current ERI state and configuration
+- spawn-agent: Spawn an ERI agent
 - list-agents: List available agent types
 """
 
@@ -14,9 +14,9 @@ import click
 
 
 def register(cli):
-    """Register GSD commands with CLI."""
+    """Register ERI commands with CLI."""
 
-    @cli.command("gsd-config")
+    @cli.command("eri-config")
     @click.argument("project")
     @click.option("--mode", type=click.Choice(["yolo", "interactive"]), default=None,
                   help="Execution mode: yolo (auto-proceed) or interactive (confirm)")
@@ -28,20 +28,20 @@ def register(cli):
                   help="Enable/disable parallel plan execution")
     @click.option("--commit-docs/--no-commit-docs", default=None,
                   help="Enable/disable doc commits")
-    @click.option("--show", is_flag=True, help="Show current GSD configuration")
-    def gsd_config_cmd(project: str, mode: str, depth: str, model_profile: str,
+    @click.option("--show", is_flag=True, help="Show current ERI configuration")
+    def eri_config_cmd(project: str, mode: str, depth: str, model_profile: str,
                        parallelization: bool, commit_docs: bool, show: bool):
-        """Configure GSD methodology settings.
+        """Configure ERI methodology settings.
 
         Examples:
-            eri-rpg gsd-config myproject --show
-            eri-rpg gsd-config myproject --mode yolo
-            eri-rpg gsd-config myproject --depth comprehensive
-            eri-rpg gsd-config myproject --model-profile quality
+            eri-rpg eri-config myproject --show
+            eri-rpg eri-config myproject --mode yolo
+            eri-rpg eri-config myproject --depth comprehensive
+            eri-rpg eri-config myproject --model-profile quality
         """
         from erirpg.config import (
-            load_config, set_gsd_mode, set_gsd_depth, set_model_profile,
-            set_parallelization, set_commit_docs, format_gsd_summary
+            load_config, set_eri_mode, set_eri_depth, set_model_profile,
+            set_parallelization, set_commit_docs, format_eri_summary
         )
         from erirpg.registry import Registry
 
@@ -56,17 +56,17 @@ def register(cli):
         # Show if requested or no other action
         no_changes = all(x is None for x in [mode, depth, model_profile, parallelization, commit_docs])
         if show or no_changes:
-            click.echo(format_gsd_summary(config.gsd))
+            click.echo(format_eri_summary(config.eri))
             return
 
         # Apply changes
         if mode is not None:
-            set_gsd_mode(proj.path, mode)
-            click.echo(f"GSD mode: {mode}")
+            set_eri_mode(proj.path, mode)
+            click.echo(f"ERI mode: {mode}")
 
         if depth is not None:
-            set_gsd_depth(proj.path, depth)
-            click.echo(f"GSD depth: {depth}")
+            set_eri_depth(proj.path, depth)
+            click.echo(f"ERI depth: {depth}")
 
         if model_profile is not None:
             set_model_profile(proj.path, model_profile)
@@ -80,23 +80,23 @@ def register(cli):
             set_commit_docs(proj.path, commit_docs)
             click.echo(f"Commit docs: {'enabled' if commit_docs else 'disabled'}")
 
-    @cli.command("gsd-status")
+    @cli.command("eri-status")
     @click.argument("project")
     @click.option("--json", "output_json", is_flag=True, help="Output as JSON")
-    def gsd_status_cmd(project: str, output_json: bool):
-        """Show current GSD state and configuration.
+    def eri_status_cmd(project: str, output_json: bool):
+        """Show current ERI state and configuration.
 
         Displays:
-        - GSD configuration
+        - ERI configuration
         - Current phase (if any)
         - Active plans
         - Pending checkpoints
 
         Examples:
-            eri-rpg gsd-status myproject
-            eri-rpg gsd-status myproject --json
+            eri-rpg eri-status myproject
+            eri-rpg eri-status myproject --json
         """
-        from erirpg.config import load_config, format_gsd_summary, format_model_profile_summary
+        from erirpg.config import load_config, format_eri_summary, format_model_profile_summary
         from erirpg.models.state import load_state
         from erirpg.models.roadmap import load_roadmap
         from erirpg.execution.checkpoint_handler import list_pending_checkpoints, format_checkpoint_summary
@@ -115,7 +115,7 @@ def register(cli):
 
         if output_json:
             output = {
-                "gsd": config.gsd.to_dict(),
+                "eri": config.eri.to_dict(),
                 "state": state.to_dict() if state else None,
                 "roadmap": roadmap.to_dict() if roadmap else None,
                 "checkpoints": [cp.to_dict() for cp in checkpoints],
@@ -124,7 +124,7 @@ def register(cli):
             return
 
         # Text output
-        click.echo(format_gsd_summary(config.gsd))
+        click.echo(format_eri_summary(config.eri))
         click.echo("")
 
         if state:
@@ -157,7 +157,7 @@ def register(cli):
     @click.option("--context", "-c", default="", help="Context to pass to agent")
     @click.option("--show-prompt", is_flag=True, help="Show the agent prompt instead of spawning")
     def spawn_agent_cmd(project: str, agent_type: str, context: str, show_prompt: bool):
-        """Spawn a GSD agent for execution.
+        """Spawn an ERI agent for execution.
 
         This prepares the Task tool call parameters for spawning an agent.
         The actual spawning happens in the Claude Code context.
@@ -197,7 +197,7 @@ def register(cli):
     @cli.command("list-agents")
     @click.option("--check", is_flag=True, help="Check if all agent prompts exist")
     def list_agents_cmd(check: bool):
-        """List available GSD agent types.
+        """List available ERI agent types.
 
         Examples:
             eri-rpg list-agents
@@ -239,7 +239,7 @@ def register(cli):
             sys.exit(1)
 
         config = load_config(proj.path)
-        click.echo(format_model_profile_summary(config.gsd.model_profile))
+        click.echo(format_model_profile_summary(config.eri.model_profile))
 
     @cli.command("verify-plan")
     @click.argument("project")

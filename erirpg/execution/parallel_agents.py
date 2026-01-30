@@ -304,7 +304,7 @@ def create_agent_prompt(plan: Plan) -> str:
     Returns:
         Prompt string
     """
-    return f"""Execute this plan following the GSD methodology:
+    return f"""Execute this plan following the ERI methodology:
 
 ## Objective
 {plan.objective}

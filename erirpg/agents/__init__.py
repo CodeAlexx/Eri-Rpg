@@ -1,5 +1,5 @@
 """
-Agent management for GSD execution.
+Agent management for ERI execution.
 
 Provides:
 - Agent prompt loading
