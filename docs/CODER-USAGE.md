@@ -446,9 +446,85 @@ ANTHROPIC_BASE_URL=http://localhost:8000 claude
 
 Now all generation is free and offline.
 
+### Automatic Fallback
+
+When configured, eri-coder can automatically switch to local models on rate limits:
+
+```json
+// .planning/config.json
+{
+  "model": {
+    "fallback": {
+      "enabled": true,
+      "trigger": "rate_limit",
+      "local_endpoint": "http://localhost:8000"
+    }
+  }
+}
+```
+
 ---
 
-## Complete Command Reference
+## Advanced Integrations
+
+### Git Worktrees for Parallel Development
+
+Compare different implementation approaches using git worktrees:
+
+```bash
+# Compare JWT vs session-based auth
+/coder:compare --worktree "JWT auth" "Session auth"
+
+# This creates:
+# ../my-app-jwt/
+# ../my-app-sessions/
+# Execute both, compare results, merge winner
+```
+
+### Test Auto-Generation
+
+Configure automatic test generation after code execution:
+
+```json
+// .planning/config.json
+{
+  "testing": {
+    "auto_generate": true,
+    "coverage_target": 80,
+    "test_framework": "auto"
+  }
+}
+```
+
+Supports Jest, Vitest, Pytest, Cargo test - auto-detected from project.
+
+### Cost Estimation
+
+Before expensive operations:
+
+```
+/coder:cost --phase 3
+
+# Shows:
+# Opus: ~45K tokens ($0.68)
+# Sonnet: ~45K tokens ($0.14)
+# Local: ~45K tokens ($0.00)
+```
+
+### Pattern Learning
+
+After successful projects, capture what worked:
+
+```
+/coder:learn auth-system
+
+# Extracts patterns to ~/.eri-rpg/patterns/
+# Apply to future projects with /coder:template
+```
+
+---
+
+## Complete Command Reference (34 Commands)
 
 ### Core Workflow
 | Command | Purpose |
@@ -476,6 +552,30 @@ Now all generation is free and offline.
 | `/coder:progress` | Current position and metrics |
 | `/coder:help` | Command reference |
 | `/coder:settings` | Configure preferences |
+| `/coder:history` | Execution timeline and decisions |
+| `/coder:metrics` | Token, cost, time, success rates |
+
+### Execution Control
+| Command | Purpose |
+|---------|---------|
+| `/coder:rollback` | Undo phase or plan execution |
+| `/coder:diff` | Show changes since checkpoint |
+| `/coder:split` | Break large plan into smaller ones |
+| `/coder:merge` | Combine multiple plans |
+| `/coder:replay` | Re-run with different parameters |
+
+### Decision Support
+| Command | Purpose |
+|---------|---------|
+| `/coder:compare` | Compare approaches before committing |
+| `/coder:cost` | Estimate tokens and API cost |
+
+### Learning & Reuse
+| Command | Purpose |
+|---------|---------|
+| `/coder:learn` | Extract patterns from success |
+| `/coder:template` | Save project as reusable template |
+| `/coder:handoff` | Generate context for humans or AI |
 
 ### Utilities
 | Command | Purpose |
