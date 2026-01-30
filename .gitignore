@@ -33,7 +33,11 @@ ENV/
 *~
 
 # EriRPG data (project-specific, don't commit)
-.eri-rpg/
+.eri-rpg/*
+# But DO commit status files for session resume
+!.eri-rpg/STATUS.md
+!.eri-rpg/TASKS.md
+!.eri-rpg/ROADMAP.md
 
 # Test/coverage
 .pytest_cache/
