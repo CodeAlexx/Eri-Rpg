@@ -1,6 +1,6 @@
 # Tasks: erirpg
 
-_Updated: 2026-01-29 16:30_
+_Updated: 2026-01-29 16:32_
 
 ## Completed
 
@@ -12,6 +12,7 @@ _Updated: 2026-01-29 16:30_
 - [x] Add auto-commit when verification passes
 - [x] Add auto-commit when no verification configured
 - [x] Update .gitignore to track STATUS.md, TASKS.md, ROADMAP.md
+- [x] VERIFIED: Auto-commit fires (commit 1117d9f proves it)
 
 ## Pending
 
