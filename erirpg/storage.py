@@ -835,7 +835,7 @@ def create_session(
         """, (session_id, project_name, now.isoformat(), phase, step, alias, branch))
         conn.commit()
 
-    return Session(
+    result = Session(
         id=session_id,
         project_name=project_name,
         started_at=now,
@@ -844,6 +844,12 @@ def create_session(
         alias=alias,
         branch=branch,
     )
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_from_session
+    sync_from_session(session_id, db_path)
+
+    return result
 
 
 def get_session(session_id: str, db_path: Optional[str] = None) -> Optional[Session]:
@@ -1115,7 +1121,13 @@ def archive_session_decisions(session_id: str, db_path: Optional[str] = None) ->
             UPDATE decisions SET archived = 1 WHERE session_id = ?
         """, (session_id,))
         conn.commit()
-        return cursor.rowcount
+        count = cursor.rowcount
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_from_session
+    sync_from_session(session_id, db_path)
+
+    return count
 
 
 # Blocker operations
@@ -1263,7 +1275,7 @@ def add_next_action(
         """, (session_id, action, priority, now.isoformat()))
         conn.commit()
 
-        return NextAction(
+        result = NextAction(
             id=cursor.lastrowid,
             session_id=session_id,
             action=action,
@@ -1272,6 +1284,12 @@ def add_next_action(
             completed_at=None,
             timestamp=now,
         )
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_from_session
+    sync_from_session(session_id, db_path)
+
+    return result
 
 
 def complete_action(action_id: int, db_path: Optional[str] = None) -> bool:
@@ -1370,7 +1388,13 @@ def add_session_learning(
             VALUES (?, ?, ?, ?)
         """, (session_id, topic, content, now.isoformat()))
         conn.commit()
-        return cursor.lastrowid
+        result_id = cursor.lastrowid
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_from_session
+    sync_from_session(session_id, db_path)
+
+    return result_id
 
 
 def get_session_learnings(

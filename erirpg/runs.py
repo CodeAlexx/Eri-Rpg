@@ -270,6 +270,10 @@ def create_run(plan: "Plan", project_path: str) -> RunRecord:
         project_path=project_path,
     )
 
+    # Sync status files after state change
+    from erirpg.status_sync import sync_status_files
+    sync_status_files(project_path)
+
     return run
 
 
@@ -334,6 +338,11 @@ def delete_run(project_path: str, run_id: str) -> bool:
         return False
 
     shutil.rmtree(run_dir)
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_status_files
+    sync_status_files(project_path)
+
     return True
 
 
