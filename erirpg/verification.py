@@ -379,6 +379,9 @@ class Verifier:
         if not commands:
             result.status = VerificationStatus.SKIPPED.value
             result.completed_at = datetime.now()
+            # No verification = auto-commit anyway
+            if auto_commit:
+                self._auto_commit_on_pass(step_id)
             return result
 
         # Run each command
