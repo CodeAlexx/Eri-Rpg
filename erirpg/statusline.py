@@ -193,34 +193,45 @@ def main():
     # Read input from Claude Code
     context_pct = None
     tokens_used = None
+    model_name = None
+    input_cwd = None
     try:
         if not sys.stdin.isatty():
             input_data = sys.stdin.read()
             if input_data.strip():
                 data = json.loads(input_data)
+                # Context window info
                 cw = data.get("context_window", {})
                 context_pct = cw.get("used_percentage")
-                tokens_used = cw.get("used_tokens")
+                # Calculate total tokens used
+                total_input = cw.get("total_input_tokens", 0)
+                total_output = cw.get("total_output_tokens", 0)
+                if total_input or total_output:
+                    tokens_used = total_input + total_output
+                # Model info
+                model_info = data.get("model", {})
+                model_name = model_info.get("display_name") or model_info.get("id")
+                # Workspace cwd (more reliable than os.getcwd)
+                workspace = data.get("workspace", {})
+                input_cwd = workspace.get("current_dir") or workspace.get("project_dir")
     except:
         pass
 
     # Load state
     global_state = load_global_state()
     registry = load_registry()
-    cwd = os.getcwd()
+    cwd = input_cwd or os.getcwd()
 
-    # Get project info - PRIORITIZE active_project from state over cwd detection
-    project_name = global_state.get("active_project")
-    project_path = None
-    tier = None
+    # Get project info - PRIORITIZE cwd-based detection over stale state
+    project_name, project_path, tier = get_project_info(registry, cwd)
 
-    if project_name and project_name in registry:
-        # Use the active project from state
-        project_path = registry[project_name].get("path")
-        tier = get_project_tier(project_path) if project_path else "lite"
-    else:
-        # Fallback to cwd-based detection
-        project_name, project_path, tier = get_project_info(registry, cwd)
+    # Only use active_project from state if cwd detection failed
+    if not project_name:
+        state_project = global_state.get("active_project")
+        if state_project and state_project in registry:
+            project_name = state_project
+            project_path = registry[state_project].get("path")
+            tier = get_project_tier(project_path) if project_path else "lite"
 
     # Gather all info
     persona = get_active_persona(global_state)
@@ -232,8 +243,11 @@ def main():
     # Get project-specific state for current_task
     project_state = get_project_state(project_path)
 
-    # === LINE 1: Phase | Persona | Context | Task ===
+    # === LINE 1: Model | Phase | Persona | Context | Task ===
     line1_parts = []
+
+    if model_name:
+        line1_parts.append(f"🤖 {model_name}")
 
     if phase and phase != "idle":
         line1_parts.append(f"📍 {phase}")

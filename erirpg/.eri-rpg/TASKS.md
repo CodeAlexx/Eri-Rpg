@@ -20,3 +20,15 @@ _Updated: 2026-01-29 16:45_
 ## Pending
 
 _No pending tasks_
+
+## Bugs/Issues
+
+- [x] **BUG: Status line issues** - project not updating, model missing, token meter missing, persona wrong
+  - Reported: 2026-01-29 16:48
+  - Phase: implementing
+  - Status: Fixed
+  - **Fixes applied**:
+    1. `statusline.py`: Now reads `model.display_name` from Claude Code input
+    2. `statusline.py`: Prioritizes cwd-based project detection over stale state
+    3. `statusline.py`: Calculates tokens from `total_input_tokens + total_output_tokens`
+    4. `persona_detect.py`: Smarter detection based on file type being read (not always "analyzer")

@@ -102,7 +102,16 @@ def detect_persona(tool_name: str, tool_input: dict) -> Optional[str]:
 
     # Tool-specific detection
     if tool_name in ["Read", "Grep", "Glob"]:
-        # Reading/searching = analyzing
+        # Check what we're reading to infer context
+        if ext in DOC_EXTENSIONS or "/docs/" in file_lower or "readme" in file_lower:
+            return "scribe"
+        if "test" in file_lower or "spec" in file_lower:
+            return "qa"
+        if ext in FRONTEND_EXTENSIONS:
+            return "frontend"
+        if ext in BACKEND_EXTENSIONS:
+            return "backend"
+        # Default: analyzing
         return "analyzer"
 
     if tool_name in ["Edit", "Write", "MultiEdit"]:
