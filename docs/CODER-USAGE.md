@@ -138,12 +138,25 @@ When you run `/coder:new-project`, Claude executes:
 │   ├── FEATURES.md
 │   ├── ARCHITECTURE.md
 │   └── PITFALLS.md
-└── codebase/         # Codebase analysis (brownfield)
-    ├── STACK.md
-    ├── ARCHITECTURE.md
-    ├── CONVENTIONS.md
-    ├── CONCERNS.md
-    └── SUMMARY.md
+├── codebase/         # Codebase analysis (brownfield)
+│   ├── STACK.md
+│   ├── ARCHITECTURE.md
+│   ├── CONVENTIONS.md
+│   ├── CONCERNS.md
+│   └── SUMMARY.md
+├── phases/           # Phase execution artifacts
+│   └── 01-setup/
+│       ├── 01-01-PLAN.md
+│       ├── 01-01-SUMMARY.md
+│       └── 01-VERIFICATION.md
+├── quick/            # Ad-hoc tasks (/coder:quick)
+│   └── 001-fix-bug/
+├── debug/            # Debug sessions (/coder:debug)
+│   ├── active-session.md
+│   └── resolved/
+└── todos/            # Captured ideas (/coder:add-todo)
+    ├── pending/
+    └── completed/
 ```
 
 ---
@@ -162,6 +175,8 @@ When you run `/coder:new-project`, Claude executes:
 
 | Command | What to Type |
 |---------|--------------|
+| Discuss a phase | `/coder:discuss-phase 1` |
+| See Claude's approach | `/coder:list-phase-assumptions 1` |
 | Plan a phase | `/coder:plan-phase 1` |
 | Build a phase | `/coder:execute-phase 1` |
 | Test a phase | `/coder:verify-work 1` |
@@ -170,9 +185,27 @@ When you run `/coder:new-project`, Claude executes:
 
 | Command | What to Type |
 |---------|--------------|
+| Check progress | `/coder:progress` |
 | Stop for today | `/coder:pause "stopping for the day"` |
 | Continue tomorrow | `/coder:resume` |
 | Finish version | `/coder:complete-milestone v1.0` |
+| Start next version | `/coder:new-milestone v2.0` |
+
+### Quick Tasks & Debugging
+
+| Command | What to Type |
+|---------|--------------|
+| Quick fix (outside phases) | `/coder:quick "Fix the login button"` |
+| Debug an issue | `/coder:debug "Login fails after reset"` |
+| Capture idea for later | `/coder:add-todo "Add dark mode"` |
+| Create gap-fix phases | `/coder:plan-milestone-gaps` |
+
+### Configuration
+
+| Command | What to Type |
+|---------|--------------|
+| View/change settings | `/coder:settings` |
+| Get help | `/coder:help` |
 
 ---
 
@@ -412,6 +445,48 @@ ANTHROPIC_BASE_URL=http://localhost:8000 claude
 ```
 
 Now all generation is free and offline.
+
+---
+
+## Complete Command Reference
+
+### Core Workflow
+| Command | Purpose |
+|---------|---------|
+| `/coder:new-project` | Initialize new project (8-phase setup) |
+| `/coder:discuss-phase N` | Capture implementation decisions |
+| `/coder:plan-phase N` | Create executable plans |
+| `/coder:execute-phase N` | Execute plans in parallel waves |
+| `/coder:verify-work N` | Manual acceptance testing |
+| `/coder:complete-milestone` | Archive and tag release |
+| `/coder:new-milestone` | Start next version |
+
+### Phase Management
+| Command | Purpose |
+|---------|---------|
+| `/coder:add-phase` | Append phase to roadmap |
+| `/coder:insert-phase N` | Insert urgent work |
+| `/coder:remove-phase N` | Remove future phase |
+| `/coder:list-phase-assumptions N` | See Claude's approach |
+| `/coder:plan-milestone-gaps` | Create phases for failures |
+
+### Navigation & Status
+| Command | Purpose |
+|---------|---------|
+| `/coder:progress` | Current position and metrics |
+| `/coder:help` | Command reference |
+| `/coder:settings` | Configure preferences |
+
+### Utilities
+| Command | Purpose |
+|---------|---------|
+| `/coder:quick "task"` | Ad-hoc task with guarantees |
+| `/coder:debug "issue"` | Systematic debugging |
+| `/coder:add-todo "idea"` | Capture for later |
+| `/coder:pause "reason"` | Create handoff state |
+| `/coder:resume` | Restore from pause |
+| `/coder:map-codebase` | Analyze existing code |
+| `/coder:add-feature "name"` | Add to existing project |
 
 ---
 
