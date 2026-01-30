@@ -1171,6 +1171,53 @@ class Agent:
             raise RuntimeError("Cannot generate summary without an active run.")
         return self._run.generate_summary(one_liner)
 
+    # === Path Validation ===
+
+    def _validate_path_in_project(self, file_path: str) -> Path:
+        """
+        Validate that a path stays within the project directory.
+
+        This is a critical security check to prevent path traversal attacks
+        and accidental modifications to files outside the project.
+
+        Args:
+            file_path: Path to validate (relative or absolute)
+
+        Returns:
+            The resolved absolute Path
+
+        Raises:
+            RuntimeError: If the path resolves to outside the project directory
+        """
+        # Resolve the full path
+        if os.path.isabs(file_path):
+            full_path = Path(file_path).resolve()
+        else:
+            full_path = (Path(self.project_path) / file_path).resolve()
+
+        project_real = Path(self.project_path).resolve()
+
+        # CRITICAL: Must be inside project directory
+        # Check both that it starts with project path AND that it's not the project itself
+        # (we want files inside, not the directory itself)
+        if not str(full_path).startswith(str(project_real) + os.sep):
+            raise RuntimeError(
+                f"╔══════════════════════════════════════════════════════╗\n"
+                f"║  ERI-RPG PATH ESCAPE BLOCKED                         ║\n"
+                f"╠══════════════════════════════════════════════════════╣\n"
+                f"║  Path resolves outside project directory!            ║\n"
+                f"║                                                      ║\n"
+                f"║  Requested: {file_path:<40} ║\n"
+                f"║  Resolved:  {str(full_path):<40} ║\n"
+                f"║  Project:   {str(project_real):<40} ║\n"
+                f"║                                                      ║\n"
+                f"║  EriRPG REFUSES to touch files outside the project.  ║\n"
+                f"║  This prevents accidental cross-project modifications.║\n"
+                f"╚══════════════════════════════════════════════════════╝"
+            )
+
+        return full_path
+
     # === File Editing API ===
 
     def edit_file(
@@ -1228,8 +1275,9 @@ class Agent:
                 "Call start_step() first."
             )
 
-        # Resolve full path
-        full_path = Path(self.project_path) / file_path
+        # CRITICAL: Validate path stays within project (prevents path traversal)
+        full_path = self._validate_path_in_project(file_path)
+
         if not full_path.exists():
             # For new files, old_content should be empty
             if old_content:
@@ -1319,8 +1367,9 @@ class Agent:
         if file_path not in self._snapshots:
             self._snapshot_file(file_path)
 
-        # Resolve full path
-        full_path = Path(self.project_path) / file_path
+        # CRITICAL: Validate path stays within project (prevents path traversal)
+        full_path = self._validate_path_in_project(file_path)
+
         full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_text(content)
 

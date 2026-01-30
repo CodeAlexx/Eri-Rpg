@@ -19,6 +19,7 @@ _original_open = builtins.open
 _PROTECTED_PATHS: List[str] = []  # Set by agent.preflight()
 _WRITE_ALLOWED: bool = False
 _HOOKS_INSTALLED: bool = False
+_WRITE_PROJECT_PATH: Optional[str] = None  # Track project for boundary checks
 
 # Paths that should never be protected (temp files, etc.)
 _ALWAYS_ALLOWED_PATTERNS = (
@@ -83,6 +84,24 @@ def guarded_open(file, mode='r', *args, **kwargs):
                     f"╚══════════════════════════════════════════════════════╝"
                 )
 
+            # CRITICAL: Boundary enforcement - block ANY path outside project
+            if _WRITE_PROJECT_PATH:
+                project_abs = os.path.realpath(_WRITE_PROJECT_PATH)
+                if not abs_path.startswith(project_abs + os.sep) and abs_path != project_abs:
+                    raise RuntimeError(
+                        f"╔══════════════════════════════════════════════════════╗\n"
+                        f"║  ERI-RPG BOUNDARY VIOLATION                          ║\n"
+                        f"╠══════════════════════════════════════════════════════╣\n"
+                        f"║  Path escapes project directory!                     ║\n"
+                        f"║                                                      ║\n"
+                        f"║  Attempted: {os.path.basename(abs_path):<40} ║\n"
+                        f"║  Project:   {os.path.basename(project_abs):<40} ║\n"
+                        f"║                                                      ║\n"
+                        f"║  EriRPG REFUSES to write files outside the project.  ║\n"
+                        f"║  This is a security feature to prevent accidents.    ║\n"
+                        f"╚══════════════════════════════════════════════════════╝"
+                    )
+
     # Allow the operation
     return _original_open(file, mode, *args, **kwargs)
 
@@ -123,21 +142,47 @@ def enable_writes(paths: List[str], project_path: Optional[str] = None) -> None:
     Args:
         paths: List of file paths (relative or absolute)
         project_path: Project root for resolving relative paths
-    """
-    global _WRITE_ALLOWED, _PROTECTED_PATHS
 
-    _WRITE_ALLOWED = True
+    Raises:
+        RuntimeError: If any path is outside the project directory (boundary violation)
+    """
+    global _WRITE_ALLOWED, _PROTECTED_PATHS, _WRITE_PROJECT_PATH
+
+    # Store project path for boundary checks in guarded_open
+    _WRITE_PROJECT_PATH = project_path
 
     # Convert all paths to absolute
     resolved_paths = []
+    project_abs = os.path.realpath(project_path) if project_path else None
+
     for p in paths:
         if os.path.isabs(p):
-            resolved_paths.append(p)
+            abs_path = os.path.realpath(p)
         elif project_path:
-            resolved_paths.append(os.path.realpath(os.path.join(project_path, p)))
+            abs_path = os.path.realpath(os.path.join(project_path, p))
         else:
-            resolved_paths.append(os.path.realpath(p))
+            abs_path = os.path.realpath(p)
 
+        # CRITICAL: Hard boundary enforcement - block ANY path outside project
+        if project_abs:
+            if not abs_path.startswith(project_abs + os.sep) and abs_path != project_abs:
+                raise RuntimeError(
+                    f"╔══════════════════════════════════════════════════════╗\n"
+                    f"║  ERI-RPG BOUNDARY VIOLATION                          ║\n"
+                    f"╠══════════════════════════════════════════════════════╣\n"
+                    f"║  Path escapes project directory!                     ║\n"
+                    f"║                                                      ║\n"
+                    f"║  Attempted: {abs_path:<40} ║\n"
+                    f"║  Project:   {project_abs:<40} ║\n"
+                    f"║                                                      ║\n"
+                    f"║  EriRPG REFUSES to whitelist files outside project.  ║\n"
+                    f"║  This is a security feature to prevent accidents.    ║\n"
+                    f"╚══════════════════════════════════════════════════════╝"
+                )
+
+        resolved_paths.append(abs_path)
+
+    _WRITE_ALLOWED = True
     _PROTECTED_PATHS = resolved_paths
 
 
@@ -147,10 +192,11 @@ def disable_writes() -> None:
 
     Called when a run completes or is abandoned.
     """
-    global _WRITE_ALLOWED, _PROTECTED_PATHS
+    global _WRITE_ALLOWED, _PROTECTED_PATHS, _WRITE_PROJECT_PATH
 
     _WRITE_ALLOWED = False
     _PROTECTED_PATHS = []
+    _WRITE_PROJECT_PATH = None
 
 
 def is_write_allowed() -> bool:
@@ -169,15 +215,36 @@ def add_allowed_path(path: str, project_path: Optional[str] = None) -> None:
 
     Use this if you discover you need to modify an additional file
     during a run. You'll need to re-run preflight for full tracking.
+
+    Raises:
+        RuntimeError: If path is outside the project directory (boundary violation)
     """
     global _PROTECTED_PATHS
 
     if os.path.isabs(path):
-        abs_path = path
+        abs_path = os.path.realpath(path)
     elif project_path:
         abs_path = os.path.realpath(os.path.join(project_path, path))
     else:
         abs_path = os.path.realpath(path)
+
+    # CRITICAL: Boundary enforcement - use stored project path or provided one
+    check_project = project_path or _WRITE_PROJECT_PATH
+    if check_project:
+        project_abs = os.path.realpath(check_project)
+        if not abs_path.startswith(project_abs + os.sep) and abs_path != project_abs:
+            raise RuntimeError(
+                f"╔══════════════════════════════════════════════════════╗\n"
+                f"║  ERI-RPG BOUNDARY VIOLATION                          ║\n"
+                f"╠══════════════════════════════════════════════════════╣\n"
+                f"║  Path escapes project directory!                     ║\n"
+                f"║                                                      ║\n"
+                f"║  Attempted: {abs_path:<40} ║\n"
+                f"║  Project:   {project_abs:<40} ║\n"
+                f"║                                                      ║\n"
+                f"║  EriRPG REFUSES to allow files outside project.      ║\n"
+                f"╚══════════════════════════════════════════════════════╝"
+            )
 
     if abs_path not in _PROTECTED_PATHS:
         _PROTECTED_PATHS.append(abs_path)
