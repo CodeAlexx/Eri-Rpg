@@ -135,10 +135,10 @@ Web app to control Claude Code from phone:
 - `requirements.txt` - Python dependencies
 - `README.md` - Usage documentation
 
-### GSD Renamed to Decisions
+### Decisions Module Cleanup
 
-Removed all "GSD" (Get Stuff Done) references:
-- `cli_commands/gsd.py` → `cli_commands/decisions.py`
+Renamed internal module for clarity:
+- Consolidated decisions tracking into `cli_commands/decisions.py`
 - Updated imports and registrations
 - Cleaned up docs and comments
 
