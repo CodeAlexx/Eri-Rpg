@@ -1,12 +1,12 @@
 {
   "project": "erirpg",
-  "version": "1.0.0",
-  "indexed_at": "2026-01-26T14:12:40.166283",
+  "version": "0.55.0-alpha",
+  "indexed_at": "2026-01-29T07:09:11.335202",
   "modules": {
     "cli.py": {
       "path": "cli.py",
       "lang": "python",
-      "lines": 2632,
+      "lines": 37,
       "summary": "EriRPG CLI - One tool. Three modes. No bloat.",
       "interfaces": [
         {
@@ -15,484 +15,18 @@
           "signature": "def cli()",
           "docstring": "EriRPG - Cross-project feature transplant tool.",
           "methods": [],
-          "line": 39
-        },
-        {
-          "name": "add",
-          "type": "function",
-          "signature": "def add(name: str, path: str, lang: str)",
-          "docstring": "Register a project.",
-          "methods": [],
-          "line": 57
-        },
-        {
-          "name": "remove",
-          "type": "function",
-          "signature": "def remove(name: str)",
-          "docstring": "Remove a project from registry.",
-          "methods": [],
-          "line": 90
-        },
-        {
-          "name": "list_projects",
-          "type": "function",
-          "signature": "def list_projects()",
-          "docstring": "List registered projects.",
-          "methods": [],
-          "line": 102
-        },
-        {
-          "name": "index",
-          "type": "function",
-          "signature": "def index(name: str, verbose: bool)",
-          "docstring": "Index a project's codebase.",
-          "methods": [],
-          "line": 128
-        },
-        {
-          "name": "take",
-          "type": "function",
-          "signature": "def take(description: str, verbose: bool)",
-          "docstring": "Transplant a feature from one project to another.",
-          "methods": [],
-          "line": 165
-        },
-        {
-          "name": "work",
-          "type": "function",
-          "signature": "def work(project: str, task: str, verbose: bool)",
-          "docstring": "Modify an existing project.",
-          "methods": [],
-          "line": 201
-        },
-        {
-          "name": "done",
-          "type": "function",
-          "signature": "def done()",
-          "docstring": "Mark current work as complete.",
-          "methods": [],
-          "line": 234
-        },
-        {
-          "name": "new_project",
-          "type": "function",
-          "signature": "def new_project(description: str, output: str, verbose: bool)",
-          "docstring": "Create a new project from scratch.",
-          "methods": [],
-          "line": 259
-        },
-        {
-          "name": "next_chunk",
-          "type": "function",
-          "signature": "def next_chunk(verbose: bool)",
-          "docstring": "Advance to next chunk in new project.",
-          "methods": [],
-          "line": 329
-        },
-        {
-          "name": "show",
-          "type": "function",
-          "signature": "def show(project: str)",
-          "docstring": "Show project structure from graph.",
-          "methods": [],
-          "line": 362
-        },
-        {
-          "name": "find",
-          "type": "function",
-          "signature": "def find(project: str, query: str, limit: int)",
-          "docstring": "Find modules matching a query.",
-          "methods": [],
-          "line": 409
-        },
-        {
-          "name": "impact",
-          "type": "function",
-          "signature": "def impact(project: str, module_path: str)",
-          "docstring": "Analyze impact of changing a module.",
-          "methods": [],
-          "line": 446
-        },
-        {
-          "name": "extract",
-          "type": "function",
-          "signature": "def extract(project: str, query: str, output: str, name: str)",
-          "docstring": "Extract a feature from a project.",
-          "methods": [],
-          "line": 503
-        },
-        {
-          "name": "plan",
-          "type": "function",
-          "signature": "def plan(feature_file: str, target_project: str)",
-          "docstring": "Plan transplant to target project.",
-          "methods": [],
-          "line": 553
-        },
-        {
-          "name": "context",
-          "type": "function",
-          "signature": "def context(feature_file: str, target_project: str, no_learnings: bool)",
-          "docstring": "Generate context for Claude Code.",
-          "methods": [],
-          "line": 606
-        },
-        {
-          "name": "do_task",
-          "type": "function",
-          "signature": "def do_task(task: str)",
-          "docstring": "Smart mode - figure out steps for a task.",
-          "methods": [],
-          "line": 675
-        },
-        {
-          "name": "status",
-          "type": "function",
-          "signature": "def status()",
-          "docstring": "Show current status and next step.",
-          "methods": [],
-          "line": 734
-        },
-        {
-          "name": "validate",
-          "type": "function",
-          "signature": "def validate()",
-          "docstring": "Validate Claude's implementation.",
-          "methods": [],
-          "line": 741
-        },
-        {
-          "name": "diagnose",
-          "type": "function",
-          "signature": "def diagnose()",
-          "docstring": "Diagnose what went wrong.",
-          "methods": [],
-          "line": 791
-        },
-        {
-          "name": "reset",
-          "type": "function",
-          "signature": "def reset()",
-          "docstring": "Reset state to idle.",
-          "methods": [],
-          "line": 831
-        },
-        {
-          "name": "learn",
-          "type": "function",
-          "signature": "def learn(project: str, module_path: str, summary: str, purpose: str)",
-          "docstring": "Store a learning about a module.",
-          "methods": [],
-          "line": 847
-        },
-        {
-          "name": "recall",
-          "type": "function",
-          "signature": "def recall(project: str, module_path: str, source: bool)",
-          "docstring": "Retrieve what was learned about a module.",
-          "methods": [],
-          "line": 924
-        },
-        {
-          "name": "relearn",
-          "type": "function",
-          "signature": "def relearn(project: str, module_path: str)",
-          "docstring": "Force re-read a module (removes stored learning).",
-          "methods": [],
-          "line": 963
-        },
-        {
-          "name": "history",
-          "type": "function",
-          "signature": "def history(project: str, module_path: str)",
-          "docstring": "Show version history for a module's learning.",
-          "methods": [],
-          "line": 990
-        },
-        {
-          "name": "rollback",
-          "type": "function",
-          "signature": "def rollback(project: str, module_path: str, target_version: int, code: bool, dry_run: bool, use_git: bool)",
-          "docstring": "Rollback a module's learning to a previous version.",
-          "methods": [],
-          "line": 1050
-        },
-        {
-          "name": "decide",
-          "type": "function",
-          "signature": "def decide(title: str, reason: str, affects: tuple, alt: tuple)",
-          "docstring": "Record an architectural decision.",
-          "methods": [],
-          "line": 1180
-        },
-        {
-          "name": "pattern",
-          "type": "function",
-          "signature": "def pattern(project: str, name: str, description: str)",
-          "docstring": "Store a reusable pattern or gotcha.",
-          "methods": [],
-          "line": 1227
-        },
-        {
-          "name": "log",
-          "type": "function",
-          "signature": "def log(action: str, feature: str, from_proj: str, to_path: str)",
-          "docstring": "Log an action to project history.",
-          "methods": [],
-          "line": 1261
-        },
-        {
-          "name": "show_knowledge",
-          "type": "function",
-          "signature": "def show_knowledge(project: str)",
-          "docstring": "Show all stored knowledge for a project.",
-          "methods": [],
-          "line": 1294
-        },
-        {
-          "name": "spec",
-          "type": "function",
-          "signature": "def spec()",
-          "docstring": "Spec management commands.",
-          "methods": [],
-          "line": 1355
-        },
-        {
-          "name": "spec_new",
-          "type": "function",
-          "signature": "def spec_new(spec_type: str, output: str, name: str)",
-          "docstring": "Create a new spec from template.",
-          "methods": [],
-          "line": 1374
-        },
-        {
-          "name": "spec_validate",
-          "type": "function",
-          "signature": "def spec_validate(path: str)",
-          "docstring": "Validate a spec file.",
-          "methods": [],
-          "line": 1414
-        },
-        {
-          "name": "spec_show",
-          "type": "function",
-          "signature": "def spec_show(path: str, as_json: bool)",
-          "docstring": "Display spec contents.",
-          "methods": [],
-          "line": 1452
-        },
-        {
-          "name": "spec_list",
-          "type": "function",
-          "signature": "def spec_list(spec_type: str, path: str)",
-          "docstring": "List specs in a project.",
-          "methods": [],
-          "line": 1537
-        },
-        {
-          "name": "plan_group",
-          "type": "function",
-          "signature": "def plan_group()",
-          "docstring": "Plan management commands.",
-          "methods": [],
-          "line": 1578
-        },
-        {
-          "name": "plan_generate",
-          "type": "function",
-          "signature": "def plan_generate(spec_path: str, output: str, project: str)",
-          "docstring": "Generate a plan from a spec.",
-          "methods": [],
-          "line": 1597
-        },
-        {
-          "name": "plan_show",
-          "type": "function",
-          "signature": "def plan_show(path: str, as_json: bool, verbose: bool)",
-          "docstring": "Display plan contents.",
-          "methods": [],
-          "line": 1653
-        },
-        {
-          "name": "plan_list",
-          "type": "function",
-          "signature": "def plan_list(path: str)",
-          "docstring": "List plans in a project.",
-          "methods": [],
-          "line": 1710
-        },
-        {
-          "name": "plan_next",
-          "type": "function",
-          "signature": "def plan_next(path: str)",
-          "docstring": "Show next step to execute.",
-          "methods": [],
-          "line": 1753
-        },
-        {
-          "name": "plan_step",
-          "type": "function",
-          "signature": "def plan_step(path: str, step_id: str, action: str, error: str)",
-          "docstring": "Update step status.",
-          "methods": [],
-          "line": 1809
-        },
-        {
-          "name": "run_group",
-          "type": "function",
-          "signature": "def run_group()",
-          "docstring": "Run management commands.",
-          "methods": [],
-          "line": 1859
-        },
-        {
-          "name": "run_start",
-          "type": "function",
-          "signature": "def run_start(plan_path: str, project: str)",
-          "docstring": "Start executing a plan.",
-          "methods": [],
-          "line": 1877
-        },
-        {
-          "name": "run_resume",
-          "type": "function",
-          "signature": "def run_resume(run_id: str, project: str)",
-          "docstring": "Resume a paused run.",
-          "methods": [],
-          "line": 1919
-        },
-        {
-          "name": "run_list_cmd",
-          "type": "function",
-          "signature": "def run_list_cmd(project: str, limit: int)",
-          "docstring": "List all runs in a project.",
-          "methods": [],
-          "line": 1959
-        },
-        {
-          "name": "run_show",
-          "type": "function",
-          "signature": "def run_show(run_id: str, project: str, as_json: bool)",
-          "docstring": "Show run details.",
-          "methods": [],
-          "line": 2004
-        },
-        {
-          "name": "run_report",
-          "type": "function",
-          "signature": "def run_report(run_id: str, project: str, output: str)",
-          "docstring": "Generate a run report.",
-          "methods": [],
-          "line": 2049
-        },
-        {
-          "name": "run_step",
-          "type": "function",
-          "signature": "def run_step(run_id: str, step_id: str, action: str, error: str, project: str)",
-          "docstring": "Update step status in a run.",
-          "methods": [],
-          "line": 2083
-        },
-        {
-          "name": "memory",
-          "type": "function",
-          "signature": "def memory()",
-          "docstring": "Memory management commands (v2 storage).",
-          "methods": [],
-          "line": 2136
-        },
-        {
-          "name": "memory_status",
-          "type": "function",
-          "signature": "def memory_status(project: str)",
-          "docstring": "Show memory status for a project.",
-          "methods": [],
-          "line": 2154
-        },
-        {
-          "name": "memory_search",
-          "type": "function",
-          "signature": "def memory_search(project: str, query: str, limit: int)",
-          "docstring": "Search learnings by keyword.",
-          "methods": [],
-          "line": 2234
-        },
-        {
-          "name": "memory_stale",
-          "type": "function",
-          "signature": "def memory_stale(project: str)",
-          "docstring": "List all stale learnings.",
-          "methods": [],
-          "line": 2274
-        },
-        {
-          "name": "memory_refresh",
-          "type": "function",
-          "signature": "def memory_refresh(project: str, module_path: str)",
-          "docstring": "Refresh a stale learning.",
-          "methods": [],
-          "line": 2323
-        },
-        {
-          "name": "memory_migrate",
-          "type": "function",
-          "signature": "def memory_migrate(project: str, force: bool)",
-          "docstring": "Migrate v1 knowledge to v2 format.",
-          "methods": [],
-          "line": 2384
-        },
-        {
-          "name": "verify_group",
-          "type": "function",
-          "signature": "def verify_group()",
-          "docstring": "Verification commands.",
-          "methods": [],
-          "line": 2441
-        },
-        {
-          "name": "verify_run",
-          "type": "function",
-          "signature": "def verify_run(run_id: str, project: str, step: str)",
-          "docstring": "Run verification commands for a run.",
-          "methods": [],
-          "line": 2458
-        },
-        {
-          "name": "verify_config",
-          "type": "function",
-          "signature": "def verify_config(project: str, init_config: bool, project_type: str)",
-          "docstring": "Show or create verification config.",
-          "methods": [],
-          "line": 2523
-        },
-        {
-          "name": "verify_results",
-          "type": "function",
-          "signature": "def verify_results(run_id: str, project: str, step: str, as_json: bool)",
-          "docstring": "Show verification results for a run.",
-          "methods": [],
-          "line": 2581
+          "line": 19
         },
         {
           "name": "main",
           "type": "function",
           "signature": "def main()",
-          "docstring": "Main entry point.",
+          "docstring": "",
           "methods": [],
-          "line": 2625
+          "line": 31
         }
       ],
-      "deps_internal": [
-        "state.py",
-        "memory.py",
-        "ops.py",
-        "graph.py",
-        "indexer.py",
-        "context.py",
-        "refs.py",
-        "registry.py",
-        "knowledge.py"
-      ],
+      "deps_internal": [],
       "deps_external": [
         "erirpg",
         "click"
@@ -548,10 +82,565 @@
       "deps_internal": [],
       "deps_external": []
     },
+    "config.py": {
+      "path": "config.py",
+      "lang": "python",
+      "lines": 462,
+      "summary": "EriRPG Project Configuration.",
+      "interfaces": [
+        {
+          "name": "TIER_LEVELS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 28
+        },
+        {
+          "name": "tier_includes_command",
+          "type": "function",
+          "signature": "def tier_includes_command(tier: Tier, command: str) -> bool",
+          "docstring": "Check if a tier includes a specific command.",
+          "methods": [],
+          "line": 101
+        },
+        {
+          "name": "get_tier_for_command",
+          "type": "function",
+          "signature": "def get_tier_for_command(command: str) -> Optional[Tier]",
+          "docstring": "Get the minimum tier required for a command.",
+          "methods": [],
+          "line": 121
+        },
+        {
+          "name": "EnforcementConfig",
+          "type": "class",
+          "signature": "",
+          "docstring": "Enforcement behavior settings.",
+          "methods": [],
+          "line": 137
+        },
+        {
+          "name": "MultiAgentConfig",
+          "type": "class",
+          "signature": "",
+          "docstring": "Multi-agent execution settings.",
+          "methods": [],
+          "line": 144
+        },
+        {
+          "name": "ProjectConfig",
+          "type": "class",
+          "signature": "",
+          "docstring": "Project-level configuration.",
+          "methods": [
+            "to_dict",
+            "from_dict",
+            "is_bootstrap",
+            "is_maintain",
+            "has_graduated",
+            "is_lite",
+            "is_standard",
+            "is_full",
+            "tier_level",
+            "can_use_command"
+          ],
+          "line": 152
+        },
+        {
+          "name": "get_config_path",
+          "type": "function",
+          "signature": "def get_config_path(project_path: str) -> Path",
+          "docstring": "Get the config file path for a project.",
+          "methods": [],
+          "line": 234
+        },
+        {
+          "name": "load_config",
+          "type": "function",
+          "signature": "def load_config(project_path: str) -> ProjectConfig",
+          "docstring": "Load project configuration. Returns defaults if not found.",
+          "methods": [],
+          "line": 239
+        },
+        {
+          "name": "save_config",
+          "type": "function",
+          "signature": "def save_config(project_path: str, config: ProjectConfig) -> None",
+          "docstring": "Save project configuration.",
+          "methods": [],
+          "line": 254
+        },
+        {
+          "name": "set_multi_agent",
+          "type": "function",
+          "signature": "def set_multi_agent(project_path: str, enabled: bool) -> ProjectConfig",
+          "docstring": "Enable or disable multi-agent mode.",
+          "methods": [],
+          "line": 265
+        },
+        {
+          "name": "set_concurrency",
+          "type": "function",
+          "signature": "def set_concurrency(project_path: str, max_concurrency: int) -> ProjectConfig",
+          "docstring": "Set max concurrency for multi-agent mode.",
+          "methods": [],
+          "line": 273
+        },
+        {
+          "name": "get_mode",
+          "type": "function",
+          "signature": "def get_mode(project_path: str) -> Mode",
+          "docstring": "Get the operational mode for a project.",
+          "methods": [],
+          "line": 285
+        },
+        {
+          "name": "set_mode",
+          "type": "function",
+          "signature": "def set_mode(project_path: str, mode: Mode) -> ProjectConfig",
+          "docstring": "Set the operational mode for a project.",
+          "methods": [],
+          "line": 328
+        },
+        {
+          "name": "graduate_project",
+          "type": "function",
+          "signature": "def graduate_project(project_path: str, by: str) -> ProjectConfig",
+          "docstring": "Graduate a project from bootstrap to maintain mode.",
+          "methods": [],
+          "line": 344
+        },
+        {
+          "name": "init_project_config",
+          "type": "function",
+          "signature": "def init_project_config(project_path: str, tier: Tier) -> ProjectConfig",
+          "docstring": "Initialize config for a new project in bootstrap mode.",
+          "methods": [],
+          "line": 364
+        },
+        {
+          "name": "get_tier",
+          "type": "function",
+          "signature": "def get_tier(project_path: str) -> Tier",
+          "docstring": "Get the feature tier for a project.",
+          "methods": [],
+          "line": 389
+        },
+        {
+          "name": "set_tier",
+          "type": "function",
+          "signature": "def set_tier(project_path: str, tier: Tier) -> ProjectConfig",
+          "docstring": "Set the feature tier for a project.",
+          "methods": [],
+          "line": 402
+        },
+        {
+          "name": "upgrade_tier",
+          "type": "function",
+          "signature": "def upgrade_tier(project_path: str) -> ProjectConfig",
+          "docstring": "Upgrade project to next tier level.",
+          "methods": [],
+          "line": 421
+        },
+        {
+          "name": "tier_allows",
+          "type": "function",
+          "signature": "def tier_allows(current_tier: Tier, required_tier: Tier) -> bool",
+          "docstring": "Check if current tier includes required tier level.",
+          "methods": [],
+          "line": 451
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "storage.py": {
+      "path": "storage.py",
+      "lang": "python",
+      "lines": 685,
+      "summary": "SQLite storage layer for EriRPG graphs.",
+      "interfaces": [
+        {
+          "name": "DEFAULT_DB_PATH",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 26
+        },
+        {
+          "name": "SCHEMA_VERSION",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 29
+        },
+        {
+          "name": "get_db_path",
+          "type": "function",
+          "signature": "def get_db_path() -> str",
+          "docstring": "Get the database path, respecting ERI_RPG_DB env var.",
+          "methods": [],
+          "line": 32
+        },
+        {
+          "name": "get_connection",
+          "type": "function",
+          "signature": "def get_connection(db_path: Optional[str]) -> Iterator[sqlite3.Connection]",
+          "docstring": "Get a database connection with proper settings.",
+          "methods": [],
+          "line": 38
+        },
+        {
+          "name": "init_db",
+          "type": "function",
+          "signature": "def init_db(db_path: Optional[str]) -> None",
+          "docstring": "Initialize the database schema.",
+          "methods": [],
+          "line": 57
+        },
+        {
+          "name": "get_schema_version",
+          "type": "function",
+          "signature": "def get_schema_version(db_path: Optional[str]) -> int",
+          "docstring": "Get current schema version, or 0 if not initialized.",
+          "methods": [],
+          "line": 156
+        },
+        {
+          "name": "save_graph",
+          "type": "function",
+          "signature": "def save_graph(graph: Graph, db_path: Optional[str]) -> None",
+          "docstring": "Save a graph to the SQLite database.",
+          "methods": [],
+          "line": 171
+        },
+        {
+          "name": "delete_project",
+          "type": "function",
+          "signature": "def delete_project(project_name: str, db_path: Optional[str]) -> bool",
+          "docstring": "Delete a project and all its data from the database.",
+          "methods": [],
+          "line": 261
+        },
+        {
+          "name": "load_graph",
+          "type": "function",
+          "signature": "def load_graph(project_name: str, db_path: Optional[str]) -> Optional[Graph]",
+          "docstring": "Load a graph from the database.",
+          "methods": [],
+          "line": 276
+        },
+        {
+          "name": "get_module",
+          "type": "function",
+          "signature": "def get_module(project_name: str, module_path: str, db_path: Optional[str]) -> Optional[Module]",
+          "docstring": "Get a single module without loading the full graph.",
+          "methods": [],
+          "line": 369
+        },
+        {
+          "name": "CrossProjectResult",
+          "type": "class",
+          "signature": "",
+          "docstring": "Result from a cross-project query.",
+          "methods": [],
+          "line": 427
+        },
+        {
+          "name": "find_interface_across_projects",
+          "type": "function",
+          "signature": "def find_interface_across_projects(name: str, interface_type: Optional[str], db_path: Optional[str]) -> List[CrossProjectResult]",
+          "docstring": "Find interfaces by name across all projects.",
+          "methods": [],
+          "line": 437
+        },
+        {
+          "name": "find_external_dep_usage",
+          "type": "function",
+          "signature": "def find_external_dep_usage(package: str, db_path: Optional[str]) -> List[Tuple[str, str]]",
+          "docstring": "Find all modules across projects that use an external package.",
+          "methods": [],
+          "line": 486
+        },
+        {
+          "name": "find_dependents_across_projects",
+          "type": "function",
+          "signature": "def find_dependents_across_projects(module_path: str, db_path: Optional[str]) -> List[Tuple[str, str]]",
+          "docstring": "Find all modules across projects that depend on a given module path.",
+          "methods": [],
+          "line": 511
+        },
+        {
+          "name": "get_project_stats",
+          "type": "function",
+          "signature": "def get_project_stats(db_path: Optional[str]) -> Dict[str, dict]",
+          "docstring": "Get statistics for all projects in the database.",
+          "methods": [],
+          "line": 539
+        },
+        {
+          "name": "get_db_stats",
+          "type": "function",
+          "signature": "def get_db_stats(db_path: Optional[str]) -> dict",
+          "docstring": "Get overall database statistics.",
+          "methods": [],
+          "line": 587
+        },
+        {
+          "name": "migrate_from_json",
+          "type": "function",
+          "signature": "def migrate_from_json(json_path: str, project_name: str, db_path: Optional[str]) -> bool",
+          "docstring": "Migrate a JSON graph file to the SQLite database.",
+          "methods": [],
+          "line": 617
+        },
+        {
+          "name": "migrate_all_projects",
+          "type": "function",
+          "signature": "def migrate_all_projects(registry_path: Optional[str], db_path: Optional[str]) -> Dict[str, bool]",
+          "docstring": "Migrate all registered projects from JSON to SQLite.",
+          "methods": [],
+          "line": 636
+        },
+        {
+          "name": "export_to_json",
+          "type": "function",
+          "signature": "def export_to_json(project_name: str, output_path: str, db_path: Optional[str]) -> bool",
+          "docstring": "Export a project's graph to JSON format.",
+          "methods": [],
+          "line": 669
+        }
+      ],
+      "deps_internal": [
+        "graph.py"
+      ],
+      "deps_external": []
+    },
+    "write_guard.py": {
+      "path": "write_guard.py",
+      "lang": "python",
+      "lines": 184,
+      "summary": "Hard enforcement hooks for EriRPG.",
+      "interfaces": [
+        {
+          "name": "_ALWAYS_ALLOWED_PATTERNS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 24
+        },
+        {
+          "name": "guarded_open",
+          "type": "function",
+          "signature": "def guarded_open(file, mode, *args, **kwargs)",
+          "docstring": "Intercept file opens and block unauthorized writes.",
+          "methods": [],
+          "line": 35
+        },
+        {
+          "name": "install_hooks",
+          "type": "function",
+          "signature": "def install_hooks() -> None",
+          "docstring": "Install write protection hooks.",
+          "methods": [],
+          "line": 90
+        },
+        {
+          "name": "uninstall_hooks",
+          "type": "function",
+          "signature": "def uninstall_hooks() -> None",
+          "docstring": "Uninstall write protection hooks.",
+          "methods": [],
+          "line": 105
+        },
+        {
+          "name": "enable_writes",
+          "type": "function",
+          "signature": "def enable_writes(paths: List[str], project_path: Optional[str]) -> None",
+          "docstring": "Enable writes for specific paths.",
+          "methods": [],
+          "line": 117
+        },
+        {
+          "name": "disable_writes",
+          "type": "function",
+          "signature": "def disable_writes() -> None",
+          "docstring": "Disable writes.",
+          "methods": [],
+          "line": 144
+        },
+        {
+          "name": "is_write_allowed",
+          "type": "function",
+          "signature": "def is_write_allowed() -> bool",
+          "docstring": "Check if writes are currently allowed.",
+          "methods": [],
+          "line": 156
+        },
+        {
+          "name": "get_allowed_paths",
+          "type": "function",
+          "signature": "def get_allowed_paths() -> List[str]",
+          "docstring": "Get list of paths that are allowed to be written.",
+          "methods": [],
+          "line": 161
+        },
+        {
+          "name": "add_allowed_path",
+          "type": "function",
+          "signature": "def add_allowed_path(path: str, project_path: Optional[str]) -> None",
+          "docstring": "Add a path to the allowed list.",
+          "methods": [],
+          "line": 166
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "analyze.py": {
+      "path": "analyze.py",
+      "lang": "python",
+      "lines": 508,
+      "summary": "EriRPG Project Pattern Analysis",
+      "interfaces": [
+        {
+          "name": "ExtensionPoint",
+          "type": "class",
+          "signature": "",
+          "docstring": "A point where code can be extended (hooks, callbacks, overrides).",
+          "methods": [],
+          "line": 26
+        },
+        {
+          "name": "Registry",
+          "type": "class",
+          "signature": "",
+          "docstring": "A factory/registry pattern for registering implementations.",
+          "methods": [],
+          "line": 35
+        },
+        {
+          "name": "ProjectPatterns",
+          "type": "class",
+          "signature": "",
+          "docstring": "Detected patterns for a project.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 44
+        },
+        {
+          "name": "get_patterns_path",
+          "type": "function",
+          "signature": "def get_patterns_path(project_path: str) -> Path",
+          "docstring": "Get path to patterns.json.",
+          "methods": [],
+          "line": 93
+        },
+        {
+          "name": "load_patterns",
+          "type": "function",
+          "signature": "def load_patterns(project_path: str) -> Optional[ProjectPatterns]",
+          "docstring": "Load patterns from .eri-rpg/patterns.json.",
+          "methods": [],
+          "line": 98
+        },
+        {
+          "name": "save_patterns",
+          "type": "function",
+          "signature": "def save_patterns(project_path: str, patterns: ProjectPatterns)",
+          "docstring": "Save patterns to .eri-rpg/patterns.json.",
+          "methods": [],
+          "line": 111
+        },
+        {
+          "name": "analyze_project",
+          "type": "function",
+          "signature": "def analyze_project(project_path: str) -> ProjectPatterns",
+          "docstring": "Analyze codebase for patterns.",
+          "methods": [],
+          "line": 119
+        },
+        {
+          "name": "detect_structure_patterns",
+          "type": "function",
+          "signature": "def detect_structure_patterns(project_path: str) -> Dict[str, str]",
+          "docstring": "Detect where different types of files live.",
+          "methods": [],
+          "line": 136
+        },
+        {
+          "name": "detect_conventions",
+          "type": "function",
+          "signature": "def detect_conventions(project_path: str, graph: Graph) -> Dict[str, str]",
+          "docstring": "Detect naming and implementation conventions.",
+          "methods": [],
+          "line": 180
+        },
+        {
+          "name": "find_extension_points",
+          "type": "function",
+          "signature": "def find_extension_points(project_path: str, graph: Graph) -> List[ExtensionPoint]",
+          "docstring": "Find hook methods, callbacks, overridable points.",
+          "methods": [],
+          "line": 209
+        },
+        {
+          "name": "find_base_classes",
+          "type": "function",
+          "signature": "def find_base_classes(project_path: str, graph: Graph) -> Dict[str, str]",
+          "docstring": "Find abstract/base classes meant to be inherited.",
+          "methods": [],
+          "line": 255
+        },
+        {
+          "name": "find_registries",
+          "type": "function",
+          "signature": "def find_registries(project_path: str, graph: Graph) -> List[Registry]",
+          "docstring": "Find factory/registry patterns.",
+          "methods": [],
+          "line": 324
+        },
+        {
+          "name": "detect_common_imports",
+          "type": "function",
+          "signature": "def detect_common_imports(project_path: str, graph: Graph) -> Dict[str, List[str]]",
+          "docstring": "Detect commonly used imports.",
+          "methods": [],
+          "line": 388
+        },
+        {
+          "name": "detect_test_patterns",
+          "type": "function",
+          "signature": "def detect_test_patterns(project_path: str) -> Dict[str, str]",
+          "docstring": "Detect test file organization.",
+          "methods": [],
+          "line": 433
+        },
+        {
+          "name": "format_patterns",
+          "type": "function",
+          "signature": "def format_patterns(patterns: ProjectPatterns) -> str",
+          "docstring": "Format patterns for display.",
+          "methods": [],
+          "line": 459
+        }
+      ],
+      "deps_internal": [
+        "graph.py",
+        "registry.py"
+      ],
+      "deps_external": []
+    },
     "graph.py": {
       "path": "graph.py",
       "lang": "python",
-      "lines": 295,
+      "lines": 324,
       "summary": "Graph data structures for representing codebases.",
       "interfaces": [
         {
@@ -563,7 +652,7 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 19
+          "line": 21
         },
         {
           "name": "Module",
@@ -574,7 +663,7 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 51
+          "line": 53
         },
         {
           "name": "Edge",
@@ -585,7 +674,7 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 86
+          "line": 88
         },
         {
           "name": "Graph",
@@ -600,23 +689,194 @@
             "get_module",
             "add_module",
             "add_edge",
+            "_build_dependents_index",
             "get_deps",
             "get_dependents",
             "get_transitive_deps",
+            "_get_transitive_deps_cached",
             "get_transitive_dependents",
             "topo_sort",
+            "clear_caches",
             "stats"
           ],
-          "line": 112
+          "line": 114
         }
       ],
       "deps_internal": [],
       "deps_external": []
     },
+    "implement.py": {
+      "path": "implement.py",
+      "lang": "python",
+      "lines": 725,
+      "summary": "EriRPG Feature Implementation Planning",
+      "interfaces": [
+        {
+          "name": "FeatureComponent",
+          "type": "class",
+          "signature": "",
+          "docstring": "A component of a feature to implement.",
+          "methods": [],
+          "line": 24
+        },
+        {
+          "name": "FilePlan",
+          "type": "class",
+          "signature": "",
+          "docstring": "Plan for a single file.",
+          "methods": [],
+          "line": 33
+        },
+        {
+          "name": "Phase",
+          "type": "class",
+          "signature": "",
+          "docstring": "A phase of implementation.",
+          "methods": [],
+          "line": 47
+        },
+        {
+          "name": "ImplementationPlan",
+          "type": "class",
+          "signature": "",
+          "docstring": "Complete plan for implementing a feature.",
+          "methods": [
+            "to_dict"
+          ],
+          "line": 56
+        },
+        {
+          "name": "COMPONENT_KEYWORDS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 94
+        },
+        {
+          "name": "extract_components",
+          "type": "function",
+          "signature": "def extract_components(feature: str) -> List[FeatureComponent]",
+          "docstring": "Parse feature description into components.",
+          "methods": [],
+          "line": 109
+        },
+        {
+          "name": "detect_component_type",
+          "type": "function",
+          "signature": "def detect_component_type(text: str) -> str",
+          "docstring": "Detect component type from text.",
+          "methods": [],
+          "line": 169
+        },
+        {
+          "name": "generate_component_name",
+          "type": "function",
+          "signature": "def generate_component_name(text: str, comp_type: str) -> str",
+          "docstring": "Generate a component name from description.",
+          "methods": [],
+          "line": 179
+        },
+        {
+          "name": "to_pascal_case",
+          "type": "function",
+          "signature": "def to_pascal_case(text: str) -> str",
+          "docstring": "Convert text to PascalCase.",
+          "methods": [],
+          "line": 203
+        },
+        {
+          "name": "to_snake_case",
+          "type": "function",
+          "signature": "def to_snake_case(text: str) -> str",
+          "docstring": "Convert text to snake_case.",
+          "methods": [],
+          "line": 209
+        },
+        {
+          "name": "map_component_to_target",
+          "type": "function",
+          "signature": "def map_component_to_target(comp: FeatureComponent, patterns: ProjectPatterns) -> FilePlan",
+          "docstring": "Map component to target location using patterns.",
+          "methods": [],
+          "line": 216
+        },
+        {
+          "name": "find_needed_registrations",
+          "type": "function",
+          "signature": "def find_needed_registrations(file_plan: List[FilePlan], patterns: ProjectPatterns) -> List[str]",
+          "docstring": "Identify registrations needed for new components.",
+          "methods": [],
+          "line": 274
+        },
+        {
+          "name": "find_relevant_hooks",
+          "type": "function",
+          "signature": "def find_relevant_hooks(components: List[FeatureComponent], patterns: ProjectPatterns) -> List[str]",
+          "docstring": "Find hooks that the feature should use.",
+          "methods": [],
+          "line": 295
+        },
+        {
+          "name": "create_phases",
+          "type": "function",
+          "signature": "def create_phases(file_plan: List[FilePlan], registrations: List[str], hooks: List[str]) -> List[Phase]",
+          "docstring": "Order implementation into phases.",
+          "methods": [],
+          "line": 323
+        },
+        {
+          "name": "plan_implementation",
+          "type": "function",
+          "signature": "def plan_implementation(project_path: str, feature: str, use_drift: bool) -> ImplementationPlan",
+          "docstring": "Generate implementation plan for a feature.",
+          "methods": [],
+          "line": 390
+        },
+        {
+          "name": "_enrich_with_drift_impact",
+          "type": "function",
+          "signature": "def _enrich_with_drift_impact(plan: ImplementationPlan, project_path: str) -> ImplementationPlan",
+          "docstring": "Enrich implementation plan with Drift impact analysis.",
+          "methods": [],
+          "line": 458
+        },
+        {
+          "name": "describe_feature",
+          "type": "function",
+          "signature": "def describe_feature(project_path: str, file_path: str) -> str",
+          "docstring": "Extract feature description from a source file.",
+          "methods": [],
+          "line": 550
+        },
+        {
+          "name": "format_implementation_plan",
+          "type": "function",
+          "signature": "def format_implementation_plan(plan: ImplementationPlan) -> str",
+          "docstring": "Format implementation plan for display.",
+          "methods": [],
+          "line": 597
+        },
+        {
+          "name": "plan_to_spec",
+          "type": "function",
+          "signature": "def plan_to_spec(plan: ImplementationPlan, project_path: str) -> Dict[str, Any]",
+          "docstring": "Convert implementation plan to EriRPG spec.",
+          "methods": [],
+          "line": 651
+        }
+      ],
+      "deps_internal": [
+        "graph.py",
+        "analyze.py",
+        "memory.py"
+      ],
+      "deps_external": []
+    },
     "memory.py": {
       "path": "memory.py",
       "lang": "python",
-      "lines": 1091,
+      "lines": 2086,
       "summary": "Persistent semantic memory for EriRPG.",
       "interfaces": [
         {
@@ -625,7 +885,7 @@
           "signature": "def hash_file(path: str) -> str",
           "docstring": "Get SHA256 hash of file content (first 16 chars).",
           "methods": [],
-          "line": 36
+          "line": 35
         },
         {
           "name": "read_file_content",
@@ -633,7 +893,7 @@
           "signature": "def read_file_content(path: str) -> str",
           "docstring": "Read file content safely.",
           "methods": [],
-          "line": 47
+          "line": 46
         },
         {
           "name": "git_head",
@@ -641,7 +901,7 @@
           "signature": "def git_head() -> Optional[str]",
           "docstring": "Get current git HEAD commit (first 12 chars).",
           "methods": [],
-          "line": 56
+          "line": 55
         },
         {
           "name": "in_git_repo",
@@ -649,7 +909,7 @@
           "signature": "def in_git_repo() -> bool",
           "docstring": "Check if we're in a git repo.",
           "methods": [],
-          "line": 72
+          "line": 71
         },
         {
           "name": "LearningVersion",
@@ -660,7 +920,7 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 82
+          "line": 81
         },
         {
           "name": "RollbackResult",
@@ -671,7 +931,7 @@
             "format",
             "to_dict"
           ],
-          "line": 147
+          "line": 146
         },
         {
           "name": "RunRecord",
@@ -682,7 +942,7 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 226
+          "line": 225
         },
         {
           "name": "StoredLearning",
@@ -697,11 +957,14 @@
             "can_rollback_files",
             "get_version",
             "history_summary",
+            "enrich_with_drift",
+            "_matches_drift_pattern",
+            "_is_about_outlier",
             "format_for_context",
             "to_dict",
             "from_dict"
           ],
-          "line": 271
+          "line": 270
         },
         {
           "name": "StoredDecision",
@@ -712,7 +975,121 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 660
+          "line": 763
+        },
+        {
+          "name": "Decision",
+          "type": "class",
+          "signature": "",
+          "docstring": "A decision made during discussion or execution.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 798
+        },
+        {
+          "name": "DeferredIdea",
+          "type": "class",
+          "signature": "",
+          "docstring": "An idea deferred for later implementation.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 844
+        },
+        {
+          "name": "Blocker",
+          "type": "class",
+          "signature": "",
+          "docstring": "A known blocker or issue.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 883
+        },
+        {
+          "name": "SessionState",
+          "type": "class",
+          "signature": "",
+          "docstring": "Rich session state for handoff between sessions.",
+          "methods": [
+            "add_decision",
+            "add_blocker",
+            "resolve_blocker",
+            "add_deferred",
+            "add_next_action",
+            "update_position",
+            "touch",
+            "format_handoff",
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 915
+        },
+        {
+          "name": "Gap",
+          "type": "class",
+          "signature": "",
+          "docstring": "A verification gap to be fixed.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 1068
+        },
+        {
+          "name": "Milestone",
+          "type": "class",
+          "signature": "",
+          "docstring": "A phase/milestone in a roadmap.",
+          "methods": [
+            "done",
+            "complete",
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 1104
+        },
+        {
+          "name": "Roadmap",
+          "type": "class",
+          "signature": "",
+          "docstring": "A multi-phase roadmap for achieving a goal.",
+          "methods": [
+            "make_id",
+            "create",
+            "add_milestone",
+            "current_milestone",
+            "current_index",
+            "advance",
+            "progress",
+            "progress_percent",
+            "is_complete",
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 1148
+        },
+        {
+          "name": "Discussion",
+          "type": "class",
+          "signature": "",
+          "docstring": "A goal clarification discussion with optional roadmap.",
+          "methods": [
+            "make_id",
+            "create",
+            "answer",
+            "unanswered",
+            "is_complete",
+            "resolve",
+            "summary",
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 1236
         },
         {
           "name": "KnowledgeStore",
@@ -729,16 +1106,31 @@
             "get_decisions_for_module",
             "add_pattern",
             "get_pattern",
+            "add_discussion",
+            "get_discussion",
+            "get_discussion_by_goal",
+            "remove_discussion",
+            "clear_discussions",
+            "list_discussions",
             "add_run",
             "get_recent_runs",
             "get_stale_learnings",
             "get_fresh_learnings",
             "search",
+            "add_user_decision",
+            "get_user_decisions",
+            "search_decisions",
+            "next_decision_id",
+            "add_deferred_idea",
+            "get_deferred_ideas",
+            "get_deferred_by_tag",
+            "promote_idea",
+            "next_idea_id",
             "stats",
             "save",
             "load"
           ],
-          "line": 692
+          "line": 1323
         },
         {
           "name": "get_knowledge_path",
@@ -746,7 +1138,7 @@
           "signature": "def get_knowledge_path(project_path: str) -> str",
           "docstring": "Get the path to knowledge.json for a project.",
           "methods": [],
-          "line": 885
+          "line": 1628
         },
         {
           "name": "load_knowledge",
@@ -754,7 +1146,7 @@
           "signature": "def load_knowledge(project_path: str, project_name: str) -> KnowledgeStore",
           "docstring": "Load knowledge store for a project.",
           "methods": [],
-          "line": 897
+          "line": 1640
         },
         {
           "name": "save_knowledge",
@@ -762,7 +1154,7 @@
           "signature": "def save_knowledge(project_path: str, store: KnowledgeStore) -> None",
           "docstring": "Save knowledge store for a project.",
           "methods": [],
-          "line": 914
+          "line": 1657
         },
         {
           "name": "LearningUpdatePolicy",
@@ -770,7 +1162,7 @@
           "signature": "",
           "docstring": "How to update learnings based on operation type.",
           "methods": [],
-          "line": 929
+          "line": 1672
         },
         {
           "name": "update_learning_with_operation",
@@ -778,7 +1170,95 @@
           "signature": "def update_learning_with_operation(store: KnowledgeStore, module_path: str, operation: str, new_understanding: dict, project_path: str, source_learning: Optional[StoredLearning], change_description: str) -> StoredLearning",
           "docstring": "Update learning based on operation type.",
           "methods": [],
-          "line": 937
+          "line": 1680
+        },
+        {
+          "name": "get_session_path",
+          "type": "function",
+          "signature": "def get_session_path(project_path: str, run_id: str) -> str",
+          "docstring": "Get path to session state file.",
+          "methods": [],
+          "line": 1839
+        },
+        {
+          "name": "save_session_state",
+          "type": "function",
+          "signature": "def save_session_state(project_path: str, state: 'SessionState') -> None",
+          "docstring": "Save session state to file.",
+          "methods": [],
+          "line": 1844
+        },
+        {
+          "name": "load_session_state",
+          "type": "function",
+          "signature": "def load_session_state(project_path: str, run_id: str) -> Optional['SessionState']",
+          "docstring": "Load session state from file.",
+          "methods": [],
+          "line": 1853
+        },
+        {
+          "name": "get_latest_session",
+          "type": "function",
+          "signature": "def get_latest_session(project_path: str) -> Optional['SessionState']",
+          "docstring": "Get the most recent session state.",
+          "methods": [],
+          "line": 1867
+        },
+        {
+          "name": "create_session",
+          "type": "function",
+          "signature": "def create_session(project_path: str, run_id: str) -> 'SessionState'",
+          "docstring": "Create a new session state.",
+          "methods": [],
+          "line": 1888
+        },
+        {
+          "name": "analyze_gaps",
+          "type": "function",
+          "signature": "def analyze_gaps(project_path: str, run_id: str) -> List['Gap']",
+          "docstring": "Analyze verification failures and identify gaps.",
+          "methods": [],
+          "line": 1903
+        },
+        {
+          "name": "_generate_fix_suggestion",
+          "type": "function",
+          "signature": "def _generate_fix_suggestion(step: dict) -> str",
+          "docstring": "Generate a suggested fix based on step failure.",
+          "methods": [],
+          "line": 1938
+        },
+        {
+          "name": "save_gaps",
+          "type": "function",
+          "signature": "def save_gaps(project_path: str, run_id: str, gaps: List['Gap']) -> str",
+          "docstring": "Save gaps to a file for later processing.",
+          "methods": [],
+          "line": 1953
+        },
+        {
+          "name": "load_gaps",
+          "type": "function",
+          "signature": "def load_gaps(project_path: str, run_id: str) -> List['Gap']",
+          "docstring": "Load gaps from file.",
+          "methods": [],
+          "line": 1964
+        },
+        {
+          "name": "enrich_learnings_batch",
+          "type": "function",
+          "signature": "def enrich_learnings_batch(project_path: str, force: bool) -> dict",
+          "docstring": "Batch enrich all stored learnings with Drift pattern data.",
+          "methods": [],
+          "line": 1982
+        },
+        {
+          "name": "get_drift_status",
+          "type": "function",
+          "signature": "def get_drift_status(project_path: str) -> dict",
+          "docstring": "Get Drift integration status for a project.",
+          "methods": [],
+          "line": 2065
         }
       ],
       "deps_internal": [
@@ -786,10 +1266,163 @@
       ],
       "deps_external": []
     },
+    "workflow.py": {
+      "path": "workflow.py",
+      "lang": "python",
+      "lines": 122,
+      "summary": "Workflow stage management with persona integration.",
+      "interfaces": [
+        {
+          "name": "Stage",
+          "type": "class",
+          "signature": "",
+          "docstring": "Workflow stages - each implies a default persona.",
+          "methods": [],
+          "line": 18
+        },
+        {
+          "name": "get_persona_for_stage",
+          "type": "function",
+          "signature": "def get_persona_for_stage(stage: Stage) -> Persona",
+          "docstring": "Get the default persona for a workflow stage.",
+          "methods": [],
+          "line": 65
+        },
+        {
+          "name": "get_stage_description",
+          "type": "function",
+          "signature": "def get_stage_description(stage: Stage) -> str",
+          "docstring": "Human-readable stage description.",
+          "methods": [],
+          "line": 70
+        },
+        {
+          "name": "get_stage_by_name",
+          "type": "function",
+          "signature": "def get_stage_by_name(name: str) -> Optional[Stage]",
+          "docstring": "Get stage enum by name string.",
+          "methods": [],
+          "line": 75
+        },
+        {
+          "name": "list_stages",
+          "type": "function",
+          "signature": "def list_stages() -> list[str]",
+          "docstring": "List all available stage names.",
+          "methods": [],
+          "line": 84
+        },
+        {
+          "name": "can_transition",
+          "type": "function",
+          "signature": "def can_transition(from_stage: Stage, to_stage: Stage) -> bool",
+          "docstring": "Check if a stage transition is valid.",
+          "methods": [],
+          "line": 89
+        },
+        {
+          "name": "get_next_stages",
+          "type": "function",
+          "signature": "def get_next_stages(current: Stage) -> list[Stage]",
+          "docstring": "Get valid next stages from current stage.",
+          "methods": [],
+          "line": 95
+        },
+        {
+          "name": "detect_stage_from_input",
+          "type": "function",
+          "signature": "def detect_stage_from_input(user_input: str) -> Optional[Stage]",
+          "docstring": "Detect workflow stage from user input.",
+          "methods": [],
+          "line": 100
+        }
+      ],
+      "deps_internal": [
+        "persona.py"
+      ],
+      "deps_external": []
+    },
+    "pattern_sync.py": {
+      "path": "pattern_sync.py",
+      "lang": "python",
+      "lines": 513,
+      "summary": "Sync patterns between EriRPG and Drift.",
+      "interfaces": [
+        {
+          "name": "SyncResult",
+          "type": "class",
+          "signature": "",
+          "docstring": "Result of a pattern sync operation.",
+          "methods": [
+            "__post_init__",
+            "to_dict"
+          ],
+          "line": 24
+        },
+        {
+          "name": "sync_patterns",
+          "type": "function",
+          "signature": "def sync_patterns(project_path: str, direction: str) -> SyncResult",
+          "docstring": "Sync patterns between .eri-rpg/patterns.json and .drift/patterns/",
+          "methods": [],
+          "line": 46
+        },
+        {
+          "name": "_import_from_drift",
+          "type": "function",
+          "signature": "def _import_from_drift(eri_path: Path, drift_path: Path) -> int",
+          "docstring": "Import Drift patterns into EriRPG format.",
+          "methods": [],
+          "line": 82
+        },
+        {
+          "name": "_export_to_drift",
+          "type": "function",
+          "signature": "def _export_to_drift(eri_path: Path, drift_path: Path) -> int",
+          "docstring": "Export EriRPG patterns to Drift-compatible format.",
+          "methods": [],
+          "line": 177
+        },
+        {
+          "name": "_to_slug",
+          "type": "function",
+          "signature": "def _to_slug(text: str) -> str",
+          "docstring": "Convert text to URL-friendly slug.",
+          "methods": [],
+          "line": 271
+        },
+        {
+          "name": "get_combined_confidence",
+          "type": "function",
+          "signature": "def get_combined_confidence(project_path: str, pattern_type: str) -> float",
+          "docstring": "Get combined confidence from both EriRPG and Drift.",
+          "methods": [],
+          "line": 283
+        },
+        {
+          "name": "get_all_patterns",
+          "type": "function",
+          "signature": "def get_all_patterns(project_path: str) -> Dict[str, Any]",
+          "docstring": "Get all patterns from both EriRPG and Drift.",
+          "methods": [],
+          "line": 362
+        },
+        {
+          "name": "get_sync_status",
+          "type": "function",
+          "signature": "def get_sync_status(project_path: str) -> Dict[str, Any]",
+          "docstring": "Get status of pattern sync between EriRPG and Drift.",
+          "methods": [],
+          "line": 457
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
     "indexer.py": {
       "path": "indexer.py",
       "lang": "python",
-      "lines": 308,
+      "lines": 396,
       "summary": "Code indexer for building dependency graphs.",
       "interfaces": [
         {
@@ -798,7 +1431,7 @@
           "signature": "",
           "docstring": "",
           "methods": [],
-          "line": 26
+          "line": 37
         },
         {
           "name": "index_project",
@@ -806,7 +1439,7 @@
           "signature": "def index_project(project: Project, verbose: bool) -> Graph",
           "docstring": "Index a project and build its dependency graph.",
           "methods": [],
-          "line": 63
+          "line": 74
         },
         {
           "name": "_find_python_files",
@@ -814,7 +1447,7 @@
           "signature": "def _find_python_files(root: str) -> List[str]",
           "docstring": "Find all Python files in a directory tree.",
           "methods": [],
-          "line": 218
+          "line": 254
         },
         {
           "name": "_find_c_files",
@@ -822,7 +1455,7 @@
           "signature": "def _find_c_files(root: str) -> List[str]",
           "docstring": "Find all C/C++ files in a directory tree.",
           "methods": [],
-          "line": 248
+          "line": 284
         },
         {
           "name": "_find_rust_files",
@@ -830,23 +1463,32 @@
           "signature": "def _find_rust_files(root: str) -> List[str]",
           "docstring": "Find all Rust files in a directory tree.",
           "methods": [],
-          "line": 277
+          "line": 313
+        },
+        {
+          "name": "_find_mojo_files",
+          "type": "function",
+          "signature": "def _find_mojo_files(root: str) -> List[str]",
+          "docstring": "Find all Mojo files in a directory tree.",
+          "methods": [],
+          "line": 339
         },
         {
           "name": "get_or_load_graph",
           "type": "function",
-          "signature": "def get_or_load_graph(project: Project) -> Graph",
-          "docstring": "Get project graph, loading from disk if exists.",
+          "signature": "def get_or_load_graph(project: Project, prefer_sqlite: bool) -> Graph",
+          "docstring": "Get project graph, loading from SQLite or JSON.",
           "methods": [],
-          "line": 303
+          "line": 369
         }
       ],
       "deps_internal": [
-        "graph.py",
+        "registry.py",
         "parsers/python.py",
         "parsers/rust.py",
-        "parsers/c.py",
-        "registry.py"
+        "graph.py",
+        "parsers/mojo.py",
+        "parsers/c.py"
       ],
       "deps_external": [
         "erirpg"
@@ -991,7 +1633,7 @@
     "state.py": {
       "path": "state.py",
       "lang": "python",
-      "lines": 169,
+      "lines": 185,
       "summary": "State tracking for orchestration mode.",
       "interfaces": [
         {
@@ -1004,6 +1646,8 @@
             "update",
             "log",
             "reset",
+            "set_active_project",
+            "get_active_project",
             "get_next_step",
             "save",
             "load",
@@ -1018,7 +1662,7 @@
     "planner.py": {
       "path": "planner.py",
       "lang": "python",
-      "lines": 1075,
+      "lines": 1445,
       "summary": "Planner for EriRPG.",
       "interfaces": [
         {
@@ -1224,6 +1868,32 @@
           "docstring": "Save a plan to the project's plans directory.",
           "methods": [],
           "line": 1065
+        },
+        {
+          "name": "Planner",
+          "type": "class",
+          "signature": "",
+          "docstring": "Generates execution specs from goals.",
+          "methods": [
+            "plan",
+            "_is_transplant",
+            "_is_refactor",
+            "_is_create",
+            "_is_modify",
+            "_is_fix",
+            "_plan_transplant_steps",
+            "_plan_refactor_steps",
+            "_plan_create_steps",
+            "_plan_modify_steps",
+            "_plan_fix_steps",
+            "_plan_generic_steps",
+            "_find_targets",
+            "_detect_verification",
+            "_get_unknown_files",
+            "_get_dependencies",
+            "_get_dependents"
+          ],
+          "line": 1082
         }
       ],
       "deps_internal": [
@@ -1405,7 +2075,7 @@
     "spec.py": {
       "path": "spec.py",
       "lang": "python",
-      "lines": 292,
+      "lines": 604,
       "summary": "Spec-driven execution format for EriRPG.",
       "interfaces": [
         {
@@ -1418,7 +2088,52 @@
             "from_dict",
             "is_blocked"
           ],
-          "line": 28
+          "line": 29
+        },
+        {
+          "name": "Artifact",
+          "type": "class",
+          "signature": "",
+          "docstring": "Expected output artifact from a spec execution.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 97
+        },
+        {
+          "name": "KeyLink",
+          "type": "class",
+          "signature": "",
+          "docstring": "Expected import/dependency link between files.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 126
+        },
+        {
+          "name": "MustHaves",
+          "type": "class",
+          "signature": "",
+          "docstring": "Verification requirements for a spec.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 152
+        },
+        {
+          "name": "SpecStep",
+          "type": "class",
+          "signature": "",
+          "docstring": "A goal-based step (legacy/compatibility format).",
+          "methods": [
+            "from_dict",
+            "to_dict",
+            "to_step"
+          ],
+          "line": 181
         },
         {
           "name": "Spec",
@@ -1428,6 +2143,10 @@
           "methods": [
             "generate",
             "load",
+            "from_file",
+            "from_dict",
+            "from_goal",
+            "to_dict",
             "save",
             "get_step",
             "current_step",
@@ -1437,9 +2156,10 @@
             "start_step",
             "complete_step",
             "fail_step",
-            "format_status"
+            "format_status",
+            "verify_must_haves"
           ],
-          "line": 96
+          "line": 224
         },
         {
           "name": "generate_spec_id",
@@ -1447,13 +2167,94 @@
           "signature": "def generate_spec_id(goal: str) -> str",
           "docstring": "Generate a unique spec ID from goal.",
           "methods": [],
-          "line": 287
+          "line": 599
         }
       ],
       "deps_internal": [],
       "deps_external": [
         "yaml"
       ]
+    },
+    "drift_bridge.py": {
+      "path": "drift_bridge.py",
+      "lang": "python",
+      "lines": 596,
+      "summary": "Bridge to Drift codebase intelligence.",
+      "interfaces": [
+        {
+          "name": "DriftPattern",
+          "type": "class",
+          "signature": "",
+          "docstring": "Pattern detected by Drift.",
+          "methods": [
+            "from_dict"
+          ],
+          "line": 22
+        },
+        {
+          "name": "DriftImpact",
+          "type": "class",
+          "signature": "",
+          "docstring": "Impact analysis result from Drift callgraph.",
+          "methods": [
+            "from_dict"
+          ],
+          "line": 45
+        },
+        {
+          "name": "DriftOutlier",
+          "type": "class",
+          "signature": "",
+          "docstring": "Code that deviates from established patterns.",
+          "methods": [
+            "from_dict"
+          ],
+          "line": 64
+        },
+        {
+          "name": "DriftFilePatterns",
+          "type": "class",
+          "signature": "",
+          "docstring": "Patterns and outliers for a specific file.",
+          "methods": [
+            "from_dict"
+          ],
+          "line": 87
+        },
+        {
+          "name": "DriftBridge",
+          "type": "class",
+          "signature": "",
+          "docstring": "Interface to Drift CLI/MCP.",
+          "methods": [
+            "__init__",
+            "_run_drift",
+            "is_available",
+            "scan",
+            "clear_cache",
+            "get_patterns",
+            "get_file_patterns",
+            "impact_analysis",
+            "find_outliers",
+            "validate_change",
+            "get_confidence_for_pattern",
+            "get_code_examples",
+            "suggest_changes",
+            "get_status"
+          ],
+          "line": 103
+        },
+        {
+          "name": "drift_available",
+          "type": "function",
+          "signature": "def drift_available(project_path: str) -> bool",
+          "docstring": "Quick check if Drift is available for a project.",
+          "methods": [],
+          "line": 593
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
     },
     "ops.py": {
       "path": "ops.py",
@@ -1565,8 +2366,8 @@
         }
       ],
       "deps_internal": [
-        "registry.py",
         "graph.py",
+        "registry.py",
         "refs.py"
       ],
       "deps_external": []
@@ -1596,6 +2397,242 @@
         }
       ],
       "deps_internal": [],
+      "deps_external": []
+    },
+    "install.py": {
+      "path": "install.py",
+      "lang": "python",
+      "lines": 388,
+      "summary": "One-command setup for Claude Code integration.",
+      "interfaces": [
+        {
+          "name": "get_erirpg_root",
+          "type": "function",
+          "signature": "def get_erirpg_root() -> Path",
+          "docstring": "Get the EriRPG installation root.",
+          "methods": [],
+          "line": 16
+        },
+        {
+          "name": "install_claude_code",
+          "type": "function",
+          "signature": "def install_claude_code(verbose: bool) -> bool",
+          "docstring": "Install EriRPG commands and hooks for Claude Code.",
+          "methods": [],
+          "line": 21
+        },
+        {
+          "name": "uninstall_claude_code",
+          "type": "function",
+          "signature": "def uninstall_claude_code(verbose: bool) -> bool",
+          "docstring": "Remove EriRPG from Claude Code.",
+          "methods": [],
+          "line": 132
+        },
+        {
+          "name": "_create_default_commands",
+          "type": "function",
+          "signature": "def _create_default_commands(commands_dir: Path, verbose: bool) -> None",
+          "docstring": "Create default slash commands if source doesn't exist.",
+          "methods": [],
+          "line": 193
+        },
+        {
+          "name": "install_commands",
+          "type": "function",
+          "signature": "def install_commands(verbose: bool) -> bool",
+          "docstring": "Install/sync only slash commands (no hooks).",
+          "methods": [],
+          "line": 273
+        },
+        {
+          "name": "check_installation",
+          "type": "function",
+          "signature": "def check_installation() -> dict",
+          "docstring": "Check current installation status.",
+          "methods": [],
+          "line": 321
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "sync.py": {
+      "path": "sync.py",
+      "lang": "python",
+      "lines": 542,
+      "summary": "Knowledge synchronization for EriRPG.",
+      "interfaces": [
+        {
+          "name": "EXCLUDE_DIRS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 31
+        },
+        {
+          "name": "EXTENSIONS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 46
+        },
+        {
+          "name": "FileStatus",
+          "type": "class",
+          "signature": "",
+          "docstring": "Status of a single file.",
+          "methods": [],
+          "line": 56
+        },
+        {
+          "name": "SyncResult",
+          "type": "class",
+          "signature": "",
+          "docstring": "Result of a sync operation.",
+          "methods": [
+            "total_files",
+            "needs_attention",
+            "summary",
+            "to_dict"
+          ],
+          "line": 66
+        },
+        {
+          "name": "compute_file_hash",
+          "type": "function",
+          "signature": "def compute_file_hash(file_path: str) -> str",
+          "docstring": "Compute SHA256 hash of file content.",
+          "methods": [],
+          "line": 137
+        },
+        {
+          "name": "find_source_files",
+          "type": "function",
+          "signature": "def find_source_files(root: str, language: Optional[str]) -> List[str]",
+          "docstring": "Find all source files in a directory tree.",
+          "methods": [],
+          "line": 149
+        },
+        {
+          "name": "sync_knowledge",
+          "type": "function",
+          "signature": "def sync_knowledge(project_path: str, project_name: str, language: Optional[str], verbose: bool) -> SyncResult",
+          "docstring": "Compare codebase files against knowledge.json.",
+          "methods": [],
+          "line": 198
+        },
+        {
+          "name": "learn_file",
+          "type": "function",
+          "signature": "def learn_file(project_path: str, rel_path: str, store: KnowledgeStore) -> Tuple[bool, str]",
+          "docstring": "Parse a file and create/update its StoredLearning.",
+          "methods": [],
+          "line": 299
+        },
+        {
+          "name": "sync_and_learn",
+          "type": "function",
+          "signature": "def sync_and_learn(project_path: str, project_name: str, language: Optional[str], verbose: bool, update_preflight: bool) -> SyncResult",
+          "docstring": "Sync knowledge and auto-learn unknown/stale files.",
+          "methods": [],
+          "line": 412
+        },
+        {
+          "name": "_update_preflight_learnings_status",
+          "type": "function",
+          "signature": "def _update_preflight_learnings_status(project_path: str, store: KnowledgeStore) -> None",
+          "docstring": "Update preflight_state.json with learnings_status for instant lookup.",
+          "methods": [],
+          "line": 478
+        },
+        {
+          "name": "get_learnings_status",
+          "type": "function",
+          "signature": "def get_learnings_status(project_path: str) -> Dict[str, str]",
+          "docstring": "Get cached learnings_status from preflight_state.json.",
+          "methods": [],
+          "line": 524
+        }
+      ],
+      "deps_internal": [
+        "memory.py",
+        "refs.py"
+      ],
+      "deps_external": [
+        "erirpg"
+      ]
+    },
+    "claudemd.py": {
+      "path": "claudemd.py",
+      "lang": "python",
+      "lines": 235,
+      "summary": "CLAUDE.md generator for EriRPG.",
+      "interfaces": [
+        {
+          "name": "generate_claude_md",
+          "type": "function",
+          "signature": "def generate_claude_md(project_path: str, project_name: str, description: str, patterns: List[str], decisions: List[str], key_modules: List[str], current_task: str, must_haves: List[str], roadmap: str, stage: Stage, persona: Persona, compact: bool) -> str",
+          "docstring": "Generate CLAUDE.md content for a project.",
+          "methods": [],
+          "line": 30
+        },
+        {
+          "name": "generate_claude_md_from_store",
+          "type": "function",
+          "signature": "def generate_claude_md_from_store(project_path: str, project_name: str, stage: Stage, persona: Persona, current_task: str, compact: bool) -> str",
+          "docstring": "Generate CLAUDE.md from existing knowledge store.",
+          "methods": [],
+          "line": 97
+        },
+        {
+          "name": "write_claude_md",
+          "type": "function",
+          "signature": "def write_claude_md(project_path: str, content: str) -> Path",
+          "docstring": "Write CLAUDE.md to project directory.",
+          "methods": [],
+          "line": 141
+        },
+        {
+          "name": "update_claude_md",
+          "type": "function",
+          "signature": "def update_claude_md(project_path: str, project_name: str, stage: Stage, persona: Persona, current_task: str) -> Path",
+          "docstring": "Update CLAUDE.md from current knowledge store.",
+          "methods": [],
+          "line": 157
+        },
+        {
+          "name": "_get_version",
+          "type": "function",
+          "signature": "def _get_version() -> str",
+          "docstring": "Get EriRPG version.",
+          "methods": [],
+          "line": 190
+        },
+        {
+          "name": "MINIMAL_TEMPLATE",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 200
+        },
+        {
+          "name": "generate_minimal_claude_md",
+          "type": "function",
+          "signature": "def generate_minimal_claude_md(project_name: str) -> str",
+          "docstring": "Generate minimal CLAUDE.md for projects without knowledge.",
+          "methods": [],
+          "line": 232
+        }
+      ],
+      "deps_internal": [
+        "workflow.py",
+        "persona.py",
+        "session_context.py"
+      ],
       "deps_external": []
     },
     "migration.py": {
@@ -1649,6 +2686,88 @@
         "memory.py",
         "refs.py"
       ],
+      "deps_external": []
+    },
+    "discovery.py": {
+      "path": "discovery.py",
+      "lang": "python",
+      "lines": 122,
+      "summary": "Discovery level detection for research pipeline.",
+      "interfaces": [
+        {
+          "name": "ARCH_KEYWORDS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 11
+        },
+        {
+          "name": "INTEGRATION_KEYWORDS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 14
+        },
+        {
+          "name": "SKIP_KEYWORDS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 17
+        },
+        {
+          "name": "DEP_PATTERN",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 20
+        },
+        {
+          "name": "DISCRETION_PHRASES",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 29
+        },
+        {
+          "name": "extract_deps",
+          "type": "function",
+          "signature": "def extract_deps(text: str) -> Set[str]",
+          "docstring": "Extract known library/framework dependencies from text.",
+          "methods": [],
+          "line": 36
+        },
+        {
+          "name": "detect_discovery_level",
+          "type": "function",
+          "signature": "def detect_discovery_level(goal: str, known_deps: Optional[Set[str]]) -> Tuple[int, str]",
+          "docstring": "Detect how much research is needed for a goal.",
+          "methods": [],
+          "line": 50
+        },
+        {
+          "name": "is_discretion_answer",
+          "type": "function",
+          "signature": "def is_discretion_answer(answer: str) -> bool",
+          "docstring": "Check if user's answer indicates they want Claude to decide.",
+          "methods": [],
+          "line": 99
+        },
+        {
+          "name": "get_level_description",
+          "type": "function",
+          "signature": "def get_level_description(level: int) -> str",
+          "docstring": "Get human-readable description of discovery level.",
+          "methods": [],
+          "line": 113
+        }
+      ],
+      "deps_internal": [],
       "deps_external": []
     },
     "benchmarks.py": {
@@ -1777,10 +2896,393 @@
       "deps_internal": [],
       "deps_external": []
     },
+    "discuss.py": {
+      "path": "discuss.py",
+      "lang": "python",
+      "lines": 955,
+      "summary": "Discussion mode for goal clarification.",
+      "interfaces": [
+        {
+          "name": "DOMAIN_GRAY_AREAS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 34
+        },
+        {
+          "name": "DOMAIN_FILE_PATTERNS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 81
+        },
+        {
+          "name": "DOMAIN_KEYWORDS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 91
+        },
+        {
+          "name": "detect_domain",
+          "type": "function",
+          "signature": "def detect_domain(goal: str, project_path: str) -> str",
+          "docstring": "Detect primary domain from goal text and project structure.",
+          "methods": [],
+          "line": 101
+        },
+        {
+          "name": "get_gray_area_questions",
+          "type": "function",
+          "signature": "def get_gray_area_questions(goal: str, domain: str) -> List[str]",
+          "docstring": "Generate questions about common ambiguities for a domain.",
+          "methods": [],
+          "line": 131
+        },
+        {
+          "name": "count_project_files",
+          "type": "function",
+          "signature": "def count_project_files(project_path: str) -> int",
+          "docstring": "Count source files in project (excluding hidden/build dirs).",
+          "methods": [],
+          "line": 156
+        },
+        {
+          "name": "is_new_project",
+          "type": "function",
+          "signature": "def is_new_project(project_path: str, threshold: int) -> bool",
+          "docstring": "Check if project is new (few source files).",
+          "methods": [],
+          "line": 176
+        },
+        {
+          "name": "is_vague_goal",
+          "type": "function",
+          "signature": "def is_vague_goal(goal: str) -> bool",
+          "docstring": "Check if goal is vague and needs clarification.",
+          "methods": [],
+          "line": 181
+        },
+        {
+          "name": "needs_discussion",
+          "type": "function",
+          "signature": "def needs_discussion(goal: str, project_path: str, force: bool, skip: bool) -> Tuple[bool, str]",
+          "docstring": "Determine if a goal needs discussion before spec generation.",
+          "methods": [],
+          "line": 215
+        },
+        {
+          "name": "generate_questions",
+          "type": "function",
+          "signature": "def generate_questions(goal: str, project_path: str, project_name: str) -> List[str]",
+          "docstring": "Generate clarifying questions for a goal.",
+          "methods": [],
+          "line": 253
+        },
+        {
+          "name": "start_discussion",
+          "type": "function",
+          "signature": "def start_discussion(goal: str, project_path: str, project_name: str) -> Discussion",
+          "docstring": "Start a new discussion for a goal.",
+          "methods": [],
+          "line": 317
+        },
+        {
+          "name": "get_or_start_discussion",
+          "type": "function",
+          "signature": "def get_or_start_discussion(goal: str, project_path: str, project_name: str) -> Tuple[Discussion, bool]",
+          "docstring": "Get existing discussion or start a new one.",
+          "methods": [],
+          "line": 340
+        },
+        {
+          "name": "answer_question",
+          "type": "function",
+          "signature": "def answer_question(goal: str, project_path: str, project_name: str, question: str, answer: str) -> Discussion",
+          "docstring": "Record an answer to a question.",
+          "methods": [],
+          "line": 361
+        },
+        {
+          "name": "answer_question_with_logging",
+          "type": "function",
+          "signature": "def answer_question_with_logging(goal: str, project_path: str, project_name: str, question: str, answer: str) -> Tuple['Discussion', Optional['Decision'], Optional['DeferredIdea']]",
+          "docstring": "Record an answer to a question with decision logging and defer detection.",
+          "methods": [],
+          "line": 387
+        },
+        {
+          "name": "resolve_discussion",
+          "type": "function",
+          "signature": "def resolve_discussion(goal: str, project_path: str, project_name: str) -> Discussion",
+          "docstring": "Mark a discussion as resolved.",
+          "methods": [],
+          "line": 453
+        },
+        {
+          "name": "enrich_goal",
+          "type": "function",
+          "signature": "def enrich_goal(goal: str, project_path: str, project_name: str) -> str",
+          "docstring": "Enrich a goal with discussion context.",
+          "methods": [],
+          "line": 480
+        },
+        {
+          "name": "get_enriched_goal",
+          "type": "function",
+          "signature": "def get_enriched_goal(goal: str, project_path: str, project_name: str) -> Tuple[str, Optional[Discussion]]",
+          "docstring": "Get enriched goal and discussion if exists.",
+          "methods": [],
+          "line": 509
+        },
+        {
+          "name": "log_decision",
+          "type": "function",
+          "signature": "def log_decision(project_path: str, project_name: str, context: str, choice: str, rationale: str, alternatives: List[str], source: str, run_id: Optional[str]) -> 'Decision'",
+          "docstring": "Log a decision with rationale.",
+          "methods": [],
+          "line": 532
+        },
+        {
+          "name": "get_decisions",
+          "type": "function",
+          "signature": "def get_decisions(project_path: str, project_name: str, limit: int, search: Optional[str]) -> List['Decision']",
+          "docstring": "Get recent decisions, optionally filtered by search.",
+          "methods": [],
+          "line": 580
+        },
+        {
+          "name": "defer_idea",
+          "type": "function",
+          "signature": "def defer_idea(project_path: str, project_name: str, idea: str, source: str, tags: List[str]) -> 'DeferredIdea'",
+          "docstring": "Capture a deferred idea.",
+          "methods": [],
+          "line": 604
+        },
+        {
+          "name": "get_deferred_ideas",
+          "type": "function",
+          "signature": "def get_deferred_ideas(project_path: str, project_name: str, tag: Optional[str], include_promoted: bool) -> List['DeferredIdea']",
+          "docstring": "Get deferred ideas, optionally filtered by tag.",
+          "methods": [],
+          "line": 643
+        },
+        {
+          "name": "promote_idea_to_milestone",
+          "type": "function",
+          "signature": "def promote_idea_to_milestone(project_path: str, project_name: str, idea_id: str, goal: str) -> Optional['Milestone']",
+          "docstring": "Promote a deferred idea to a roadmap milestone.",
+          "methods": [],
+          "line": 663
+        },
+        {
+          "name": "format_discussion",
+          "type": "function",
+          "signature": "def format_discussion(discussion: Discussion) -> str",
+          "docstring": "Format discussion for CLI display.",
+          "methods": [],
+          "line": 722
+        },
+        {
+          "name": "create_roadmap",
+          "type": "function",
+          "signature": "def create_roadmap(goal: str, project_path: str, project_name: str) -> Roadmap",
+          "docstring": "Create a roadmap for a discussion.",
+          "methods": [],
+          "line": 765
+        },
+        {
+          "name": "add_milestone",
+          "type": "function",
+          "signature": "def add_milestone(goal: str, project_path: str, project_name: str, name: str, description: str) -> Milestone",
+          "docstring": "Add a milestone to a discussion's roadmap.",
+          "methods": [],
+          "line": 795
+        },
+        {
+          "name": "advance_roadmap",
+          "type": "function",
+          "signature": "def advance_roadmap(goal: str, project_path: str, project_name: str) -> Optional[Milestone]",
+          "docstring": "Mark current milestone done and return next one.",
+          "methods": [],
+          "line": 826
+        },
+        {
+          "name": "get_roadmap",
+          "type": "function",
+          "signature": "def get_roadmap(goal: str, project_path: str, project_name: str) -> Optional[Roadmap]",
+          "docstring": "Get roadmap for a goal.",
+          "methods": [],
+          "line": 852
+        },
+        {
+          "name": "get_active_discussion",
+          "type": "function",
+          "signature": "def get_active_discussion(project_path: str, project_name: str) -> Optional[Discussion]",
+          "docstring": "Get the active (unresolved) discussion for a project.",
+          "methods": [],
+          "line": 871
+        },
+        {
+          "name": "format_roadmap",
+          "type": "function",
+          "signature": "def format_roadmap(roadmap: Roadmap) -> str",
+          "docstring": "Format roadmap for CLI display.",
+          "methods": [],
+          "line": 892
+        },
+        {
+          "name": "get_current_milestone_goal",
+          "type": "function",
+          "signature": "def get_current_milestone_goal(project_path: str, project_name: str) -> Optional[str]",
+          "docstring": "Get the goal string for the current milestone.",
+          "methods": [],
+          "line": 934
+        }
+      ],
+      "deps_internal": [
+        "memory.py"
+      ],
+      "deps_external": []
+    },
+    "statusline.py": {
+      "path": "statusline.py",
+      "lang": "python",
+      "lines": 161,
+      "summary": "EriRPG Status Line for Claude Code.",
+      "interfaces": [
+        {
+          "name": "DEFAULT_SETTINGS",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 19
+        },
+        {
+          "name": "load_settings",
+          "type": "function",
+          "signature": "def load_settings() -> dict",
+          "docstring": "Load settings from ~/.eri-rpg/settings.json",
+          "methods": [],
+          "line": 31
+        },
+        {
+          "name": "find_state_file",
+          "type": "function",
+          "signature": "def find_state_file() -> Path | None",
+          "docstring": "Find STATE.md in current or parent directories.",
+          "methods": [],
+          "line": 42
+        },
+        {
+          "name": "parse_state_file",
+          "type": "function",
+          "signature": "def parse_state_file(state_path: Path) -> dict",
+          "docstring": "Parse STATE.md for phase info.",
+          "methods": [],
+          "line": 62
+        },
+        {
+          "name": "format_statusline",
+          "type": "function",
+          "signature": "def format_statusline(state: dict, context_pct: int | None, settings: dict) -> str",
+          "docstring": "Format the status line based on settings.",
+          "methods": [],
+          "line": 100
+        },
+        {
+          "name": "main",
+          "type": "function",
+          "signature": "def main()",
+          "docstring": "Main entry point.",
+          "methods": [],
+          "line": 130
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "research.py": {
+      "path": "research.py",
+      "lang": "python",
+      "lines": 283,
+      "summary": "Research pipeline for EriRPG.",
+      "interfaces": [
+        {
+          "name": "LibraryChoice",
+          "type": "class",
+          "signature": "",
+          "docstring": "A library/framework choice made during research.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 16
+        },
+        {
+          "name": "Pitfall",
+          "type": "class",
+          "signature": "",
+          "docstring": "A common pitfall discovered during research.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 33
+        },
+        {
+          "name": "ResearchFindings",
+          "type": "class",
+          "signature": "",
+          "docstring": "Complete findings from a research phase.",
+          "methods": [
+            "to_dict",
+            "from_dict",
+            "to_markdown",
+            "to_avoid_patterns"
+          ],
+          "line": 48
+        },
+        {
+          "name": "ResearchCache",
+          "type": "class",
+          "signature": "",
+          "docstring": "Cache for research findings by goal hash.",
+          "methods": [
+            "__init__",
+            "_load",
+            "_save",
+            "_hash_goal",
+            "get",
+            "set",
+            "clear"
+          ],
+          "line": 182
+        },
+        {
+          "name": "ResearchPhase",
+          "type": "class",
+          "signature": "",
+          "docstring": "Orchestrates research for a goal.",
+          "methods": [
+            "__init__",
+            "execute",
+            "save_findings"
+          ],
+          "line": 235
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
     "registry.py": {
       "path": "registry.py",
       "lang": "python",
-      "lines": 214,
+      "lines": 241,
       "summary": "Project registry for managing registered projects.",
       "interfaces": [
         {
@@ -1803,7 +3305,7 @@
             "is_indexed",
             "index_age_days"
           ],
-          "line": 70
+          "line": 86
         },
         {
           "name": "Registry",
@@ -1821,7 +3323,7 @@
             "update_indexed",
             "get_instance"
           ],
-          "line": 117
+          "line": 144
         }
       ],
       "deps_internal": [],
@@ -1896,8 +3398,8 @@
         }
       ],
       "deps_internal": [
-        "runs.py",
-        "planner.py"
+        "planner.py",
+        "runs.py"
       ],
       "deps_external": []
     },
@@ -1987,7 +3489,7 @@
     "context.py": {
       "path": "context.py",
       "lang": "python",
-      "lines": 743,
+      "lines": 744,
       "summary": "Context generation for Claude Code.",
       "interfaces": [
         {
@@ -2125,14 +3627,96 @@
         }
       ],
       "deps_internal": [
-        "registry.py",
         "ops.py",
         "graph.py",
+        "registry.py",
         "memory.py"
       ],
       "deps_external": [
         "tiktoken"
       ]
+    },
+    "commands.py": {
+      "path": "commands.py",
+      "lang": "python",
+      "lines": 266,
+      "summary": "Slash command system for EriRPG.",
+      "interfaces": [
+        {
+          "name": "CommandConfig",
+          "type": "class",
+          "signature": "",
+          "docstring": "Configuration for a slash command.",
+          "methods": [
+            "to_dict"
+          ],
+          "line": 21
+        },
+        {
+          "name": "ParsedCommand",
+          "type": "class",
+          "signature": "",
+          "docstring": "Result of parsing user input.",
+          "methods": [
+            "has_flag",
+            "get_flag"
+          ],
+          "line": 42
+        },
+        {
+          "name": "_build_alias_map",
+          "type": "function",
+          "signature": "def _build_alias_map() -> Dict[str, str]",
+          "docstring": "Build map from aliases to canonical command names.",
+          "methods": [],
+          "line": 150
+        },
+        {
+          "name": "ALIAS_MAP",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 159
+        },
+        {
+          "name": "parse_command",
+          "type": "function",
+          "signature": "def parse_command(user_input: str) -> Optional[ParsedCommand]",
+          "docstring": "Parse slash command from user input.",
+          "methods": [],
+          "line": 162
+        },
+        {
+          "name": "is_command",
+          "type": "function",
+          "signature": "def is_command(user_input: str) -> bool",
+          "docstring": "Check if input looks like a command.",
+          "methods": [],
+          "line": 221
+        },
+        {
+          "name": "get_help_text",
+          "type": "function",
+          "signature": "def get_help_text() -> str",
+          "docstring": "Generate help text for all commands.",
+          "methods": [],
+          "line": 230
+        },
+        {
+          "name": "get_command_names",
+          "type": "function",
+          "signature": "def get_command_names() -> List[str]",
+          "docstring": "Get all command names including aliases.",
+          "methods": [],
+          "line": 261
+        }
+      ],
+      "deps_internal": [
+        "workflow.py",
+        "persona.py"
+      ],
+      "deps_external": []
     },
     "cache.py": {
       "path": "cache.py",
@@ -2320,7 +3904,7 @@
     "verification.py": {
       "path": "verification.py",
       "lang": "python",
-      "lines": 795,
+      "lines": 1039,
       "summary": "Verification system for EriRPG.",
       "interfaces": [
         {
@@ -2353,7 +3937,7 @@
             "passed",
             "duration"
           ],
-          "line": 71
+          "line": 74
         },
         {
           "name": "VerificationResult",
@@ -2367,7 +3951,7 @@
             "failed_commands",
             "format_report"
           ],
-          "line": 126
+          "line": 129
         },
         {
           "name": "VerificationConfig",
@@ -2380,7 +3964,7 @@
             "validate",
             "get_commands_for_step"
           ],
-          "line": 218
+          "line": 221
         },
         {
           "name": "Verifier",
@@ -2393,7 +3977,7 @@
             "run_verification",
             "should_run_for_step"
           ],
-          "line": 264
+          "line": 267
         },
         {
           "name": "save_verification_result",
@@ -2401,7 +3985,7 @@
           "signature": "def save_verification_result(project_path: str, run_id: str, result: VerificationResult) -> str",
           "docstring": "Save verification result to run directory.",
           "methods": [],
-          "line": 374
+          "line": 412
         },
         {
           "name": "load_verification_result",
@@ -2409,7 +3993,7 @@
           "signature": "def load_verification_result(project_path: str, run_id: str, step_id: str) -> Optional[VerificationResult]",
           "docstring": "Load verification result from run directory.",
           "methods": [],
-          "line": 401
+          "line": 439
         },
         {
           "name": "list_verification_results",
@@ -2417,7 +4001,7 @@
           "signature": "def list_verification_results(project_path: str, run_id: str) -> List[VerificationResult]",
           "docstring": "List all verification results for a run.",
           "methods": [],
-          "line": 433
+          "line": 471
         },
         {
           "name": "format_verification_summary",
@@ -2425,7 +4009,7 @@
           "signature": "def format_verification_summary(results: List[VerificationResult]) -> str",
           "docstring": "Format a summary of all verification results.",
           "methods": [],
-          "line": 464
+          "line": 502
         },
         {
           "name": "load_verification_config",
@@ -2433,7 +4017,7 @@
           "signature": "def load_verification_config(project_path: str) -> Optional[VerificationConfig]",
           "docstring": "Load verification config from project.",
           "methods": [],
-          "line": 505
+          "line": 543
         },
         {
           "name": "save_verification_config",
@@ -2441,7 +4025,7 @@
           "signature": "def save_verification_config(project_path: str, config: VerificationConfig) -> str",
           "docstring": "Save verification config to project.",
           "methods": [],
-          "line": 534
+          "line": 572
         },
         {
           "name": "get_default_python_config",
@@ -2449,7 +4033,7 @@
           "signature": "def get_default_python_config() -> VerificationConfig",
           "docstring": "Get default verification config for Python projects.",
           "methods": [],
-          "line": 558
+          "line": 596
         },
         {
           "name": "get_default_node_config",
@@ -2457,7 +4041,35 @@
           "signature": "def get_default_node_config() -> VerificationConfig",
           "docstring": "Get default verification config for Node.js projects.",
           "methods": [],
-          "line": 584
+          "line": 622
+        },
+        {
+          "name": "find_relevant_tests",
+          "type": "function",
+          "signature": "def find_relevant_tests(changed_files: List[str], project_path: str, test_dirs: Optional[List[str]]) -> Optional[List[str]]",
+          "docstring": "Find test files that import any of the changed files.",
+          "methods": [],
+          "line": 652
+        },
+        {
+          "name": "build_smart_test_command",
+          "type": "function",
+          "signature": "def build_smart_test_command(changed_files: List[str], project_path: str, base_command: str, fallback_to_all: bool) -> str",
+          "docstring": "Build a test command that runs only relevant tests.",
+          "methods": [],
+          "line": 753
+        },
+        {
+          "name": "SmartVerifier",
+          "type": "class",
+          "signature": "",
+          "docstring": "Verifier with smart test selection support.",
+          "methods": [
+            "__init__",
+            "get_relevant_tests",
+            "run_command"
+          ],
+          "line": 799
         },
         {
           "name": "BreakingChange",
@@ -2467,7 +4079,7 @@
           "methods": [
             "format"
           ],
-          "line": 615
+          "line": 859
         },
         {
           "name": "signatures_compatible",
@@ -2475,7 +4087,7 @@
           "signature": "def signatures_compatible(before: str, after: str) -> bool",
           "docstring": "Check if two signatures are compatible.",
           "methods": [],
-          "line": 634
+          "line": 878
         },
         {
           "name": "validate_interface_contracts",
@@ -2483,7 +4095,7 @@
           "signature": "def validate_interface_contracts(before_graph: 'Graph', after_graph: 'Graph') -> List[BreakingChange]",
           "docstring": "Detect if any interface signatures changed incompatibly.",
           "methods": [],
-          "line": 703
+          "line": 947
         },
         {
           "name": "format_breaking_changes",
@@ -2491,98 +4103,271 @@
           "signature": "def format_breaking_changes(changes: List[BreakingChange]) -> str",
           "docstring": "Format breaking changes for display.",
           "methods": [],
-          "line": 776
+          "line": 1020
         }
       ],
       "deps_internal": [],
       "deps_external": []
     },
-    "hooks.py": {
-      "path": "hooks.py",
+    "quick.py": {
+      "path": "quick.py",
       "lang": "python",
-      "lines": 184,
-      "summary": "Hard enforcement hooks for EriRPG.",
+      "lines": 545,
+      "summary": "EriRPG Quick Fix Mode - Lightweight single-file edits.",
       "interfaces": [
         {
-          "name": "_ALWAYS_ALLOWED_PATTERNS",
-          "type": "const",
-          "signature": "",
-          "docstring": "",
+          "name": "is_quick_fix_active",
+          "type": "function",
+          "signature": "def is_quick_fix_active() -> bool",
+          "docstring": "Check if quick fix mode is active.",
           "methods": [],
-          "line": 24
+          "line": 49
         },
         {
-          "name": "guarded_open",
+          "name": "get_quick_fix_file",
           "type": "function",
-          "signature": "def guarded_open(file, mode, *args, **kwargs)",
-          "docstring": "Intercept file opens and block unauthorized writes.",
+          "signature": "def get_quick_fix_file() -> Optional[str]",
+          "docstring": "Get the file being quick-fixed.",
           "methods": [],
-          "line": 35
+          "line": 54
         },
         {
-          "name": "install_hooks",
+          "name": "get_quick_fix_project",
           "type": "function",
-          "signature": "def install_hooks() -> None",
-          "docstring": "Install write protection hooks.",
+          "signature": "def get_quick_fix_project() -> Optional[str]",
+          "docstring": "Get the project being quick-fixed.",
+          "methods": [],
+          "line": 59
+        },
+        {
+          "name": "_set_quick_fix_active",
+          "type": "function",
+          "signature": "def _set_quick_fix_active(active: bool, file_path: Optional[str], project: Optional[str]) -> None",
+          "docstring": "Set quick fix mode state (internal use only).",
+          "methods": [],
+          "line": 64
+        },
+        {
+          "name": "_is_git_repo",
+          "type": "function",
+          "signature": "def _is_git_repo(path: str) -> bool",
+          "docstring": "Check if path is inside a git repository.",
+          "methods": [],
+          "line": 76
+        },
+        {
+          "name": "_git_head",
+          "type": "function",
+          "signature": "def _git_head(path: str) -> Optional[str]",
+          "docstring": "Get current git HEAD commit hash.",
           "methods": [],
           "line": 90
         },
         {
-          "name": "uninstall_hooks",
+          "name": "save_quick_fix_state",
           "type": "function",
-          "signature": "def uninstall_hooks() -> None",
-          "docstring": "Uninstall write protection hooks.",
+          "signature": "def save_quick_fix_state(project_path: str, file_path: str, description: str) -> Path",
+          "docstring": "Save quick fix state to file for Claude Code hooks.",
           "methods": [],
-          "line": 105
+          "line": 111
         },
         {
-          "name": "enable_writes",
+          "name": "clear_quick_fix_state",
           "type": "function",
-          "signature": "def enable_writes(paths: List[str], project_path: Optional[str]) -> None",
-          "docstring": "Enable writes for specific paths.",
+          "signature": "def clear_quick_fix_state(project_path: str) -> None",
+          "docstring": "Clear quick fix state file.",
           "methods": [],
-          "line": 117
+          "line": 135
         },
         {
-          "name": "disable_writes",
+          "name": "load_quick_fix_state",
           "type": "function",
-          "signature": "def disable_writes() -> None",
-          "docstring": "Disable writes.",
+          "signature": "def load_quick_fix_state(project_path: str) -> Optional[Dict[str, Any]]",
+          "docstring": "Load quick fix state from file.",
           "methods": [],
-          "line": 144
+          "line": 142
         },
         {
-          "name": "is_write_allowed",
+          "name": "quick_fix",
           "type": "function",
-          "signature": "def is_write_allowed() -> bool",
-          "docstring": "Check if writes are currently allowed.",
+          "signature": "def quick_fix(project: str, file_path: str, description: str, auto_commit: bool, dry_run: bool) -> Optional[str]",
+          "docstring": "Single-file edit without full spec ceremony.",
           "methods": [],
-          "line": 156
+          "line": 159
         },
         {
-          "name": "get_allowed_paths",
+          "name": "quick_done",
           "type": "function",
-          "signature": "def get_allowed_paths() -> List[str]",
-          "docstring": "Get list of paths that are allowed to be written.",
+          "signature": "def quick_done(project: str, auto_commit: bool, commit_message: Optional[str]) -> Optional[str]",
+          "docstring": "Complete a quick fix - commit changes and cleanup.",
           "methods": [],
-          "line": 161
+          "line": 235
         },
         {
-          "name": "add_allowed_path",
+          "name": "quick_cancel",
           "type": "function",
-          "signature": "def add_allowed_path(path: str, project_path: Optional[str]) -> None",
-          "docstring": "Add a path to the allowed list.",
+          "signature": "def quick_cancel(project: str) -> None",
+          "docstring": "Cancel a quick fix and restore original file.",
           "methods": [],
-          "line": 166
+          "line": 291
+        },
+        {
+          "name": "QuickAgent",
+          "type": "class",
+          "signature": "",
+          "docstring": "Lightweight agent for quick fixes.",
+          "methods": [
+            "__init__",
+            "fix",
+            "done",
+            "cancel",
+            "is_active"
+          ],
+          "line": 331
+        },
+        {
+          "name": "_save_snapshot",
+          "type": "function",
+          "signature": "def _save_snapshot(project_path: str, file_path: str, content: str) -> Path",
+          "docstring": "Save file snapshot for potential rollback.",
+          "methods": [],
+          "line": 452
+        },
+        {
+          "name": "_restore_snapshot",
+          "type": "function",
+          "signature": "def _restore_snapshot(project_path: str, file_path: str) -> bool",
+          "docstring": "Restore file from snapshot.",
+          "methods": [],
+          "line": 475
+        },
+        {
+          "name": "_git_commit",
+          "type": "function",
+          "signature": "def _git_commit(project_path: str, files: List[str], message: str) -> Optional[str]",
+          "docstring": "Create git commit for files.",
+          "methods": [],
+          "line": 502
+        }
+      ],
+      "deps_internal": [
+        "registry.py"
+      ],
+      "deps_external": []
+    },
+    "persona.py": {
+      "path": "persona.py",
+      "lang": "python",
+      "lines": 176,
+      "summary": "Persona system for EriRPG.",
+      "interfaces": [
+        {
+          "name": "Persona",
+          "type": "class",
+          "signature": "",
+          "docstring": "5 focused personas derived from workflow stages.",
+          "methods": [],
+          "line": 15
+        },
+        {
+          "name": "PersonaConfig",
+          "type": "class",
+          "signature": "",
+          "docstring": "Configuration for a persona's behavior.",
+          "methods": [
+            "to_prompt",
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 28
+        },
+        {
+          "name": "detect_persona_from_input",
+          "type": "function",
+          "signature": "def detect_persona_from_input(user_input: str) -> Persona",
+          "docstring": "Auto-detect appropriate persona from user input.",
+          "methods": [],
+          "line": 129
+        },
+        {
+          "name": "get_persona",
+          "type": "function",
+          "signature": "def get_persona(persona: Persona) -> PersonaConfig",
+          "docstring": "Get configuration for a persona.",
+          "methods": [],
+          "line": 159
+        },
+        {
+          "name": "get_persona_by_name",
+          "type": "function",
+          "signature": "def get_persona_by_name(name: str) -> Optional[Persona]",
+          "docstring": "Get persona enum by name string.",
+          "methods": [],
+          "line": 164
+        },
+        {
+          "name": "list_personas",
+          "type": "function",
+          "signature": "def list_personas() -> List[str]",
+          "docstring": "List all available persona names.",
+          "methods": [],
+          "line": 173
         }
       ],
       "deps_internal": [],
+      "deps_external": []
+    },
+    "must_haves.py": {
+      "path": "must_haves.py",
+      "lang": "python",
+      "lines": 156,
+      "summary": "Must-haves validation for plan completeness.",
+      "interfaces": [
+        {
+          "name": "MustHaves",
+          "type": "class",
+          "signature": "",
+          "docstring": "Requirements that must be satisfied by a plan.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 14
+        },
+        {
+          "name": "validate_plan",
+          "type": "function",
+          "signature": "def validate_plan(plan: Plan, must_haves: MustHaves) -> List[str]",
+          "docstring": "Validate that a plan covers all must-haves.",
+          "methods": [],
+          "line": 42
+        },
+        {
+          "name": "_fuzzy_match",
+          "type": "function",
+          "signature": "def _fuzzy_match(needle: str, haystack: str) -> bool",
+          "docstring": "Check if key words from needle appear in haystack.",
+          "methods": [],
+          "line": 106
+        },
+        {
+          "name": "derive_must_haves_from_goal",
+          "type": "function",
+          "signature": "def derive_must_haves_from_goal(goal: str) -> MustHaves",
+          "docstring": "Derive basic must-haves from a goal string.",
+          "methods": [],
+          "line": 120
+        }
+      ],
+      "deps_internal": [
+        "agent/plan.py"
+      ],
       "deps_external": []
     },
     "preflight.py": {
       "path": "preflight.py",
       "lang": "python",
-      "lines": 304,
+      "lines": 379,
       "summary": "Preflight checks before any code operation.",
       "interfaces": [
         {
@@ -2597,12 +4382,28 @@
           "line": 24
         },
         {
+          "name": "normalize_path",
+          "type": "function",
+          "signature": "def normalize_path(path: str, project_path: str) -> str",
+          "docstring": "Normalize a file path for consistent comparison.",
+          "methods": [],
+          "line": 142
+        },
+        {
+          "name": "_get_cached_learnings_status",
+          "type": "function",
+          "signature": "def _get_cached_learnings_status(project_path: str) -> Optional[Dict[str, str]]",
+          "docstring": "Get cached learnings_status from preflight_state.json.",
+          "methods": [],
+          "line": 182
+        },
+        {
           "name": "preflight",
           "type": "function",
           "signature": "def preflight(project_path: str, files: List[str], operation: str, graph: Optional['Graph'], before_graph: Optional['Graph'], strict: bool) -> PreflightReport",
           "docstring": "Run preflight checks before any code operation.",
           "methods": [],
-          "line": 142
+          "line": 204
         },
         {
           "name": "require_preflight",
@@ -2610,10 +4411,61 @@
           "signature": "def require_preflight(func)",
           "docstring": "Decorator to require preflight before operation.",
           "methods": [],
-          "line": 293
+          "line": 368
         }
       ],
       "deps_internal": [],
+      "deps_external": []
+    },
+    "session_context.py": {
+      "path": "session_context.py",
+      "lang": "python",
+      "lines": 235,
+      "summary": "Dynamic context builder for EriRPG.",
+      "interfaces": [
+        {
+          "name": "SessionContext",
+          "type": "class",
+          "signature": "",
+          "docstring": "All context needed for current session.",
+          "methods": [
+            "__post_init__",
+            "set_stage",
+            "set_persona",
+            "to_dict"
+          ],
+          "line": 25
+        },
+        {
+          "name": "build_context",
+          "type": "function",
+          "signature": "def build_context(ctx: SessionContext, compact: bool) -> str",
+          "docstring": "Build dynamic context string.",
+          "methods": [],
+          "line": 84
+        },
+        {
+          "name": "build_minimal_context",
+          "type": "function",
+          "signature": "def build_minimal_context(persona: Persona) -> str",
+          "docstring": "Build minimal context when no project is loaded.",
+          "methods": [],
+          "line": 171
+        },
+        {
+          "name": "context_from_knowledge_store",
+          "type": "function",
+          "signature": "def context_from_knowledge_store(project_path: str, project_name: str, stage: Stage, persona: Persona, current_task: str) -> SessionContext",
+          "docstring": "Build SessionContext from EriRPG knowledge store.",
+          "methods": [],
+          "line": 188
+        }
+      ],
+      "deps_internal": [
+        "commands.py",
+        "workflow.py",
+        "persona.py"
+      ],
       "deps_external": []
     },
     "ux.py": {
@@ -2821,29 +4673,39 @@
     "__init__.py": {
       "path": "__init__.py",
       "lang": "python",
-      "lines": 41,
+      "lines": 54,
       "summary": "EriRPG - Cross-project feature transplant tool.",
       "interfaces": [],
       "deps_internal": [
         "registry.py",
-        "hooks.py",
-        "graph.py"
+        "persona.py",
+        "commands.py",
+        "graph.py",
+        "workflow.py"
       ],
       "deps_external": []
     },
     "modes/take.py": {
       "path": "modes/take.py",
       "lang": "python",
-      "lines": 459,
+      "lines": 496,
       "summary": "Take Mode - Transplant feature from Project A to Project B.",
       "interfaces": [
+        {
+          "name": "get_module_info",
+          "type": "function",
+          "signature": "def get_module_info(project_path: str, module_path: str, graph: 'Graph') -> Optional[dict]",
+          "docstring": "Get module info, checking v2 knowledge first then v1 graph.",
+          "methods": [],
+          "line": 34
+        },
         {
           "name": "TakeRequest",
           "type": "class",
           "signature": "",
           "docstring": "Parsed take command.",
           "methods": [],
-          "line": 34
+          "line": 71
         },
         {
           "name": "parse_take_request",
@@ -2851,7 +4713,7 @@
           "signature": "def parse_take_request(description: str) -> TakeRequest",
           "docstring": "Parse natural language take request.",
           "methods": [],
-          "line": 41
+          "line": 78
         },
         {
           "name": "check_projects",
@@ -2859,7 +4721,7 @@
           "signature": "def check_projects(request: TakeRequest, registry: Registry) -> Tuple[str, str, str, str]",
           "docstring": "Check projects exist and are indexed.",
           "methods": [],
-          "line": 83
+          "line": 120
         },
         {
           "name": "find_feature",
@@ -2867,7 +4729,7 @@
           "signature": "def find_feature(graph: Graph, feature_query: str, project_name: str) -> list",
           "docstring": "Find modules matching feature query.",
           "methods": [],
-          "line": 145
+          "line": 182
         },
         {
           "name": "check_knowledge",
@@ -2875,7 +4737,7 @@
           "signature": "def check_knowledge(graph: Graph, modules: list) -> dict",
           "docstring": "Check what knowledge exists for these modules.",
           "methods": [],
-          "line": 166
+          "line": 203
         },
         {
           "name": "generate_transplant_spec",
@@ -2883,7 +4745,7 @@
           "signature": "def generate_transplant_spec(feature: Feature, plan: TransplantPlan, source_graph: Graph, target_name: str, output_dir: str) -> str",
           "docstring": "Generate TRANSPLANT.md spec file.",
           "methods": [],
-          "line": 190
+          "line": 227
         },
         {
           "name": "format_guide",
@@ -2891,7 +4753,7 @@
           "signature": "def format_guide(feature_name: str, source_name: str, target_name: str, context_path: str, tokens: int, tokens_saved: int) -> str",
           "docstring": "Format the guide output for the user.",
           "methods": [],
-          "line": 266
+          "line": 303
         },
         {
           "name": "run_take",
@@ -2899,16 +4761,51 @@
           "signature": "def run_take(description: str, verbose: bool) -> dict",
           "docstring": "Run the take mode.",
           "methods": [],
-          "line": 305
+          "line": 342
         }
       ],
       "deps_internal": [
-        "state.py",
         "ops.py",
+        "registry.py",
+        "state.py",
+        "memory.py",
         "graph.py",
         "indexer.py",
-        "context.py",
-        "registry.py"
+        "context.py"
+      ],
+      "deps_external": []
+    },
+    "modes/discuss.py": {
+      "path": "modes/discuss.py",
+      "lang": "python",
+      "lines": 191,
+      "summary": "Discussion context output.",
+      "interfaces": [
+        {
+          "name": "DiscussionContext",
+          "type": "class",
+          "signature": "",
+          "docstring": "Context extracted from discussion phase.",
+          "methods": [
+            "to_markdown",
+            "to_dict",
+            "from_dict",
+            "save",
+            "load"
+          ],
+          "line": 18
+        },
+        {
+          "name": "build_discussion_context",
+          "type": "function",
+          "signature": "def build_discussion_context(phase_id: str, goal: str, phase_boundary: str, decisions: Dict[str, List[str]], answers: Dict[str, str], deferred: List[str], known_deps: set) -> DiscussionContext",
+          "docstring": "Build discussion context from phase outputs.",
+          "methods": [],
+          "line": 143
+        }
+      ],
+      "deps_internal": [
+        "discovery.py"
       ],
       "deps_external": []
     },
@@ -3048,24 +4945,32 @@
         }
       ],
       "deps_internal": [
-        "state.py",
-        "registry.py"
+        "registry.py",
+        "state.py"
       ],
       "deps_external": []
     },
     "modes/work.py": {
       "path": "modes/work.py",
       "lang": "python",
-      "lines": 506,
+      "lines": 543,
       "summary": "Work Mode - Modify existing project.",
       "interfaces": [
+        {
+          "name": "get_module_info",
+          "type": "function",
+          "signature": "def get_module_info(project_path: str, module_path: str, graph: 'Graph') -> Optional[dict]",
+          "docstring": "Get module info, checking v2 knowledge first then v1 graph.",
+          "methods": [],
+          "line": 32
+        },
         {
           "name": "WorkRequest",
           "type": "class",
           "signature": "",
           "docstring": "Parsed work command.",
           "methods": [],
-          "line": 32
+          "line": 69
         },
         {
           "name": "parse_work_request",
@@ -3073,7 +4978,7 @@
           "signature": "def parse_work_request(project: Optional[str], task: str) -> WorkRequest",
           "docstring": "Parse work request.",
           "methods": [],
-          "line": 38
+          "line": 75
         },
         {
           "name": "resolve_project",
@@ -3081,7 +4986,7 @@
           "signature": "def resolve_project(request: WorkRequest, registry: Registry) -> Tuple[str, str]",
           "docstring": "Resolve which project to work on.",
           "methods": [],
-          "line": 43
+          "line": 80
         },
         {
           "name": "find_relevant_modules",
@@ -3089,7 +4994,7 @@
           "signature": "def find_relevant_modules(graph: Graph, task: str, limit: int) -> List[Tuple[Module, float]]",
           "docstring": "Find modules relevant to the task.",
           "methods": [],
-          "line": 83
+          "line": 120
         },
         {
           "name": "gather_knowledge",
@@ -3097,7 +5002,7 @@
           "signature": "def gather_knowledge(graph: Graph, modules: List[Tuple[Module, float]]) -> dict",
           "docstring": "Gather existing knowledge about relevant modules.",
           "methods": [],
-          "line": 96
+          "line": 133
         },
         {
           "name": "generate_task_spec",
@@ -3105,7 +5010,7 @@
           "signature": "def generate_task_spec(project_name: str, task: str, modules: List[Tuple[Module, float]], knowledge: dict, output_dir: str) -> str",
           "docstring": "Generate TASK.md spec file.",
           "methods": [],
-          "line": 137
+          "line": 174
         },
         {
           "name": "generate_work_context",
@@ -3113,7 +5018,7 @@
           "signature": "def generate_work_context(project_name: str, project_path: str, task: str, modules: List[Tuple[Module, float]], knowledge: dict, graph: Graph, output_dir: str) -> Tuple[str, int]",
           "docstring": "Generate context file for CC.",
           "methods": [],
-          "line": 204
+          "line": 241
         },
         {
           "name": "format_guide",
@@ -3121,7 +5026,7 @@
           "signature": "def format_guide(project_name: str, task: str, modules: List[Tuple[Module, float]], knowledge: dict, context_path: str, tokens: int) -> str",
           "docstring": "Format the guide output for the user.",
           "methods": [],
-          "line": 334
+          "line": 371
         },
         {
           "name": "run_work",
@@ -3129,37 +5034,118 @@
           "signature": "def run_work(project: Optional[str], task: str, verbose: bool) -> dict",
           "docstring": "Run the work mode.",
           "methods": [],
-          "line": 379
+          "line": 416
         }
       ],
       "deps_internal": [
-        "state.py",
         "ops.py",
+        "registry.py",
+        "state.py",
+        "memory.py",
         "graph.py",
-        "indexer.py",
-        "registry.py"
+        "indexer.py"
       ],
       "deps_external": []
     },
     "modes/__init__.py": {
       "path": "modes/__init__.py",
       "lang": "python",
-      "lines": 14,
+      "lines": 23,
       "summary": "EriRPG Modes - Three ways to work.",
       "interfaces": [],
       "deps_internal": [
         "modes/work.py",
+        "modes/take.py",
         "modes/new.py",
-        "modes/take.py"
+        "modes/discuss.py"
       ],
       "deps_external": []
     },
     "agent/run.py": {
       "path": "agent/run.py",
       "lang": "python",
-      "lines": 240,
+      "lines": 623,
       "summary": "Run state management.",
       "interfaces": [
+        {
+          "name": "StepResult",
+          "type": "class",
+          "signature": "",
+          "docstring": "Result of executing a single step.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 25
+        },
+        {
+          "name": "WaveResult",
+          "type": "class",
+          "signature": "",
+          "docstring": "Result of executing a wave of steps.",
+          "methods": [
+            "errors",
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 42
+        },
+        {
+          "name": "WaveCheckpoint",
+          "type": "class",
+          "signature": "",
+          "docstring": "Checkpoint for resumable wave execution.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 72
+        },
+        {
+          "name": "ExecutionResult",
+          "type": "class",
+          "signature": "",
+          "docstring": "Final result of wave execution.",
+          "methods": [
+            "to_dict"
+          ],
+          "line": 104
+        },
+        {
+          "name": "WaveExecutor",
+          "type": "class",
+          "signature": "",
+          "docstring": "Executes plan steps in waves with checkpoint support.",
+          "methods": [
+            "__init__",
+            "save_checkpoint",
+            "load_checkpoint",
+            "clear_checkpoint"
+          ],
+          "line": 118
+        },
+        {
+          "name": "Decision",
+          "type": "class",
+          "signature": "",
+          "docstring": "A decision made during run execution.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 264
+        },
+        {
+          "name": "RunSummary",
+          "type": "class",
+          "signature": "",
+          "docstring": "Summary of a completed run.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 293
+        },
         {
           "name": "RunState",
           "type": "class",
@@ -3176,13 +5162,15 @@
             "skip_step",
             "add_learned_files",
             "track_file_edit",
+            "add_decision",
+            "generate_summary",
             "get_report",
             "to_dict",
             "from_dict",
             "save",
             "load"
           ],
-          "line": 19
+          "line": 328
         },
         {
           "name": "get_run_dir",
@@ -3190,7 +5178,7 @@
           "signature": "def get_run_dir(project_path: str) -> str",
           "docstring": "Get the runs directory for a project.",
           "methods": [],
-          "line": 189
+          "line": 572
         },
         {
           "name": "save_run",
@@ -3198,7 +5186,7 @@
           "signature": "def save_run(project_path: str, run: RunState) -> str",
           "docstring": "Save a run to the project's runs directory.",
           "methods": [],
-          "line": 194
+          "line": 577
         },
         {
           "name": "load_run",
@@ -3206,7 +5194,7 @@
           "signature": "def load_run(project_path: str, run_id: str) -> Optional[RunState]",
           "docstring": "Load a run by ID.",
           "methods": [],
-          "line": 203
+          "line": 586
         },
         {
           "name": "list_runs",
@@ -3214,7 +5202,7 @@
           "signature": "def list_runs(project_path: str) -> List[Dict[str, Any]]",
           "docstring": "List all runs for a project.",
           "methods": [],
-          "line": 211
+          "line": 594
         },
         {
           "name": "get_latest_run",
@@ -3222,56 +5210,30 @@
           "signature": "def get_latest_run(project_path: str) -> Optional[RunState]",
           "docstring": "Get the most recent run.",
           "methods": [],
-          "line": 234
+          "line": 617
         }
       ],
       "deps_internal": [
-        "agent/plan.py",
-        "agent/spec.py"
+        "spec.py",
+        "agent/plan.py"
       ],
       "deps_external": []
     },
     "agent/spec.py": {
       "path": "agent/spec.py",
       "lang": "python",
-      "lines": 125,
-      "summary": "Spec file parsing for agent-driven workflows.",
-      "interfaces": [
-        {
-          "name": "SpecStep",
-          "type": "class",
-          "signature": "",
-          "docstring": "A step defined in the spec file.",
-          "methods": [
-            "from_dict",
-            "to_dict"
-          ],
-          "line": 15
-        },
-        {
-          "name": "Spec",
-          "type": "class",
-          "signature": "",
-          "docstring": "A goal specification for the agent.",
-          "methods": [
-            "from_file",
-            "from_dict",
-            "from_goal",
-            "to_dict",
-            "save"
-          ],
-          "line": 44
-        }
+      "lines": 9,
+      "summary": "Backward compatibility - re-exports from erirpg.spec.",
+      "interfaces": [],
+      "deps_internal": [
+        "spec.py"
       ],
-      "deps_internal": [],
-      "deps_external": [
-        "yaml"
-      ]
+      "deps_external": []
     },
     "agent/plan.py": {
       "path": "agent/plan.py",
       "lang": "python",
-      "lines": 183,
+      "lines": 312,
       "summary": "Plan generation from specs.",
       "interfaces": [
         {
@@ -3283,6 +5245,27 @@
           "line": 15
         },
         {
+          "name": "CircularDependencyError",
+          "type": "class",
+          "signature": "",
+          "docstring": "Raised when circular dependencies are detected in step graph.",
+          "methods": [
+            "__init__"
+          ],
+          "line": 23
+        },
+        {
+          "name": "AvoidPattern",
+          "type": "class",
+          "signature": "",
+          "docstring": "A pattern to avoid during step execution.",
+          "methods": [
+            "to_dict",
+            "from_dict"
+          ],
+          "line": 31
+        },
+        {
           "name": "Step",
           "type": "class",
           "signature": "",
@@ -3291,7 +5274,7 @@
             "to_dict",
             "from_dict"
           ],
-          "line": 24
+          "line": 54
         },
         {
           "name": "Plan",
@@ -3309,9 +5292,18 @@
             "to_dict",
             "from_dict",
             "save",
-            "load"
+            "load",
+            "waves"
           ],
-          "line": 89
+          "line": 144
+        },
+        {
+          "name": "compute_waves",
+          "type": "function",
+          "signature": "def compute_waves(steps: List[Step]) -> Dict[int, List[Step]]",
+          "docstring": "Compute execution waves based on step dependencies.",
+          "methods": [],
+          "line": 245
         }
       ],
       "deps_internal": [],
@@ -3320,7 +5312,7 @@
     "agent/learner.py": {
       "path": "agent/learner.py",
       "lang": "python",
-      "lines": 199,
+      "lines": 200,
       "summary": "Auto-learning module.",
       "interfaces": [
         {
@@ -3337,7 +5329,7 @@
           "signature": "def update_learning(project_path: str, file_path: str, summary: Optional[str], purpose: Optional[str], key_functions: Optional[Dict[str, str]], gotchas: Optional[List[str]], project_name: Optional[str]) -> bool",
           "docstring": "Update an existing learning with richer information.",
           "methods": [],
-          "line": 81
+          "line": 82
         },
         {
           "name": "get_knowledge",
@@ -3345,7 +5337,7 @@
           "signature": "def get_knowledge(project_path: str, file_path: str, project_name: Optional[str]) -> Optional[StoredLearning]",
           "docstring": "Get stored knowledge for a file.",
           "methods": [],
-          "line": 131
+          "line": 132
         },
         {
           "name": "is_stale",
@@ -3353,7 +5345,7 @@
           "signature": "def is_stale(project_path: str, file_path: str, project_name: Optional[str]) -> bool",
           "docstring": "Check if knowledge for a file is stale.",
           "methods": [],
-          "line": 154
+          "line": 155
         },
         {
           "name": "get_all_knowledge",
@@ -3361,7 +5353,7 @@
           "signature": "def get_all_knowledge(project_path: str, project_name: Optional[str]) -> Dict[str, StoredLearning]",
           "docstring": "Get all stored knowledge for a project.",
           "methods": [],
-          "line": 172
+          "line": 173
         },
         {
           "name": "get_stale_knowledge",
@@ -3369,19 +5361,19 @@
           "signature": "def get_stale_knowledge(project_path: str, project_name: Optional[str]) -> List[str]",
           "docstring": "Get list of files with stale knowledge.",
           "methods": [],
-          "line": 184
+          "line": 185
         }
       ],
       "deps_internal": [
-        "memory.py",
-        "refs.py"
+        "refs.py",
+        "memory.py"
       ],
       "deps_external": []
     },
     "agent/__init__.py": {
       "path": "agent/__init__.py",
       "lang": "python",
-      "lines": 1395,
+      "lines": 1679,
       "summary": "EriRPG Agent API.",
       "interfaces": [
         {
@@ -3390,7 +5382,7 @@
           "signature": "def get_active_agent() -> 'Agent'",
           "docstring": "Get the current active agent or raise error.",
           "methods": [],
-          "line": 74
+          "line": 75
         },
         {
           "name": "require_preflight",
@@ -3398,7 +5390,7 @@
           "signature": "def require_preflight() -> None",
           "docstring": "Check that preflight was done or raise error.",
           "methods": [],
-          "line": 99
+          "line": 100
         },
         {
           "name": "_set_active_agent",
@@ -3406,7 +5398,7 @@
           "signature": "def _set_active_agent(agent: Optional['Agent']) -> None",
           "docstring": "Set the active agent (internal use only).",
           "methods": [],
-          "line": 122
+          "line": 123
         },
         {
           "name": "_set_preflight_done",
@@ -3414,7 +5406,7 @@
           "signature": "def _set_preflight_done(done: bool) -> None",
           "docstring": "Set preflight state (internal use only).",
           "methods": [],
-          "line": 128
+          "line": 129
         },
         {
           "name": "Agent",
@@ -3423,14 +5415,22 @@
           "docstring": "Main agent interface for spec-driven execution.",
           "methods": [
             "__init__",
+            "config",
+            "multi_agent_enabled",
+            "max_concurrency",
             "from_spec",
             "from_goal",
             "resume",
             "_generate_plan",
             "_create_run",
+            "from_new_spec",
+            "next_step",
+            "verify_step",
+            "get_spec_status",
             "current_step",
             "is_complete",
             "progress",
+            "needs_discussion",
             "start_step",
             "complete_step",
             "_git_commit",
@@ -3450,6 +5450,8 @@
             "_snapshot_file",
             "reset_preflight",
             "get_report",
+            "add_decision",
+            "generate_summary",
             "edit_file",
             "write_file",
             "rollback",
@@ -3458,31 +5460,799 @@
             "can_rollback",
             "_save"
           ],
-          "line": 137
+          "line": 138
         }
       ],
       "deps_internal": [
-        "agent/run.py",
-        "agent/spec.py",
-        "agent/plan.py",
+        "spec.py",
+        "agent/learner.py",
+        "config.py",
         "memory.py",
-        "agent/learner.py"
+        "agent/run.py",
+        "agent/plan.py"
       ],
       "deps_external": []
+    },
+    "cli_commands/drift.py": {
+      "path": "cli_commands/drift.py",
+      "lang": "python",
+      "lines": 423,
+      "summary": "Drift Commands - Drift integration and pattern synchronization.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register drift commands with CLI.",
+          "methods": [],
+          "line": 21
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/goal.py": {
+      "path": "cli_commands/goal.py",
+      "lang": "python",
+      "lines": 1038,
+      "summary": "Goal Commands - Spec-driven execution commands.",
+      "interfaces": [
+        {
+          "name": "_parse_research_for_phases",
+          "type": "function",
+          "signature": "def _parse_research_for_phases(research_content: str, goal: str)",
+          "docstring": "Parse research content to extract phases, files, and structure.",
+          "methods": [],
+          "line": 20
+        },
+        {
+          "name": "_generate_progress_bar",
+          "type": "function",
+          "signature": "def _generate_progress_bar(completed: int, total: int, width: int) -> str",
+          "docstring": "Generate a text progress bar.",
+          "methods": [],
+          "line": 106
+        },
+        {
+          "name": "_check_phase_completion",
+          "type": "function",
+          "signature": "def _check_phase_completion(project_path: str, phase: dict) -> tuple[bool, list[str]]",
+          "docstring": "Check if a phase's deliverables exist.",
+          "methods": [],
+          "line": 115
+        },
+        {
+          "name": "update_session_files",
+          "type": "function",
+          "signature": "def update_session_files(project_path: str, project_name: str, completed_phase: int, activity: str)",
+          "docstring": "Update session-persistent files based on current file state.",
+          "methods": [],
+          "line": 133
+        },
+        {
+          "name": "_generate_session_files",
+          "type": "function",
+          "signature": "def _generate_session_files(project_path: str, project_name: str, goal: str, spec, knowledge)",
+          "docstring": "Generate all session-persistent files for /clear survival.",
+          "methods": [],
+          "line": 425
+        },
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register goal commands with CLI.",
+          "methods": [],
+          "line": 810
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/mode.py": {
+      "path": "cli_commands/mode.py",
+      "lang": "python",
+      "lines": 427,
+      "summary": "Mode Commands - Bootstrap/Maintain mode and Tier management.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register mode commands with CLI.",
+          "methods": [],
+          "line": 25
+        }
+      ],
+      "deps_internal": [
+        "registry.py",
+        "config.py",
+        "memory.py",
+        "indexer.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/plan_group.py": {
+      "path": "cli_commands/plan_group.py",
+      "lang": "python",
+      "lines": 296,
+      "summary": "Plan Commands - Plan management for executable workflows.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register plan group commands with CLI.",
+          "methods": [],
+          "line": 20
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/guards.py": {
+      "path": "cli_commands/guards.py",
+      "lang": "python",
+      "lines": 158,
+      "summary": "CLI Command Guards - Tier-based command gating.",
+      "interfaces": [
+        {
+          "name": "get_project_path_from_context",
+          "type": "function",
+          "signature": "def get_project_path_from_context(ctx: click.Context, project_arg: Optional[str]) -> Optional[str]",
+          "docstring": "Extract project path from Click context or argument.",
+          "methods": [],
+          "line": 21
+        },
+        {
+          "name": "tier_required",
+          "type": "function",
+          "signature": "def tier_required(min_tier: Tier)",
+          "docstring": "Decorator to gate commands by minimum tier level.",
+          "methods": [],
+          "line": 63
+        },
+        {
+          "name": "tier_hidden",
+          "type": "function",
+          "signature": "def tier_hidden(min_tier: Tier)",
+          "docstring": "Decorator to hide commands from --help if tier is below minimum.",
+          "methods": [],
+          "line": 125
+        },
+        {
+          "name": "standard_tier",
+          "type": "function",
+          "signature": "def standard_tier(f: Callable) -> Callable",
+          "docstring": "Shorthand for @tier_required(\"standard\").",
+          "methods": [],
+          "line": 150
+        },
+        {
+          "name": "full_tier",
+          "type": "function",
+          "signature": "def full_tier(f: Callable) -> Callable",
+          "docstring": "Shorthand for @tier_required(\"full\").",
+          "methods": [],
+          "line": 155
+        }
+      ],
+      "deps_internal": [
+        "registry.py",
+        "config.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/roadmap.py": {
+      "path": "cli_commands/roadmap.py",
+      "lang": "python",
+      "lines": 213,
+      "summary": "Roadmap Commands - Roadmap progress and management.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register roadmap commands with CLI.",
+          "methods": [],
+          "line": 17
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/config_cmd.py": {
+      "path": "cli_commands/config_cmd.py",
+      "lang": "python",
+      "lines": 56,
+      "summary": "Configuration Commands - Project settings management.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register configuration commands with CLI.",
+          "methods": [],
+          "line": 12
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/explore.py": {
+      "path": "cli_commands/explore.py",
+      "lang": "python",
+      "lines": 202,
+      "summary": "Exploration Commands - Project structure and module discovery.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register exploration commands with CLI.",
+          "methods": [],
+          "line": 17
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/orchestration.py": {
+      "path": "cli_commands/orchestration.py",
+      "lang": "python",
+      "lines": 251,
+      "summary": "Orchestration Commands - Task parsing and workflow coordination.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register orchestration commands with CLI.",
+          "methods": [],
+          "line": 20
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/persona_cmd.py": {
+      "path": "cli_commands/persona_cmd.py",
+      "lang": "python",
+      "lines": 209,
+      "summary": "Persona Commands - Persona and context management (SuperClaude replacement).",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register persona commands with CLI.",
+          "methods": [],
+          "line": 18
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/install.py": {
+      "path": "cli_commands/install.py",
+      "lang": "python",
+      "lines": 55,
+      "summary": "Install Commands - Claude Code integration.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register install commands with CLI.",
+          "methods": [],
+          "line": 13
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/discuss.py": {
+      "path": "cli_commands/discuss.py",
+      "lang": "python",
+      "lines": 245,
+      "summary": "Discuss Commands - Goal clarification and discussion management.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register discuss commands with CLI.",
+          "methods": [],
+          "line": 18
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/verify_group.py": {
+      "path": "cli_commands/verify_group.py",
+      "lang": "python",
+      "lines": 198,
+      "summary": "Verify Commands - Code verification and quality checks.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register verify group commands with CLI.",
+          "methods": [],
+          "line": 18
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/storage_cmd.py": {
+      "path": "cli_commands/storage_cmd.py",
+      "lang": "python",
+      "lines": 203,
+      "summary": "Storage CLI commands for SQLite graph operations.",
+      "interfaces": [
+        {
+          "name": "db_stats_cmd",
+          "type": "function",
+          "signature": "def db_stats_cmd()",
+          "docstring": "Show SQLite database statistics.",
+          "methods": [],
+          "line": 20
+        },
+        {
+          "name": "db_migrate_cmd",
+          "type": "function",
+          "signature": "def db_migrate_cmd(verbose: bool)",
+          "docstring": "Migrate all JSON graphs to SQLite database.",
+          "methods": [],
+          "line": 57
+        },
+        {
+          "name": "db_export_cmd",
+          "type": "function",
+          "signature": "def db_export_cmd(project: str, output: Optional[str])",
+          "docstring": "Export a project's graph from SQLite to JSON.",
+          "methods": [],
+          "line": 87
+        },
+        {
+          "name": "find_interface_cmd",
+          "type": "function",
+          "signature": "def find_interface_cmd(name: str, iface_type: Optional[str])",
+          "docstring": "Find interfaces across all projects.",
+          "methods": [],
+          "line": 105
+        },
+        {
+          "name": "find_package_cmd",
+          "type": "function",
+          "signature": "def find_package_cmd(package: str)",
+          "docstring": "Find usage of an external package across projects.",
+          "methods": [],
+          "line": 141
+        },
+        {
+          "name": "find_dependents_cmd",
+          "type": "function",
+          "signature": "def find_dependents_cmd(module_path: str)",
+          "docstring": "Find modules depending on a path across projects.",
+          "methods": [],
+          "line": 169
+        },
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli: click.Group) -> None",
+          "docstring": "Register storage commands with the CLI.",
+          "methods": [],
+          "line": 195
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": [
+        "erirpg",
+        "click"
+      ]
+    },
+    "cli_commands/session.py": {
+      "path": "cli_commands/session.py",
+      "lang": "python",
+      "lines": 271,
+      "summary": "Session Commands - Session state and gap closure.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register session commands with CLI.",
+          "methods": [],
+          "line": 14
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/modes.py": {
+      "path": "cli_commands/modes.py",
+      "lang": "python",
+      "lines": 404,
+      "summary": "Mode Commands - Core workflow commands for EriRPG.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register mode commands with CLI.",
+          "methods": [],
+          "line": 24
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/spec_group.py": {
+      "path": "cli_commands/spec_group.py",
+      "lang": "python",
+      "lines": 247,
+      "summary": "Spec Commands - Spec management for structured task definitions.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register spec group commands with CLI.",
+          "methods": [],
+          "line": 19
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/analyze_cmd.py": {
+      "path": "cli_commands/analyze_cmd.py",
+      "lang": "python",
+      "lines": 236,
+      "summary": "Analyze Commands - Pattern analysis and implementation.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register analyze commands with CLI.",
+          "methods": [],
+          "line": 17
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/cleanup.py": {
+      "path": "cli_commands/cleanup.py",
+      "lang": "python",
+      "lines": 206,
+      "summary": "Cleanup Commands - Run management and housekeeping.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register cleanup commands with CLI.",
+          "methods": [],
+          "line": 18
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/ui.py": {
+      "path": "cli_commands/ui.py",
+      "lang": "python",
+      "lines": 55,
+      "summary": "UI Commands - Web dashboard.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register UI commands with CLI.",
+          "methods": [],
+          "line": 14
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/knowledge.py": {
+      "path": "cli_commands/knowledge.py",
+      "lang": "python",
+      "lines": 493,
+      "summary": "Knowledge Commands - Learning storage and retrieval.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register knowledge commands with CLI.",
+          "methods": [],
+          "line": 23
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/run_group.py": {
+      "path": "cli_commands/run_group.py",
+      "lang": "python",
+      "lines": 290,
+      "summary": "Run Commands - Execution management for plans.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register run group commands with CLI.",
+          "methods": [],
+          "line": 21
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/metadata.py": {
+      "path": "cli_commands/metadata.py",
+      "lang": "python",
+      "lines": 341,
+      "summary": "Metadata Commands - Project metadata management.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register metadata commands with CLI.",
+          "methods": [],
+          "line": 21
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/setup.py": {
+      "path": "cli_commands/setup.py",
+      "lang": "python",
+      "lines": 129,
+      "summary": "Setup Commands - Project registration and indexing.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register setup commands with CLI.",
+          "methods": [],
+          "line": 19
+        }
+      ],
+      "deps_internal": [
+        "registry.py",
+        "config.py",
+        "indexer.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/memory_group.py": {
+      "path": "cli_commands/memory_group.py",
+      "lang": "python",
+      "lines": 323,
+      "summary": "Memory Commands - V2 knowledge storage management.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register memory group commands with CLI.",
+          "methods": [],
+          "line": 20
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/quick.py": {
+      "path": "cli_commands/quick.py",
+      "lang": "python",
+      "lines": 140,
+      "summary": "Quick Fix Commands - Lightweight mode for simple changes.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register quick fix commands with CLI.",
+          "methods": [],
+          "line": 15
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/decisions.py": {
+      "path": "cli_commands/decisions.py",
+      "lang": "python",
+      "lines": 202,
+      "summary": "Decision Commands - Decision logging and deferred ideas.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register decision commands with CLI.",
+          "methods": [],
+          "line": 18
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
+    },
+    "cli_commands/__init__.py": {
+      "path": "cli_commands/__init__.py",
+      "lang": "python",
+      "lines": 118,
+      "summary": "EriRPG CLI Commands - Modular command structure.",
+      "interfaces": [
+        {
+          "name": "register_all",
+          "type": "function",
+          "signature": "def register_all(cli: 'click.Group') -> None",
+          "docstring": "Register all command modules with the CLI group.",
+          "methods": [],
+          "line": 53
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "cli_commands/transplant.py": {
+      "path": "cli_commands/transplant.py",
+      "lang": "python",
+      "lines": 205,
+      "summary": "Transplant Commands - Feature extraction and transplant operations.",
+      "interfaces": [
+        {
+          "name": "register",
+          "type": "function",
+          "signature": "def register(cli)",
+          "docstring": "Register transplant commands with CLI.",
+          "methods": [],
+          "line": 17
+        }
+      ],
+      "deps_internal": [
+        "cli_commands/guards.py"
+      ],
+      "deps_external": [
+        "click"
+      ]
     },
     "hooks/pretooluse.py": {
       "path": "hooks/pretooluse.py",
       "lang": "python",
-      "lines": 239,
+      "lines": 526,
       "summary": "EriRPG PreToolUse Hook - HARD ENFORCEMENT",
       "interfaces": [
+        {
+          "name": "HOOK_DIR",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 44
+        },
+        {
+          "name": "ERIRPG_ROOT",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 45
+        },
         {
           "name": "LOG_FILE",
           "type": "const",
           "signature": "",
           "docstring": "",
           "methods": [],
-          "line": 37
+          "line": 46
         },
         {
           "name": "log",
@@ -3490,7 +6260,7 @@
           "signature": "def log(msg: str)",
           "docstring": "Log to file for debugging.",
           "methods": [],
-          "line": 40
+          "line": 49
         },
         {
           "name": "get_active_run_state",
@@ -3498,13 +6268,161 @@
           "signature": "def get_active_run_state(project_path: str) -> dict",
           "docstring": "Check for active EriRPG run in project.",
           "methods": [],
-          "line": 49
+          "line": 58
         },
         {
           "name": "get_preflight_state",
           "type": "function",
           "signature": "def get_preflight_state(project_path: str) -> dict",
           "docstring": "Check for active preflight state.",
+          "methods": [],
+          "line": 85
+        },
+        {
+          "name": "get_quick_fix_state",
+          "type": "function",
+          "signature": "def get_quick_fix_state(project_path: str) -> dict",
+          "docstring": "Check for active quick fix state.",
+          "methods": [],
+          "line": 98
+        },
+        {
+          "name": "get_project_mode",
+          "type": "function",
+          "signature": "def get_project_mode(project_path: str) -> str",
+          "docstring": "Get the operational mode for a project.",
+          "methods": [],
+          "line": 111
+        },
+        {
+          "name": "get_enforcement_config",
+          "type": "function",
+          "signature": "def get_enforcement_config(project_path: str) -> dict",
+          "docstring": "Get enforcement configuration for a project.",
+          "methods": [],
+          "line": 148
+        },
+        {
+          "name": "detect_bash_file_write",
+          "type": "function",
+          "signature": "def detect_bash_file_write(command: str) -> str",
+          "docstring": "Detect if a Bash command writes to a file. Returns the file path or None.",
+          "methods": [],
+          "line": 177
+        },
+        {
+          "name": "main",
+          "type": "function",
+          "signature": "def main()",
+          "docstring": "Main hook entry point.",
+          "methods": [],
+          "line": 209
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "hooks/sessionstart.py": {
+      "path": "hooks/sessionstart.py",
+      "lang": "python",
+      "lines": 187,
+      "summary": "EriRPG SessionStart Hook - Check for incomplete runs at session start.",
+      "interfaces": [
+        {
+          "name": "log",
+          "type": "function",
+          "signature": "def log(msg: str)",
+          "docstring": "Log to file for debugging.",
+          "methods": [],
+          "line": 17
+        },
+        {
+          "name": "find_project_roots",
+          "type": "function",
+          "signature": "def find_project_roots(start_path: str) -> list",
+          "docstring": "Find all project roots with .eri-rpg directories.",
+          "methods": [],
+          "line": 26
+        },
+        {
+          "name": "get_incomplete_runs",
+          "type": "function",
+          "signature": "def get_incomplete_runs(project_path: str) -> list",
+          "docstring": "Get list of incomplete runs.",
+          "methods": [],
+          "line": 41
+        },
+        {
+          "name": "get_quick_fix_state",
+          "type": "function",
+          "signature": "def get_quick_fix_state(project_path: str) -> dict",
+          "docstring": "Get active quick fix state.",
+          "methods": [],
+          "line": 87
+        },
+        {
+          "name": "get_resume_file",
+          "type": "function",
+          "signature": "def get_resume_file(project_path: str) -> str",
+          "docstring": "Get contents of resume.md if it exists.",
+          "methods": [],
+          "line": 100
+        },
+        {
+          "name": "main",
+          "type": "function",
+          "signature": "def main()",
+          "docstring": "Main hook entry point.",
+          "methods": [],
+          "line": 112
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "hooks/precompact.py": {
+      "path": "hooks/precompact.py",
+      "lang": "python",
+      "lines": 216,
+      "summary": "EriRPG PreCompact Hook - Save state before context compaction.",
+      "interfaces": [
+        {
+          "name": "log",
+          "type": "function",
+          "signature": "def log(msg: str)",
+          "docstring": "Log to file for debugging.",
+          "methods": [],
+          "line": 19
+        },
+        {
+          "name": "find_project_root",
+          "type": "function",
+          "signature": "def find_project_root(start_path: str) -> str",
+          "docstring": "Find project root by looking for .eri-rpg directory.",
+          "methods": [],
+          "line": 28
+        },
+        {
+          "name": "get_active_run",
+          "type": "function",
+          "signature": "def get_active_run(project_path: str) -> dict",
+          "docstring": "Get the most recent active run.",
+          "methods": [],
+          "line": 38
+        },
+        {
+          "name": "get_quick_fix_state",
+          "type": "function",
+          "signature": "def get_quick_fix_state(project_path: str) -> dict",
+          "docstring": "Get active quick fix state.",
+          "methods": [],
+          "line": 63
+        },
+        {
+          "name": "create_resume_file",
+          "type": "function",
+          "signature": "def create_resume_file(project_path: str, run_state: dict, quick_fix: dict) -> str",
+          "docstring": "Create a resume.md file with instructions for continuing after compaction.",
           "methods": [],
           "line": 76
         },
@@ -3514,7 +6432,274 @@
           "signature": "def main()",
           "docstring": "Main hook entry point.",
           "methods": [],
-          "line": 89
+          "line": 153
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "ui/data.py": {
+      "path": "ui/data.py",
+      "lang": "python",
+      "lines": 283,
+      "summary": "Data loading helpers for EriRPG UI.",
+      "interfaces": [
+        {
+          "name": "REGISTRY_PATH",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 9
+        },
+        {
+          "name": "load_registry",
+          "type": "function",
+          "signature": "def load_registry() -> Dict[str, Any]",
+          "docstring": "Load the global project registry.",
+          "methods": [],
+          "line": 12
+        },
+        {
+          "name": "get_project",
+          "type": "function",
+          "signature": "def get_project(name: str) -> Optional[Dict[str, Any]]",
+          "docstring": "Get a project from registry by name.",
+          "methods": [],
+          "line": 22
+        },
+        {
+          "name": "get_project_path",
+          "type": "function",
+          "signature": "def get_project_path(name: str) -> Optional[Path]",
+          "docstring": "Get project path from registry.",
+          "methods": [],
+          "line": 28
+        },
+        {
+          "name": "load_state",
+          "type": "function",
+          "signature": "def load_state(project_path: str) -> Dict[str, Any]",
+          "docstring": "Load project state.json.",
+          "methods": [],
+          "line": 36
+        },
+        {
+          "name": "load_knowledge",
+          "type": "function",
+          "signature": "def load_knowledge(project_path: str) -> Dict[str, Any]",
+          "docstring": "Load project knowledge.json.",
+          "methods": [],
+          "line": 47
+        },
+        {
+          "name": "load_graph",
+          "type": "function",
+          "signature": "def load_graph(project_path: str) -> Dict[str, Any]",
+          "docstring": "Load project dependency graph.",
+          "methods": [],
+          "line": 58
+        },
+        {
+          "name": "load_runs",
+          "type": "function",
+          "signature": "def load_runs(project_path: str) -> List[Dict[str, Any]]",
+          "docstring": "Load all runs from project runs directory.",
+          "methods": [],
+          "line": 69
+        },
+        {
+          "name": "load_roadmap",
+          "type": "function",
+          "signature": "def load_roadmap(project_path: str) -> Optional[str]",
+          "docstring": "Load project roadmap markdown.",
+          "methods": [],
+          "line": 88
+        },
+        {
+          "name": "count_modules",
+          "type": "function",
+          "signature": "def count_modules(project_path: str) -> int",
+          "docstring": "Count nodes in dependency graph.",
+          "methods": [],
+          "line": 99
+        },
+        {
+          "name": "load_config",
+          "type": "function",
+          "signature": "def load_config(project_path: str) -> Dict[str, Any]",
+          "docstring": "Load project config.json.",
+          "methods": [],
+          "line": 106
+        },
+        {
+          "name": "get_project_mode",
+          "type": "function",
+          "signature": "def get_project_mode(project_path: str) -> str",
+          "docstring": "Get project operational mode (bootstrap or maintain).",
+          "methods": [],
+          "line": 117
+        },
+        {
+          "name": "count_learned",
+          "type": "function",
+          "signature": "def count_learned(project_path: str) -> int",
+          "docstring": "Count entries in knowledge.learnings.",
+          "methods": [],
+          "line": 137
+        },
+        {
+          "name": "check_staleness",
+          "type": "function",
+          "signature": "def check_staleness(project_path: str, file_path: str, source_ref: Dict) -> bool",
+          "docstring": "Check if a learning is stale.",
+          "methods": [],
+          "line": 143
+        },
+        {
+          "name": "format_relative_time",
+          "type": "function",
+          "signature": "def format_relative_time(timestamp: float) -> str",
+          "docstring": "Format timestamp as relative time.",
+          "methods": [],
+          "line": 158
+        },
+        {
+          "name": "get_last_active",
+          "type": "function",
+          "signature": "def get_last_active(project_path: str) -> Optional[str]",
+          "docstring": "Get timestamp of last activity.",
+          "methods": [],
+          "line": 172
+        },
+        {
+          "name": "get_git_log",
+          "type": "function",
+          "signature": "def get_git_log(project_path: str, limit: int) -> List[Dict[str, Any]]",
+          "docstring": "Get git log for project.",
+          "methods": [],
+          "line": 187
+        },
+        {
+          "name": "get_drift_status",
+          "type": "function",
+          "signature": "def get_drift_status(project_path: str) -> Dict[str, Any]",
+          "docstring": "Get Drift integration status.",
+          "methods": [],
+          "line": 213
+        },
+        {
+          "name": "get_all_projects",
+          "type": "function",
+          "signature": "def get_all_projects() -> List[Dict[str, Any]]",
+          "docstring": "Get all projects with stats.",
+          "methods": [],
+          "line": 245
+        },
+        {
+          "name": "get_active_task",
+          "type": "function",
+          "signature": "def get_active_task() -> Optional[Dict[str, Any]]",
+          "docstring": "Find currently active task across all projects.",
+          "methods": [],
+          "line": 266
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "ui/server.py": {
+      "path": "ui/server.py",
+      "lang": "python",
+      "lines": 388,
+      "summary": "FastAPI server for EriRPG dashboard.",
+      "interfaces": [
+        {
+          "name": "create_app",
+          "type": "function",
+          "signature": "def create_app() -> FastAPI",
+          "docstring": "Create and configure the FastAPI application.",
+          "methods": [],
+          "line": 23
+        },
+        {
+          "name": "_format_time",
+          "type": "function",
+          "signature": "def _format_time(ts) -> str",
+          "docstring": "Format timestamp for templates.",
+          "methods": [],
+          "line": 375
+        }
+      ],
+      "deps_internal": [
+        "ui/data.py"
+      ],
+      "deps_external": [
+        "fastapi"
+      ]
+    },
+    "ui/__init__.py": {
+      "path": "ui/__init__.py",
+      "lang": "python",
+      "lines": 4,
+      "summary": "EriRPG Web UI - Local dashboard for monitoring EriRPG state.",
+      "interfaces": [],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "parsers/dart.py": {
+      "path": "parsers/dart.py",
+      "lang": "python",
+      "lines": 454,
+      "summary": "Dart parser using regex (no external deps).",
+      "interfaces": [
+        {
+          "name": "parse_dart_file",
+          "type": "function",
+          "signature": "def parse_dart_file(path: str) -> Dict[str, Any]",
+          "docstring": "Parse Dart file, extract interfaces and imports.",
+          "methods": [],
+          "line": 18
+        },
+        {
+          "name": "_extract_library_doc",
+          "type": "function",
+          "signature": "def _extract_library_doc(source: str) -> str",
+          "docstring": "Extract library-level doc comment.",
+          "methods": [],
+          "line": 328
+        },
+        {
+          "name": "_extract_doc_comment",
+          "type": "function",
+          "signature": "def _extract_doc_comment(source: str, pos: int) -> str",
+          "docstring": "Extract /// doc comment immediately before a position.",
+          "methods": [],
+          "line": 358
+        },
+        {
+          "name": "_summarize_params",
+          "type": "function",
+          "signature": "def _summarize_params(params: str) -> str",
+          "docstring": "Summarize function parameters for display.",
+          "methods": [],
+          "line": 382
+        },
+        {
+          "name": "resolve_import_to_module",
+          "type": "function",
+          "signature": "def resolve_import_to_module(import_info: dict, project_modules: List[str]) -> Optional[str]",
+          "docstring": "Resolve a Dart import to a project module.",
+          "methods": [],
+          "line": 405
+        },
+        {
+          "name": "classify_external_package",
+          "type": "function",
+          "signature": "def classify_external_package(import_info: dict) -> Optional[str]",
+          "docstring": "Extract external package name from import statement.",
+          "methods": [],
+          "line": 440
         }
       ],
       "deps_internal": [],
@@ -3573,6 +6758,104 @@
           "docstring": "Extract external crate name from use statement.",
           "methods": [],
           "line": 331
+        }
+      ],
+      "deps_internal": [],
+      "deps_external": []
+    },
+    "parsers/mojo.py": {
+      "path": "parsers/mojo.py",
+      "lang": "python",
+      "lines": 489,
+      "summary": "Mojo parser using regex (no external deps).",
+      "interfaces": [
+        {
+          "name": "FIRE_EMOJI",
+          "type": "const",
+          "signature": "",
+          "docstring": "",
+          "methods": [],
+          "line": 21
+        },
+        {
+          "name": "parse_mojo_file",
+          "type": "function",
+          "signature": "def parse_mojo_file(path: str) -> Dict[str, Any]",
+          "docstring": "Parse Mojo file, extract interfaces and imports.",
+          "methods": [],
+          "line": 24
+        },
+        {
+          "name": "_extract_module_doc",
+          "type": "function",
+          "signature": "def _extract_module_doc(source: str) -> str",
+          "docstring": "Extract module-level docstring (triple-quoted at start).",
+          "methods": [],
+          "line": 285
+        },
+        {
+          "name": "_extract_doc_comment",
+          "type": "function",
+          "signature": "def _extract_doc_comment(source: str, pos: int) -> str",
+          "docstring": "Extract docstring or # comment immediately before a position.",
+          "methods": [],
+          "line": 315
+        },
+        {
+          "name": "_extract_indented_block",
+          "type": "function",
+          "signature": "def _extract_indented_block(source: str, start: int) -> str",
+          "docstring": "Extract an indented block starting at position.",
+          "methods": [],
+          "line": 338
+        },
+        {
+          "name": "_extract_struct_fields",
+          "type": "function",
+          "signature": "def _extract_struct_fields(body: str) -> List[str]",
+          "docstring": "Extract field names from struct body.",
+          "methods": [],
+          "line": 371
+        },
+        {
+          "name": "_extract_struct_methods",
+          "type": "function",
+          "signature": "def _extract_struct_methods(body: str) -> List[str]",
+          "docstring": "Extract method names from struct body.",
+          "methods": [],
+          "line": 379
+        },
+        {
+          "name": "_summarize_params",
+          "type": "function",
+          "signature": "def _summarize_params(params: str) -> str",
+          "docstring": "Summarize function parameters for display.",
+          "methods": [],
+          "line": 387
+        },
+        {
+          "name": "resolve_import_to_module",
+          "type": "function",
+          "signature": "def resolve_import_to_module(import_info: dict, project_modules: List[str], project_name: str, current_module: str) -> Optional[str]",
+          "docstring": "Resolve a Mojo import to a project module path.",
+          "methods": [],
+          "line": 410
+        },
+        {
+          "name": "classify_external_package",
+          "type": "function",
+          "signature": "def classify_external_package(import_info: dict) -> Optional[str]",
+          "docstring": "Extract external package name from import.",
+          "methods": [],
+          "line": 464
+        },
+        {
+          "name": "is_mojo_file",
+          "type": "function",
+          "signature": "def is_mojo_file(path: str) -> bool",
+          "docstring": "Check if a file is a Mojo source file.",
+          "methods": [],
+          "line": 483
         }
       ],
       "deps_internal": [],
@@ -3689,7 +6972,7 @@
     "parsers/__init__.py": {
       "path": "parsers/__init__.py",
       "lang": "python",
-      "lines": 58,
+      "lines": 82,
       "summary": "Language-specific parsers for code analysis.",
       "interfaces": [
         {
@@ -3698,7 +6981,7 @@
           "signature": "def get_parser_for_file(path: str)",
           "docstring": "Get appropriate parser function for a file path.",
           "methods": [],
-          "line": 30
+          "line": 46
         },
         {
           "name": "detect_language",
@@ -3706,69 +6989,53 @@
           "signature": "def detect_language(path: str) -> str",
           "docstring": "Detect language from file extension.",
           "methods": [],
-          "line": 45
+          "line": 65
         }
       ],
       "deps_internal": [
-        "parsers/rust.py",
         "parsers/python.py",
-        "parsers/c.py"
+        "parsers/rust.py",
+        "parsers/mojo.py",
+        "parsers/c.py",
+        "parsers/dart.py"
       ],
       "deps_external": []
     }
   },
   "edges": [
     {
-      "source": "cli.py",
-      "target": "state.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "cli.py",
-      "target": "memory.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "cli.py",
-      "target": "ops.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "cli.py",
+      "source": "storage.py",
       "target": "graph.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
-      "source": "cli.py",
-      "target": "indexer.py",
+      "source": "analyze.py",
+      "target": "graph.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
-      "source": "cli.py",
-      "target": "context.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "cli.py",
-      "target": "refs.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "cli.py",
+      "source": "analyze.py",
       "target": "registry.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
-      "source": "cli.py",
-      "target": "knowledge.py",
+      "source": "implement.py",
+      "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "implement.py",
+      "target": "analyze.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "implement.py",
+      "target": "memory.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3779,8 +7046,14 @@
       "specifics": []
     },
     {
+      "source": "workflow.py",
+      "target": "persona.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
       "source": "indexer.py",
-      "target": "graph.py",
+      "target": "registry.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3798,13 +7071,19 @@
     },
     {
       "source": "indexer.py",
-      "target": "parsers/c.py",
+      "target": "graph.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
       "source": "indexer.py",
-      "target": "registry.py",
+      "target": "parsers/mojo.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "indexer.py",
+      "target": "parsers/c.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3816,19 +7095,49 @@
     },
     {
       "source": "ops.py",
-      "target": "registry.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "ops.py",
       "target": "graph.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
       "source": "ops.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "ops.py",
       "target": "refs.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "sync.py",
+      "target": "memory.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "sync.py",
+      "target": "refs.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "claudemd.py",
+      "target": "workflow.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "claudemd.py",
+      "target": "persona.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "claudemd.py",
+      "target": "session_context.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3845,8 +7154,8 @@
       "specifics": []
     },
     {
-      "source": "runner.py",
-      "target": "runs.py",
+      "source": "discuss.py",
+      "target": "memory.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3857,8 +7166,8 @@
       "specifics": []
     },
     {
-      "source": "context.py",
-      "target": "registry.py",
+      "source": "runner.py",
+      "target": "runs.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3876,7 +7185,55 @@
     },
     {
       "source": "context.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "context.py",
       "target": "memory.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "commands.py",
+      "target": "workflow.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "commands.py",
+      "target": "persona.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "quick.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "must_haves.py",
+      "target": "agent/plan.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "session_context.py",
+      "target": "commands.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "session_context.py",
+      "target": "workflow.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "session_context.py",
+      "target": "persona.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3888,13 +7245,37 @@
     },
     {
       "source": "__init__.py",
-      "target": "hooks.py",
+      "target": "persona.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "__init__.py",
+      "target": "commands.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
       "source": "__init__.py",
       "target": "graph.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "__init__.py",
+      "target": "workflow.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "modes/take.py",
+      "target": "ops.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "modes/take.py",
+      "target": "registry.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3906,7 +7287,7 @@
     },
     {
       "source": "modes/take.py",
-      "target": "ops.py",
+      "target": "memory.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3929,14 +7310,8 @@
       "specifics": []
     },
     {
-      "source": "modes/take.py",
-      "target": "registry.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "modes/new.py",
-      "target": "state.py",
+      "source": "modes/discuss.py",
+      "target": "discovery.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3947,7 +7322,7 @@
       "specifics": []
     },
     {
-      "source": "modes/work.py",
+      "source": "modes/new.py",
       "target": "state.py",
       "edge_type": "imports",
       "specifics": []
@@ -3955,6 +7330,24 @@
     {
       "source": "modes/work.py",
       "target": "ops.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "modes/work.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "modes/work.py",
+      "target": "state.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "modes/work.py",
+      "target": "memory.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3971,14 +7364,14 @@
       "specifics": []
     },
     {
-      "source": "modes/work.py",
-      "target": "registry.py",
+      "source": "modes/__init__.py",
+      "target": "modes/work.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
       "source": "modes/__init__.py",
-      "target": "modes/work.py",
+      "target": "modes/take.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -3990,7 +7383,13 @@
     },
     {
       "source": "modes/__init__.py",
-      "target": "modes/take.py",
+      "target": "modes/discuss.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "agent/run.py",
+      "target": "spec.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -4001,8 +7400,14 @@
       "specifics": []
     },
     {
-      "source": "agent/run.py",
-      "target": "agent/spec.py",
+      "source": "agent/spec.py",
+      "target": "spec.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "agent/learner.py",
+      "target": "refs.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -4013,8 +7418,26 @@
       "specifics": []
     },
     {
-      "source": "agent/learner.py",
-      "target": "refs.py",
+      "source": "agent/__init__.py",
+      "target": "spec.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "agent/__init__.py",
+      "target": "agent/learner.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "agent/__init__.py",
+      "target": "config.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "agent/__init__.py",
+      "target": "memory.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -4026,31 +7449,187 @@
     },
     {
       "source": "agent/__init__.py",
-      "target": "agent/spec.py",
-      "edge_type": "imports",
-      "specifics": []
-    },
-    {
-      "source": "agent/__init__.py",
       "target": "agent/plan.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
-      "source": "agent/__init__.py",
+      "source": "cli_commands/drift.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/goal.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/mode.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/mode.py",
+      "target": "config.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/mode.py",
       "target": "memory.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
-      "source": "agent/__init__.py",
-      "target": "agent/learner.py",
+      "source": "cli_commands/mode.py",
+      "target": "indexer.py",
       "edge_type": "imports",
       "specifics": []
     },
     {
-      "source": "parsers/__init__.py",
-      "target": "parsers/rust.py",
+      "source": "cli_commands/plan_group.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/guards.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/guards.py",
+      "target": "config.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/roadmap.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/explore.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/orchestration.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/persona_cmd.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/discuss.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/verify_group.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/modes.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/spec_group.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/analyze_cmd.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/cleanup.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/ui.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/knowledge.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/run_group.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/metadata.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/setup.py",
+      "target": "registry.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/setup.py",
+      "target": "config.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/setup.py",
+      "target": "indexer.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/memory_group.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/decisions.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "cli_commands/transplant.py",
+      "target": "cli_commands/guards.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "ui/server.py",
+      "target": "ui/data.py",
       "edge_type": "imports",
       "specifics": []
     },
@@ -4062,7 +7641,25 @@
     },
     {
       "source": "parsers/__init__.py",
+      "target": "parsers/rust.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "parsers/__init__.py",
+      "target": "parsers/mojo.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "parsers/__init__.py",
       "target": "parsers/c.py",
+      "edge_type": "imports",
+      "specifics": []
+    },
+    {
+      "source": "parsers/__init__.py",
+      "target": "parsers/dart.py",
       "edge_type": "imports",
       "specifics": []
     }

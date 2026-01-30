@@ -137,12 +137,13 @@ def register(cli):
                 return
         click.echo("")
 
-        # Phase 4: PLAN
-        click.echo("Phase 4: PLAN")
+        # Phase 4: PLAN (ERI)
+        click.echo("Phase 4: PLAN (ERI)")
         click.echo("-" * 30)
         plan = _run_plan_phase(spec, output_path)
-        click.echo(f"Plan: {plan.name}")
-        click.echo(f"Steps: {plan.total_steps}")
+        click.echo(f"Plan: {plan.objective[:60]}...")
+        click.echo(f"Tasks: {len(plan.tasks)}")
+        click.echo(f"Must-haves: {len(plan.must_haves.truths)} truths, {len(plan.must_haves.artifacts)} artifacts")
 
         if not yes:
             click.echo("")
@@ -172,26 +173,23 @@ def register(cli):
 
         # Summary
         click.echo("=" * 50)
-        click.echo(" PROJECT CREATED SUCCESSFULLY")
+        click.echo(" PROJECT SCAFFOLDED")
         click.echo("=" * 50)
         click.echo("")
         click.echo(f"Location: {output_path}")
         click.echo("")
-        click.echo("Next steps:")
-        click.echo(f"  1. cd {output_path}")
-        click.echo(f"  2. eri-rpg mode {name}  # Switch to this project")
-        click.echo(f"  3. eri-rpg take {name} \"<goal>\"  # Start working")
-        click.echo("")
 
-        # Show stack-specific instructions
-        if stack == "fastapi-only" or (spec.framework and "fastapi" in spec.framework.lower()):
-            click.echo("For FastAPI projects:")
-            click.echo("  pip install -r requirements.txt")
-            click.echo("  uvicorn app.main:app --reload")
-        elif stack == "cli-python" or (spec.framework and "cli" in spec.framework.lower()):
-            click.echo("For CLI projects:")
-            click.echo("  pip install -e .[dev]")
-            click.echo(f"  {name} --help")
+        # Show ERI execution instructions
+        click.echo("ERI Plan created with:")
+        click.echo(f"  - {len(plan.tasks)} tasks to execute")
+        click.echo(f"  - {len(plan.must_haves.truths)} truths to verify")
+        click.echo(f"  - {len(plan.must_haves.artifacts)} artifacts to create")
+        click.echo("")
+        click.echo("To execute the plan, run:")
+        click.echo(f"  eri-rpg eri-execute {name}")
+        click.echo("")
+        click.echo("Or view the plan:")
+        click.echo(f"  eri-rpg eri-plan {name} --show")
 
 
 def _run_describe_phase(name: str, description: str) -> str:
@@ -327,24 +325,21 @@ def _run_plan_phase(
     spec: "ProjectSpec",
     project_path: str,
 ) -> "Plan":
-    """Run the plan phase - generate execution plan.
+    """Run the plan phase - generate ERI execution plan.
 
     Args:
         spec: ProjectSpec to plan from
         project_path: Path where project will be created
 
     Returns:
-        Generated Plan
+        Generated ERI Plan with tasks and must-haves
     """
-    from erirpg.planner import generate_plan, save_plan_to_project
+    from erirpg.eri_planner import generate_eri_plan, save_eri_plan
 
-    plan = generate_plan(spec)
+    plan = generate_eri_plan(spec, project_path)
 
-    # Save plan
-    plans_dir = Path(project_path) / ".eri-rpg" / "plans"
-    plans_dir.mkdir(parents=True, exist_ok=True)
-
-    save_plan_to_project(plan, project_path)
+    # Save ERI plan to phases directory
+    save_eri_plan(project_path, plan)
 
     return plan
 

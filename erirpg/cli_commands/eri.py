@@ -347,3 +347,110 @@ def register(cli):
 
         click.echo("Checkpoint resolved. Continuation context:")
         click.echo(context)
+
+    @cli.command("eri-plan")
+    @click.argument("project")
+    @click.option("--show", is_flag=True, help="Show full plan with execution instructions")
+    @click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+    def eri_plan_cmd(project: str, show: bool, output_json: bool):
+        """Show ERI plan for a project.
+
+        Displays the ERI plan with tasks, must-haves, and execution instructions.
+
+        Examples:
+            eri-rpg eri-plan myproject --show
+            eri-rpg eri-plan myproject --json
+        """
+        from erirpg.eri_planner import load_eri_plan, format_plan_for_execution
+        from erirpg.registry import Registry
+
+        registry = Registry.get_instance()
+        proj = registry.get(project)
+        if not proj:
+            click.echo(f"Error: Project '{project}' not found", err=True)
+            sys.exit(1)
+
+        plan = load_eri_plan(proj.path)
+        if not plan:
+            click.echo(f"Error: No ERI plan found for '{project}'", err=True)
+            click.echo("Create one with: eri-rpg new <project> <description>")
+            sys.exit(1)
+
+        if output_json:
+            click.echo(json.dumps(plan.to_dict(), indent=2))
+            return
+
+        if show:
+            click.echo(format_plan_for_execution(plan))
+        else:
+            click.echo(f"Plan: {plan.id}")
+            click.echo(f"Phase: {plan.phase}")
+            click.echo(f"Objective: {plan.objective}")
+            click.echo(f"Tasks: {len(plan.tasks)}")
+            click.echo(f"Must-haves:")
+            click.echo(f"  Truths: {len(plan.must_haves.truths)}")
+            click.echo(f"  Artifacts: {len(plan.must_haves.artifacts)}")
+            click.echo(f"  Key Links: {len(plan.must_haves.key_links)}")
+            click.echo("")
+            click.echo("Use --show for full execution instructions")
+
+    @cli.command("eri-execute")
+    @click.argument("project")
+    @click.option("--task", type=int, default=None, help="Execute specific task number")
+    @click.option("--dry-run", is_flag=True, help="Show what would be executed")
+    def eri_execute_cmd(project: str, task: int, dry_run: bool):
+        """Execute ERI plan for a project.
+
+        Shows execution instructions for Claude to follow.
+        This outputs the plan in a format that Claude can execute.
+
+        Examples:
+            eri-rpg eri-execute myproject
+            eri-rpg eri-execute myproject --task 1
+            eri-rpg eri-execute myproject --dry-run
+        """
+        from erirpg.eri_planner import load_eri_plan, format_plan_for_execution
+        from erirpg.registry import Registry
+
+        registry = Registry.get_instance()
+        proj = registry.get(project)
+        if not proj:
+            click.echo(f"Error: Project '{project}' not found", err=True)
+            sys.exit(1)
+
+        plan = load_eri_plan(proj.path)
+        if not plan:
+            click.echo(f"Error: No ERI plan found for '{project}'", err=True)
+            sys.exit(1)
+
+        if dry_run:
+            click.echo("DRY RUN - Would execute:")
+            click.echo(f"  Plan: {plan.id}")
+            click.echo(f"  Tasks: {len(plan.tasks)}")
+            for i, t in enumerate(plan.tasks, 1):
+                click.echo(f"    {i}. {t.get('name', 'task')}: {t.get('action', '')[:50]}...")
+            return
+
+        if task is not None:
+            # Execute specific task
+            if task < 1 or task > len(plan.tasks):
+                click.echo(f"Error: Task {task} not found. Plan has {len(plan.tasks)} tasks.")
+                sys.exit(1)
+
+            t = plan.tasks[task - 1]
+            click.echo("=" * 60)
+            click.echo(f"EXECUTE TASK {task}: {t.get('name', 'task')}")
+            click.echo("=" * 60)
+            click.echo("")
+            click.echo(f"Action: {t.get('action', '')}")
+            click.echo(f"Files: {', '.join(t.get('files', []))}")
+            click.echo(f"Done when: {t.get('done', '')}")
+            click.echo("")
+            if t.get('details'):
+                click.echo("Details:")
+                click.echo(t['details'])
+            click.echo("")
+            click.echo(f"Verify: {t.get('verify', '')}")
+        else:
+            # Show full plan for execution
+            click.echo(format_plan_for_execution(plan))

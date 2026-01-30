@@ -1,0 +1,4 @@
+#!/bin/bash
+# EriRPG CLI wrapper - ensures PYTHONPATH is set
+export PYTHONPATH="/home/alex/eri-rpg:$PYTHONPATH"
+exec python3 -m erirpg.cli "$@"

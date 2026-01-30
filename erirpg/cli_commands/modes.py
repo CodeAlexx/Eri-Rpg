@@ -299,7 +299,7 @@ def register(cli):
         """
         import asyncio
         from erirpg.planner import Plan
-        from erirpg.executor import WaveExecutor
+        from erirpg.execution import WaveExecutor
 
         registry = Registry.get_instance()
         project = registry.get(name)
@@ -336,7 +336,8 @@ def register(cli):
 
         # Load plan
         plan = Plan.load(plan_file)
-        click.echo(f"Plan: {plan.goal}")
+        click.echo(f"Plan: {plan.name}")
+        click.echo(f"Description: {plan.description}")
         click.echo(f"Steps: {len(plan.steps)}")
 
         # Show wave structure
