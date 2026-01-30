@@ -183,8 +183,18 @@ This persists across sessions. Claude resumes where it left off.
 
 ## Documentation
 
-- [docs/MANUAL.md](docs/MANUAL.md) - Complete reference
+### Command References
+- [docs/ERI-COMMANDS.md](docs/ERI-COMMANDS.md) - All 44 `/eri:*` commands (existing codebases)
+- [docs/CODER-COMMANDS.md](docs/CODER-COMMANDS.md) - All 34 `/coder:*` commands (new projects)
+
+### Guides
+- [docs/CODER-USAGE.md](docs/CODER-USAGE.md) - Vibe coding guide (no code required)
+- [docs/MANUAL.md](docs/MANUAL.md) - Complete EriRPG reference
+- [docs/TYPICAL_WORKFLOW.md](docs/TYPICAL_WORKFLOW.md) - Quick workflow guide
+
+### Architecture
 - [DESIGN.md](DESIGN.md) - Technical architecture
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System design
 
 ## Empowerment Directive
 
@@ -234,7 +244,9 @@ Then execute phase by phase:
 
 ![Parallel Research Agents](https://raw.githubusercontent.com/CodeAlexx/rust-llm-chat-interface/main/docs/screenshot-agents.png)
 
-**Full Guide:** [docs/CODER-USAGE.md](docs/CODER-USAGE.md) - Complete no-code guide
+**Guides:**
+- [docs/CODER-USAGE.md](docs/CODER-USAGE.md) - No-code guide for non-programmers
+- [docs/CODER-COMMANDS.md](docs/CODER-COMMANDS.md) - All 34 commands with detailed usage
 
 ## Status
 
