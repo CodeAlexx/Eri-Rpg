@@ -960,7 +960,14 @@ def update_session(
             params,
         )
         conn.commit()
-        return cursor.rowcount > 0
+        success = cursor.rowcount > 0
+
+    # Sync status files after state change
+    if success:
+        from erirpg.status_sync import sync_from_session
+        sync_from_session(session_id, db_path)
+
+    return success
 
 
 def end_session(
@@ -996,7 +1003,7 @@ def add_decision(
         """, (session_id, context, decision, rationale, now.isoformat()))
         conn.commit()
 
-        return Decision(
+        result = Decision(
             id=cursor.lastrowid,
             session_id=session_id,
             context=context,
@@ -1004,6 +1011,12 @@ def add_decision(
             rationale=rationale,
             timestamp=now,
         )
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_from_session
+    sync_from_session(session_id, db_path)
+
+    return result
 
 
 def get_session_decisions(
@@ -1123,7 +1136,7 @@ def add_blocker(
         """, (session_id, description, severity, now.isoformat()))
         conn.commit()
 
-        return Blocker(
+        result = Blocker(
             id=cursor.lastrowid,
             session_id=session_id,
             description=description,
@@ -1133,6 +1146,12 @@ def add_blocker(
             resolution=None,
             timestamp=now,
         )
+
+    # Sync status files after state change
+    from erirpg.status_sync import sync_from_session
+    sync_from_session(session_id, db_path)
+
+    return result
 
 
 def resolve_blocker(
@@ -1144,12 +1163,25 @@ def resolve_blocker(
     now = datetime.now()
 
     with get_connection(db_path) as conn:
+        # Get session_id before update for status sync
+        row = conn.execute(
+            "SELECT session_id FROM blockers WHERE id = ?", (blocker_id,)
+        ).fetchone()
+        session_id = row["session_id"] if row else None
+
         cursor = conn.execute("""
             UPDATE blockers SET resolved = 1, resolved_at = ?, resolution = ?
             WHERE id = ?
         """, (now.isoformat(), resolution, blocker_id))
         conn.commit()
-        return cursor.rowcount > 0
+        success = cursor.rowcount > 0
+
+    # Sync status files after state change
+    if success and session_id:
+        from erirpg.status_sync import sync_from_session
+        sync_from_session(session_id, db_path)
+
+    return success
 
 
 def get_unresolved_blockers(
@@ -1247,12 +1279,25 @@ def complete_action(action_id: int, db_path: Optional[str] = None) -> bool:
     now = datetime.now()
 
     with get_connection(db_path) as conn:
+        # Get session_id before update for status sync
+        row = conn.execute(
+            "SELECT session_id FROM next_actions WHERE id = ?", (action_id,)
+        ).fetchone()
+        session_id = row["session_id"] if row else None
+
         cursor = conn.execute("""
             UPDATE next_actions SET completed = 1, completed_at = ?
             WHERE id = ?
         """, (now.isoformat(), action_id))
         conn.commit()
-        return cursor.rowcount > 0
+        success = cursor.rowcount > 0
+
+    # Sync status files after state change
+    if success and session_id:
+        from erirpg.status_sync import sync_from_session
+        sync_from_session(session_id, db_path)
+
+    return success
 
 
 def get_pending_actions(

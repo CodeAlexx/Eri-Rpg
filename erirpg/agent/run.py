@@ -369,6 +369,16 @@ class RunState:
             "data": data or {},
         })
 
+    def _sync_status(self) -> None:
+        """Sync status files after state change."""
+        if not self.work_dir:
+            return
+        try:
+            from erirpg.status_sync import sync_status_files
+            sync_status_files(self.work_dir)
+        except Exception:
+            pass  # Never fail on status sync
+
     def start_step(self, step: Step) -> None:
         """Mark step as in progress."""
         step.status = StepStatus.IN_PROGRESS
@@ -391,6 +401,7 @@ class RunState:
             "files_touched": files_touched,
             "notes": notes,
         })
+        self._sync_status()
 
     def fail_step(self, step: Step, error: str) -> None:
         """Mark step as failed."""
@@ -398,6 +409,7 @@ class RunState:
         step.completed_at = datetime.now()
         step.error = error
         self.add_log("step_failed", {"step_id": step.id, "error": error})
+        self._sync_status()
 
     def skip_step(self, step: Step, reason: str = "") -> None:
         """Skip a step."""
@@ -405,6 +417,7 @@ class RunState:
         step.completed_at = datetime.now()
         step.notes = f"Skipped: {reason}" if reason else "Skipped"
         self.add_log("step_skipped", {"step_id": step.id, "reason": reason})
+        self._sync_status()
 
     def add_learned_files(self, files: List[str]) -> None:
         """Track files that were learned during this run."""
@@ -434,12 +447,12 @@ class RunState:
         step_id: str = "",
     ) -> Decision:
         """Record a decision made during the run.
-        
+
         Args:
             decision: What was decided
             rationale: Why this decision was made
             step_id: Which step this relates to (defaults to current)
-        
+
         Returns:
             The created Decision
         """
@@ -452,6 +465,7 @@ class RunState:
         )
         self.decisions.append(dec)
         self.add_log("decision_made", dec.to_dict())
+        self._sync_status()
         return dec
 
     def generate_summary(self, one_liner: str = "") -> RunSummary:

@@ -290,6 +290,10 @@ def save_run(project_path: str, run: RunRecord) -> str:
     with open(run_path, "w") as f:
         json.dump(run.to_dict(), f, indent=2)
 
+    # Sync status files after run state change
+    from erirpg.status_sync import sync_status_files
+    sync_status_files(project_path)
+
     return run_path
 
 

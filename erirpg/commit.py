@@ -218,6 +218,10 @@ def verify_and_commit(
         result.committed = True
         result.commit_hash = commit_hash
         clear_modified_files(project_path)
+
+        # Sync status files after successful commit
+        from erirpg.status_sync import sync_status_files
+        sync_status_files(project_path)
     else:
         result.error = "Git commit failed (nothing to commit?)"
 
