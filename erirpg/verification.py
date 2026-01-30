@@ -356,12 +356,14 @@ class Verifier:
         self,
         step_id: str,
         step_type: str = "",
+        auto_commit: bool = True,
     ) -> VerificationResult:
         """Run all applicable verification commands for a step.
 
         Args:
             step_id: ID of the step being verified
             step_type: Type of step (used to filter commands)
+            auto_commit: If True, automatically commit when verification passes
 
         Returns:
             VerificationResult with all command results
@@ -394,7 +396,50 @@ class Verifier:
         result.completed_at = datetime.now()
         result.status = VerificationStatus.PASSED.value if all_passed else VerificationStatus.FAILED.value
 
+        # Auto-commit when verification passes
+        if result.passed and auto_commit:
+            self._auto_commit_on_pass(step_id)
+
         return result
+
+    def _auto_commit_on_pass(self, step_id: str) -> bool:
+        """Automatically commit all changes when verification passes.
+
+        Returns:
+            True if commit succeeded, False otherwise
+        """
+        try:
+            # Stage all changes
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=self.project_path,
+                capture_output=True,
+                timeout=30,
+            )
+
+            # Check if there's anything to commit
+            status = subprocess.run(
+                ["git", "diff", "--cached", "--quiet"],
+                cwd=self.project_path,
+                capture_output=True,
+                timeout=10,
+            )
+
+            if status.returncode == 0:
+                return True  # Nothing to commit
+
+            # Commit with verification-passed message
+            subprocess.run(
+                ["git", "commit", "-m", f"feat: {step_id} - verification passed\n\nAuto-committed by EriRPG after verification passed."],
+                cwd=self.project_path,
+                capture_output=True,
+                timeout=30,
+            )
+
+            return True
+
+        except Exception:
+            return False  # Never fail on auto-commit
 
     def should_run_for_step(self, is_checkpoint: bool = False) -> bool:
         """Determine if verification should run based on config."""
