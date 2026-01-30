@@ -1,7 +1,7 @@
 {
-  "description": "EriRPG enforcement hooks - blocks Edit/Write/Bash file writes without active preflight",
+  "description": "EriRPG enforcement hooks - blocks unauthorized edits, auto-commits when enabled",
   "install": "Copy to ~/.claude/settings.json or merge with existing hooks config",
-  "note": "Set ERIRPG_ROOT env var or use full path to pretooluse.py",
+  "note": "Set ERIRPG_ROOT env var or use full path to hook scripts",
   "hooks": {
     "PreToolUse": [
       {
@@ -11,6 +11,18 @@
             "type": "command",
             "command": "python3 ${ERIRPG_ROOT:-/home/alex/eri-rpg}/erirpg/hooks/pretooluse.py",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${ERIRPG_ROOT:-/home/alex/eri-rpg}/erirpg/hooks/posttooluse.py",
+            "timeout": 10
           }
         ]
       }

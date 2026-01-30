@@ -4,11 +4,12 @@ EriRPG integrates with Claude Code through hooks that enforce its workflow durin
 
 ## Overview
 
-Three hooks are provided:
+Four hooks are provided:
 
 | Hook | Purpose | When Called |
 |------|---------|-------------|
 | PreToolUse | Block unauthorized edits | Before Edit/Write/MultiEdit |
+| PostToolUse | Auto-commit when enabled | After Edit/Write/MultiEdit |
 | PreCompact | Save state before compaction | Before context is compacted |
 | SessionStart | Remind about incomplete runs | At session start |
 
@@ -37,6 +38,18 @@ Add to `~/.claude/settings.json`:
             "type": "command",
             "command": "python3 ${ERIRPG_ROOT}/erirpg/hooks/pretooluse.py",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${ERIRPG_ROOT}/erirpg/hooks/posttooluse.py",
+            "timeout": 10
           }
         ]
       }
@@ -94,6 +107,32 @@ Start an EriRPG run first:
 Or use quick fix for single-file edits:
   eri-rpg quick project src/utils.py "description"
 ```
+
+### PostToolUse Hook
+
+**Purpose**: Auto-commit files after edits when `auto_commit` is enabled.
+
+**Behavior**:
+1. Checks if file is in an EriRPG project
+2. Checks if `auto_commit: true` in project config
+3. Stages and commits the file with auto-generated message
+4. Logs commit hash for reference
+
+**Commit message format**:
+```
+auto: edit path/to/file.py [14:32]
+```
+
+**Configuration**:
+```yaml
+# In .eri-rpg/config.yaml
+workflow:
+  auto_commit: true  # default
+```
+
+**Disable auto-commit**:
+- Set `auto_commit: false` in project config
+- Or remove PostToolUse hook from settings.json
 
 ### PreCompact Hook
 
