@@ -91,6 +91,7 @@ def register_all(cli: "click.Group") -> None:
     from . import debug_cmd
     from . import todo_cmd
     from . import new_project
+    from . import task_list_cmd
 
     setup.register(cli)
     mode.register(cli)
@@ -122,3 +123,4 @@ def register_all(cli: "click.Group") -> None:
     debug_cmd.register(cli)
     todo_cmd.register(cli)
     new_project.register(cli)
+    task_list_cmd.register(cli)
