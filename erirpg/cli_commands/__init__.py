@@ -93,6 +93,7 @@ def register_all(cli: "click.Group") -> None:
     from . import new_project
     from . import task_list_cmd
     from . import eri
+    from . import coder_cmds
 
     setup.register(cli)
     mode.register(cli)
@@ -126,3 +127,4 @@ def register_all(cli: "click.Group") -> None:
     new_project.register(cli)
     task_list_cmd.register(cli)
     eri.register(cli)
+    coder_cmds.register(cli)
