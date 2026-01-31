@@ -19,9 +19,33 @@ Commands are organized by category:
 - Plan Operations: split, merge, replay
 - Knowledge: learn, template, handoff
 - Project: add_feature, new_milestone
+
+Also exports legacy command system (parse_command, is_command, get_help_text)
+for backward compatibility with erirpg core.
 """
 
+# Legacy exports for backward compatibility with erirpg core
+from erirpg.commands.legacy import (
+    parse_command,
+    is_command,
+    get_help_text,
+    get_command_names,
+    COMMANDS,
+    ALIAS_MAP,
+    CommandConfig,
+    ParsedCommand,
+)
+
 __all__ = [
+    # Legacy exports
+    'parse_command',
+    'is_command',
+    'get_help_text',
+    'get_command_names',
+    'COMMANDS',
+    'ALIAS_MAP',
+    'CommandConfig',
+    'ParsedCommand',
     # Core Workflow
     'new_project',
     'plan_phase',

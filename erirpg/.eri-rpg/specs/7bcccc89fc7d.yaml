@@ -1,0 +1,65 @@
+id: 7bcccc89fc7d
+goal: 'Add run summaries: Create Decision and RunSummary dataclasses in runs.py, add
+  summary field to RunRecord, update RunState to track decisions and artifacts_created,
+  add methods to generate summary (one_liner, decisions, artifacts_created, duration),
+  update serialization'
+project: erirpg
+steps:
+- id: learn-context
+  action: learn
+  targets: []
+  description: Understand where new code will integrate
+  depends_on: []
+  verification: Integration points identified
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+- id: create
+  action: create
+  targets:
+  - runs.py
+  description: Create new files/functions
+  depends_on:
+  - learn-context
+  verification: New code created
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+- id: wire
+  action: modify
+  targets: []
+  description: Connect new code to existing system
+  depends_on:
+  - create
+  verification: New code is accessible
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+- id: test
+  action: create
+  targets: []
+  description: Add tests for new functionality
+  depends_on:
+  - wire
+  verification: Tests written and passing
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+created_at: '2026-01-26T21:06:02.138458'
+verification:
+- pytest
+constraints: []
+must_haves: null
+current_step_id: null

@@ -17,12 +17,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.state import (
-    load_project_state,
-    get_progress_metrics,
-    get_current_position,
-)
-from erirpg.coder.metrics import get_session_metrics
+from erirpg.coder.state import get_progress
 
 
 def progress(
@@ -37,48 +32,14 @@ def progress(
     result = {
         "command": "progress",
         "project": str(project_path),
-        "position": None,
-        "metrics": None,
-        "session_metrics": None,
-        "next_steps": [],
     }
 
-    # Get current position
+    # Get progress from state module
     try:
-        result["position"] = get_current_position(project_path)
+        progress_data = get_progress(project_path)
+        result.update(progress_data)
     except Exception as e:
-        result["position"] = {"error": str(e)}
-
-    # Get progress metrics
-    try:
-        result["metrics"] = get_progress_metrics(project_path)
-    except Exception as e:
-        result["metrics"] = {"error": str(e)}
-
-    # Get session metrics if detailed
-    if detailed:
-        try:
-            result["session_metrics"] = get_session_metrics(project_path)
-        except Exception as e:
-            result["session_metrics"] = {"error": str(e)}
-
-    # Determine next steps
-    pos = result.get("position", {})
-    if pos and not pos.get("error"):
-        current_phase = pos.get("current_phase")
-        current_plan = pos.get("current_plan")
-        status = pos.get("status")
-
-        if status == "idle":
-            result["next_steps"].append("Run /coder:plan-phase to start planning")
-        elif status == "planning":
-            result["next_steps"].append(f"Continue planning phase {current_phase}")
-        elif status == "executing":
-            result["next_steps"].append(f"Continue executing plan {current_plan}")
-        elif status == "verifying":
-            result["next_steps"].append("Run /coder:verify-work to complete verification")
-        elif status == "complete":
-            result["next_steps"].append("Run /coder:new-milestone or add more phases")
+        result["error"] = str(e)
 
     if output_json:
         print(json.dumps(result, indent=2, default=str))

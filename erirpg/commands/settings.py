@@ -20,8 +20,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder import load_config, save_config, get_default_config
-from erirpg.coder.state import ensure_planning_dir
+from erirpg.coder import load_config, save_config, get_default_config, ensure_planning_dir
 
 
 def settings(

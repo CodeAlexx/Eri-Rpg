@@ -1,0 +1,106 @@
+{
+  "id": "a1ec2a97e3c5",
+  "spec": {
+    "id": "7e9edd3aa841",
+    "goal": "Test decision tracking",
+    "project": "",
+    "steps": [],
+    "created_at": "2026-01-29T07:32:48.301727",
+    "verification": [],
+    "constraints": [],
+    "must_haves": null,
+    "source_project": null,
+    "target_project": null,
+    "context": [],
+    "metadata": {},
+    "current_step_id": null
+  },
+  "plan": {
+    "id": "e7bd8b1099e3",
+    "goal": "Test decision tracking",
+    "steps": [
+      {
+        "id": "execute",
+        "goal": "Test decision tracking",
+        "description": "Execute the goal",
+        "order": 1,
+        "context_files": [],
+        "knowledge_needed": [],
+        "status": "completed",
+        "started_at": null,
+        "completed_at": "2026-01-29T07:32:48.306411",
+        "files_touched": [],
+        "notes": "Test run with decisions",
+        "error": null,
+        "verification_commands": [],
+        "verification_passed": null,
+        "parallelizable": false,
+        "depends_on": [],
+        "action": "",
+        "avoid": [],
+        "done_criteria": "",
+        "checkpoint_type": null,
+        "wave": 0
+      }
+    ],
+    "created_at": "2026-01-29T07:32:48.301750",
+    "final_verification": [],
+    "source_project": null,
+    "target_project": null,
+    "constraints": []
+  },
+  "started_at": "2026-01-29T07:32:48.301758",
+  "completed_at": null,
+  "log": [
+    {
+      "timestamp": "2026-01-29T07:32:48.303731",
+      "event": "decision_made",
+      "data": {
+        "id": "cb0ed526",
+        "decision": "SQLite over JSON",
+        "rationale": "Cross-project queries need O(log n) indexed lookups",
+        "step_id": "execute",
+        "timestamp": "2026-01-29T07:32:48.303725"
+      }
+    },
+    {
+      "timestamp": "2026-01-29T07:32:48.303748",
+      "event": "decision_made",
+      "data": {
+        "id": "fb6f1f8b",
+        "decision": "Single global DB",
+        "rationale": "Cross-project priority, no sync complexity, simpler code",
+        "step_id": "execute",
+        "timestamp": "2026-01-29T07:32:48.303745"
+      }
+    },
+    {
+      "timestamp": "2026-01-29T07:32:48.306413",
+      "event": "step_completed",
+      "data": {
+        "step_id": "execute",
+        "files_touched": [],
+        "notes": "Test run with decisions"
+      }
+    }
+  ],
+  "files_learned": [],
+  "files_edited": [],
+  "decisions": [
+    {
+      "id": "cb0ed526",
+      "decision": "SQLite over JSON",
+      "rationale": "Cross-project queries need O(log n) indexed lookups",
+      "step_id": "execute",
+      "timestamp": "2026-01-29T07:32:48.303725"
+    },
+    {
+      "id": "fb6f1f8b",
+      "decision": "Single global DB",
+      "rationale": "Cross-project priority, no sync complexity, simpler code",
+      "step_id": "execute",
+      "timestamp": "2026-01-29T07:32:48.303745"
+    }
+  ],
+  "work_dir": "/home/alex/eri-rpg/erirpg"
+}

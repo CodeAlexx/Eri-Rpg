@@ -1,0 +1,66 @@
+id: 31e5d2ed7257
+goal: 'Add multi-agent toggle option: 1) Create config.py with ProjectConfig for multi_agent
+  settings, 2) Add ''config'' CLI command, 3) Update Agent to load/respect config,
+  4) Add parallelizable field to Step, 5) Fix pretooluse.py to allow ~/.claude/ paths'
+project: erirpg
+steps:
+- id: learn-context
+  action: learn
+  targets: []
+  description: Understand where new code will integrate
+  depends_on: []
+  verification: Integration points identified
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+- id: create
+  action: create
+  targets:
+  - config.py
+  - pretooluse.py
+  - /.c
+  description: Create new files/functions
+  depends_on:
+  - learn-context
+  verification: New code created
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+- id: wire
+  action: modify
+  targets: []
+  description: Connect new code to existing system
+  depends_on:
+  - create
+  verification: New code is accessible
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+- id: test
+  action: create
+  targets: []
+  description: Add tests for new functionality
+  depends_on:
+  - wire
+  verification: Tests written and passing
+  status: pending
+  started_at: null
+  completed_at: null
+  error: null
+  files_modified: []
+  notes: ''
+created_at: '2026-01-26T22:36:35.329056'
+verification:
+- pytest
+constraints: []
+must_haves: null
+current_step_id: null
