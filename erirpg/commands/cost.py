@@ -2,8 +2,6 @@
 """
 /coder:cost - Estimate tokens and cost.
 
-Analyzes project to estimate token usage and API costs.
-
 Usage:
     python -m erirpg.commands.cost [--json]
     python -m erirpg.commands.cost --phase <n> [--json]
@@ -14,11 +12,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.metrics import (
-    estimate_project_cost,
-    estimate_phase_cost,
-    get_token_stats,
-)
+from erirpg.coder.metrics import estimate_project_cost, estimate_tokens
 
 
 def cost(
@@ -38,17 +32,13 @@ def cost(
     try:
         if phase_number:
             # Estimate for specific phase
-            estimate = estimate_phase_cost(project_path, phase_number)
+            estimate = estimate_tokens(phase_number, project_path)
             result["phase"] = phase_number
             result["estimate"] = estimate
         else:
             # Estimate for whole project
             estimate = estimate_project_cost(project_path)
             result["estimate"] = estimate
-
-        # Get token stats
-        stats = get_token_stats(project_path)
-        result["token_stats"] = stats
 
     except Exception as e:
         result["error"] = str(e)
@@ -63,7 +53,6 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse --phase argument
     phase_number = None
     if "--phase" in sys.argv:
         idx = sys.argv.index("--phase")

@@ -2,15 +2,9 @@
 """
 /coder:metrics - Track execution metrics.
 
-Displays execution metrics including:
-- Time tracking
-- Token usage
-- Success rates
-- Performance trends
-
 Usage:
     python -m erirpg.commands.metrics [--json]
-    python -m erirpg.commands.metrics --session [--json]
+    python -m erirpg.commands.metrics --summary [--json]
 """
 
 import json
@@ -18,15 +12,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.metrics import (
-    get_execution_metrics,
-    get_session_metrics,
-    get_historical_trends,
-)
+from erirpg.coder.metrics import load_metrics, get_metrics_summary
 
 
 def metrics(
-    session_only: bool = False,
+    summary_only: bool = False,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -40,19 +30,14 @@ def metrics(
     }
 
     try:
-        if session_only:
-            # Current session metrics only
-            session = get_session_metrics(project_path)
-            result["session"] = session
+        if summary_only:
+            summary = get_metrics_summary(project_path)
+            result["summary"] = summary
         else:
-            # All metrics
-            execution = get_execution_metrics(project_path)
-            session = get_session_metrics(project_path)
-            trends = get_historical_trends(project_path)
-
-            result["execution"] = execution
-            result["session"] = session
-            result["trends"] = trends
+            all_metrics = load_metrics(project_path)
+            summary = get_metrics_summary(project_path)
+            result["metrics"] = all_metrics
+            result["summary"] = summary
 
     except Exception as e:
         result["error"] = str(e)
@@ -66,9 +51,9 @@ def metrics(
 def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
-    session_only = "--session" in sys.argv
+    summary_only = "--summary" in sys.argv
 
-    metrics(session_only=session_only, output_json=output_json)
+    metrics(summary_only=summary_only, output_json=output_json)
 
 
 if __name__ == "__main__":

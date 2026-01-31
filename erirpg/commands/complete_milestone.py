@@ -2,12 +2,6 @@
 """
 /coder:complete-milestone - Archive milestone and tag release.
 
-Handles:
-- Git tag creation
-- STATE.md update
-- Archive entry
-- Next milestone preparation
-
 Usage:
     python -m erirpg.commands.complete_milestone [--json]
     python -m erirpg.commands.complete_milestone --version <version> [--json]
@@ -19,13 +13,8 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import (
-    load_project_state,
-    update_state,
-    ensure_planning_dir,
-)
-from erirpg.coder.git_ops import create_tag, get_current_commit
-from erirpg.coder import load_config
+from erirpg.coder import ensure_planning_dir, load_config, save_config
+from erirpg.coder.git_ops import run_git, get_commit_hash
 
 
 def complete_milestone(
@@ -46,36 +35,31 @@ def complete_milestone(
         planning_dir = ensure_planning_dir(project_path)
         config = load_config(project_path)
 
-        # Get version
         if not version:
-            # Try to get from config or PROJECT.md
             version = config.get("version", "0.1.0")
 
         result["version"] = version
 
         # Create git tag
         try:
-            tag_result = create_tag(project_path, f"v{version}", f"Release {version}")
-            result["tag"] = tag_result
+            code, stdout, stderr = run_git(["tag", "-a", f"v{version}", "-m", f"Release {version}"])
+            if code == 0:
+                result["tag"] = f"v{version}"
+            else:
+                result["tag_error"] = stderr or stdout
         except Exception as e:
             result["tag_error"] = str(e)
-
-        # Update STATE.md
-        update_state(project_path, {
-            "status": "milestone_complete",
-            "completed_version": version,
-            "completed_at": datetime.utcnow().isoformat() + "Z"
-        })
 
         # Create archive entry
         archive_dir = planning_dir / "archive"
         archive_dir.mkdir(exist_ok=True)
 
+        commit = get_commit_hash("HEAD")
         archive_path = archive_dir / f"milestone-{version}.md"
         archive_content = f"""---
 version: {version}
 completed: {datetime.utcnow().isoformat()}Z
-commit: {get_current_commit(project_path)}
+commit: {commit}
 ---
 
 # Milestone {version}
@@ -113,7 +97,6 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse --version argument
     version = None
     if "--version" in sys.argv:
         idx = sys.argv.index("--version")

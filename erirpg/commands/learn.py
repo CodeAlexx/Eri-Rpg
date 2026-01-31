@@ -2,11 +2,10 @@
 """
 /coder:learn - Pattern extraction to knowledge graph.
 
-Extracts patterns from code and stores them in knowledge base.
-
 Usage:
     python -m erirpg.commands.learn <pattern-description> [--json]
     python -m erirpg.commands.learn --from <file> [--json]
+    python -m erirpg.commands.learn --list [--json]
 """
 
 import json
@@ -15,15 +14,17 @@ from pathlib import Path
 from typing import Optional
 
 from erirpg.coder.knowledge import (
-    store_pattern,
-    extract_patterns_from_file,
-    get_knowledge_stats,
+    add_pattern,
+    search_knowledge,
+    get_knowledge_summary,
+    import_from_phase,
 )
 
 
 def learn(
     pattern_description: Optional[str] = None,
     from_file: Optional[str] = None,
+    list_only: bool = False,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -37,8 +38,13 @@ def learn(
     }
 
     try:
-        if from_file:
-            # Extract patterns from file
+        if list_only:
+            # Show knowledge summary
+            summary = get_knowledge_summary(project_path)
+            result["summary"] = summary
+
+        elif from_file:
+            # Import patterns from file
             file_path = Path(from_file)
             if not file_path.is_absolute():
                 file_path = project_path / from_file
@@ -46,24 +52,26 @@ def learn(
             if not file_path.exists():
                 result["error"] = f"File not found: {file_path}"
             else:
-                patterns = extract_patterns_from_file(file_path)
+                # Try to import from phase summary
+                imported = import_from_phase(file_path, project_path)
                 result["source"] = str(file_path)
-                result["patterns_found"] = len(patterns)
-                result["patterns"] = patterns
+                result["imported"] = imported
+                result["message"] = f"Imported patterns from {file_path.name}"
 
         elif pattern_description:
             # Store manually described pattern
-            stored = store_pattern(project_path, pattern_description)
+            stored = add_pattern(project_path, pattern_description)
             result["stored"] = stored
             result["message"] = "Pattern stored in knowledge base"
 
         else:
-            # Show knowledge stats
-            stats = get_knowledge_stats(project_path)
-            result["stats"] = stats
+            # Show help and summary
+            summary = get_knowledge_summary(project_path)
+            result["summary"] = summary
             result["usage"] = {
-                "describe": "python -m erirpg.commands.learn '<pattern description>'",
-                "from_file": "python -m erirpg.commands.learn --from <file>"
+                "add": "python -m erirpg.commands.learn '<pattern description>'",
+                "import": "python -m erirpg.commands.learn --from <file>",
+                "list": "python -m erirpg.commands.learn --list"
             }
 
     except Exception as e:
@@ -78,26 +86,21 @@ def learn(
 def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
+    list_only = "--list" in sys.argv
 
-    # Parse --from argument
     from_file = None
     if "--from" in sys.argv:
         idx = sys.argv.index("--from")
         if idx + 1 < len(sys.argv):
             from_file = sys.argv[idx + 1]
 
-    # Get pattern description (non-flag arguments)
     pattern_description = None
-    if not from_file:
+    if not from_file and not list_only:
         args = [a for a in sys.argv[1:] if not a.startswith("--")]
         if args:
             pattern_description = " ".join(args)
 
-    learn(
-        pattern_description=pattern_description,
-        from_file=from_file,
-        output_json=output_json
-    )
+    learn(pattern_description=pattern_description, from_file=from_file, list_only=list_only, output_json=output_json)
 
 
 if __name__ == "__main__":

@@ -2,11 +2,6 @@
 """
 /coder:new-milestone - Start next version.
 
-Creates new milestone with:
-- Version bump
-- Fresh roadmap section
-- State reset
-
 Usage:
     python -m erirpg.commands.new_milestone <version> [--json]
 """
@@ -17,8 +12,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import ensure_planning_dir, update_state
-from erirpg.coder import load_config, save_config
+from erirpg.coder import ensure_planning_dir, load_config, save_config
 
 
 def new_milestone(
@@ -48,41 +42,29 @@ def new_milestone(
 
         result["previous_version"] = previous_version
 
-        # Update ROADMAP.md to add new milestone section
+        # Update ROADMAP.md
         roadmap_path = planning_dir / "ROADMAP.md"
         if roadmap_path.exists():
-            roadmap_content = roadmap_path.read_text()
             new_section = f"""
 
 ---
 
 # Milestone {version}
 
-## Phase 1: [First Phase Name]
+## Phase 1: [First Phase]
 **Status:** pending
 **Goal:** [Define goal]
-
-### Requirements
-- [REQ-XXX]
 
 ### Success Criteria
 - [ ] [Criterion 1]
 """
-            roadmap_path.write_text(roadmap_content + new_section)
+            content = roadmap_path.read_text()
+            roadmap_path.write_text(content + new_section)
             result["roadmap_updated"] = True
 
-        # Reset state for new milestone
-        update_state(project_path, {
-            "current_phase": 1,
-            "milestone": version,
-            "status": "planning",
-            "milestone_started": datetime.utcnow().isoformat() + "Z"
-        })
-
-        result["status"] = "created"
         result["message"] = f"Milestone {version} started"
         result["next_steps"] = [
-            "Edit ROADMAP.md to define phases for this milestone",
+            "Edit ROADMAP.md to define phases",
             "Run /coder:plan-phase 1 to start planning"
         ]
 

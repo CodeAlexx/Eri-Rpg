@@ -2,11 +2,6 @@
 """
 /coder:verify-work - Manual user acceptance testing.
 
-Guides UAT process with:
-- Test checklist generation
-- Result recording
-- Gap identification
-
 Usage:
     python -m erirpg.commands.verify_work <phase-number> [--json]
     python -m erirpg.commands.verify_work <phase-number> --result pass|fail [--json]
@@ -18,12 +13,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import (
-    get_phase_info,
-    update_state,
-    ensure_planning_dir,
-)
-from erirpg.coder.planning import get_phase_verification
+from erirpg.coder import ensure_planning_dir, load_roadmap
 
 
 def verify_work(
@@ -45,23 +35,21 @@ def verify_work(
     try:
         planning_dir = ensure_planning_dir(project_path)
 
-        # Get phase info
-        phase_info = get_phase_info(project_path, phase_number)
-        if not phase_info:
-            result["error"] = f"Phase {phase_number} not found"
-            if output_json:
-                print(json.dumps(result, indent=2, default=str))
-            return result
+        # Find phase directory
+        phases_dir = planning_dir / "phases"
+        phase_dir = None
+        if phases_dir.exists():
+            for d in phases_dir.iterdir():
+                if d.is_dir() and d.name.startswith(f"{phase_number:02d}"):
+                    phase_dir = d
+                    break
 
-        # Get verification criteria
-        verification = get_phase_verification(project_path, phase_number)
-        result["verification_criteria"] = verification
+        if not phase_dir:
+            phase_dir = phases_dir / f"{phase_number:02d}-phase"
+            phase_dir.mkdir(parents=True, exist_ok=True)
 
         if result_status:
             # Record result
-            phase_dir = planning_dir / "phases" / f"{phase_number:02d}-{phase_info.get('name', 'phase').lower().replace(' ', '-')}"
-            phase_dir.mkdir(parents=True, exist_ok=True)
-
             uat_path = phase_dir / f"phase-{phase_number:02d}-UAT.md"
             uat_content = f"""---
 phase: {phase_number}
@@ -74,21 +62,14 @@ status: {result_status}
 ## Test Results
 **Status**: {result_status.upper()}
 
-## Verification Criteria
-{chr(10).join(f"- [{'x' if result_status == 'pass' else ' '}] {c}" for c in verification.get('criteria', []))}
-
 ## Notes
-[Add any notes about the verification]
+[Add verification notes]
 """
             uat_path.write_text(uat_content)
             result["uat_file"] = str(uat_path)
             result["status"] = result_status
 
             if result_status == "pass":
-                update_state(project_path, {
-                    "current_phase": phase_number,
-                    "status": "verified"
-                })
                 result["message"] = f"Phase {phase_number} verified successfully"
                 result["next_steps"] = [
                     "Proceed to next phase",
@@ -101,10 +82,8 @@ status: {result_status}
                     f"Re-run /coder:verify-work {phase_number} --result pass when fixed"
                 ]
         else:
-            # Show verification checklist
             result["status"] = "awaiting_verification"
-            result["checklist"] = verification.get("criteria", [])
-            result["message"] = "Review the checklist and record result"
+            result["message"] = "Review the phase and record result"
             result["next_steps"] = [
                 f"/coder:verify-work {phase_number} --result pass",
                 f"/coder:verify-work {phase_number} --result fail"
@@ -123,7 +102,6 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse --result argument
     result_status = None
     if "--result" in sys.argv:
         idx = sys.argv.index("--result")

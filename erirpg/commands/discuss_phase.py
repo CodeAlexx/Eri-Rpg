@@ -2,12 +2,6 @@
 """
 /coder:discuss-phase - Capture implementation decisions for a phase.
 
-Creates CONTEXT.md with:
-- Implementation approach
-- Key decisions
-- Constraints
-- Dependencies
-
 Usage:
     python -m erirpg.commands.discuss_phase <phase-number> [--json]
 """
@@ -18,8 +12,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import ensure_planning_dir, get_phase_info
-from erirpg.coder.planning import create_phase_directory
+from erirpg.coder import ensure_planning_dir, load_roadmap
 
 
 def discuss_phase(
@@ -40,29 +33,32 @@ def discuss_phase(
     try:
         planning_dir = ensure_planning_dir(project_path)
 
-        # Get phase info
-        phase_info = get_phase_info(project_path, phase_number)
+        # Get phase info from roadmap
+        roadmap = load_roadmap(project_path)
+        phase_info = None
+        for p in roadmap.get("phases", []):
+            if p.get("number") == phase_number:
+                phase_info = p
+                break
+
         if not phase_info:
-            result["error"] = f"Phase {phase_number} not found"
-            if output_json:
-                print(json.dumps(result, indent=2, default=str))
-            return result
+            phase_info = {"number": phase_number, "name": f"Phase {phase_number}"}
 
         result["phase_info"] = phase_info
 
-        # Create/get phase directory
+        # Create phase directory
         phase_name = phase_info.get("name", f"phase-{phase_number}")
-        phase_dir = create_phase_directory(project_path, phase_number, phase_name)
+        phase_slug = phase_name.lower().replace(" ", "-")
+        phase_dir = planning_dir / "phases" / f"{phase_number:02d}-{phase_slug}"
+        phase_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create or read CONTEXT.md
+        # Create CONTEXT.md
         context_path = phase_dir / f"phase-{phase_number:02d}-CONTEXT.md"
 
         if context_path.exists():
             result["context_file"] = str(context_path)
             result["exists"] = True
-            result["content"] = context_path.read_text()
         else:
-            # Create new CONTEXT.md
             context_content = f"""---
 phase: {phase_number}
 name: {phase_name}
@@ -80,24 +76,18 @@ status: discussing
 
 ## Key Decisions
 - Decision 1: [Rationale]
-- Decision 2: [Rationale]
 
 ## Constraints
 - [List any constraints]
 
 ## Dependencies
-- [List dependencies on other phases/systems]
+- [List dependencies]
 
 ## Open Questions
 - [ ] [Question 1]
-- [ ] [Question 2]
-
-## Notes
-[Additional context and notes]
 """
             context_path.write_text(context_content)
             result["context_file"] = str(context_path)
-            result["exists"] = False
             result["created"] = True
 
         result["next_steps"] = [

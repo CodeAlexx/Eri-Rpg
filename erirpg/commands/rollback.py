@@ -2,8 +2,6 @@
 """
 /coder:rollback - Undo execution via git.
 
-Rolls back to a previous checkpoint or commit.
-
 Usage:
     python -m erirpg.commands.rollback [--json]
     python -m erirpg.commands.rollback --to <commit> [--json]
@@ -16,15 +14,16 @@ from pathlib import Path
 from typing import Optional
 
 from erirpg.coder.git_ops import (
-    rollback_to_checkpoint,
-    list_checkpoints,
-    get_current_commit,
+    preview_rollback,
+    execute_rollback,
+    find_last_plan_commits,
+    get_commit_hash,
 )
 
 
 def rollback(
     to_commit: Optional[str] = None,
-    list_checkpoints_only: bool = False,
+    list_checkpoints: bool = False,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -38,37 +37,37 @@ def rollback(
     }
 
     try:
-        if list_checkpoints_only:
-            # List available checkpoints
-            checkpoints = list_checkpoints(project_path)
-            result["checkpoints"] = checkpoints
-            result["count"] = len(checkpoints)
+        if list_checkpoints:
+            # List available plan commits as checkpoints
+            commits = find_last_plan_commits()
+            result["checkpoints"] = commits
+            result["count"] = len(commits)
 
         elif to_commit:
-            # Rollback to specific commit
-            current = get_current_commit(project_path)
+            # Preview and execute rollback
+            current = get_commit_hash("HEAD")
             result["before"] = current
 
-            rollback_result = rollback_to_checkpoint(project_path, to_commit)
-            result["after"] = rollback_result.get("commit")
-            result["status"] = "rolled_back"
-            result["message"] = f"Rolled back to {to_commit}"
+            preview = preview_rollback(to_commit)
+            result["preview"] = preview
+
+            if preview.get("can_rollback"):
+                rollback_result = execute_rollback(to_commit)
+                result["after"] = get_commit_hash("HEAD")
+                result["status"] = "rolled_back"
+                result["message"] = f"Rolled back to {to_commit}"
+            else:
+                result["status"] = "cannot_rollback"
+                result["message"] = preview.get("reason", "Rollback not possible")
 
         else:
-            # Rollback to last checkpoint
-            checkpoints = list_checkpoints(project_path)
-            if checkpoints:
-                last_checkpoint = checkpoints[0]
-                current = get_current_commit(project_path)
-                result["before"] = current
-
-                rollback_result = rollback_to_checkpoint(project_path, last_checkpoint["commit"])
-                result["after"] = last_checkpoint["commit"]
-                result["status"] = "rolled_back"
-                result["message"] = f"Rolled back to last checkpoint: {last_checkpoint.get('name', last_checkpoint['commit'])}"
+            # Show last commits as potential rollback points
+            commits = find_last_plan_commits()
+            if commits:
+                result["available_checkpoints"] = commits[:5]
+                result["message"] = "Use --to <commit> to rollback, or --list to see all"
             else:
-                result["status"] = "no_checkpoints"
-                result["message"] = "No checkpoints available"
+                result["message"] = "No plan commits found"
 
     except Exception as e:
         result["error"] = str(e)
@@ -82,20 +81,15 @@ def rollback(
 def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
-    list_only = "--list" in sys.argv
+    list_checkpoints = "--list" in sys.argv
 
-    # Parse --to argument
     to_commit = None
     if "--to" in sys.argv:
         idx = sys.argv.index("--to")
         if idx + 1 < len(sys.argv):
             to_commit = sys.argv[idx + 1]
 
-    rollback(
-        to_commit=to_commit,
-        list_checkpoints_only=list_only,
-        output_json=output_json
-    )
+    rollback(to_commit=to_commit, list_checkpoints=list_checkpoints, output_json=output_json)
 
 
 if __name__ == "__main__":

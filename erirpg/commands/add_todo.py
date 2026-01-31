@@ -2,8 +2,6 @@
 """
 /coder:add-todo - Capture idea for later.
 
-Stores todos in .planning/todos/ for later implementation.
-
 Usage:
     python -m erirpg.commands.add_todo <idea> [--priority high|medium|low] [--json]
 """
@@ -12,10 +10,8 @@ import json
 import sys
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 
-from erirpg.coder.state import ensure_planning_dir
-from erirpg.coder.todos import add_todo as _add_todo, list_todos
+from erirpg.coder.todos import add_todo as _add_todo
 
 
 def add_todo(
@@ -27,8 +23,6 @@ def add_todo(
     """Add a todo item."""
     if project_path is None:
         project_path = Path.cwd()
-
-    ensure_planning_dir(project_path)
 
     result = {
         "command": "add-todo",
@@ -53,16 +47,13 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse priority
     priority = "medium"
     if "--priority" in sys.argv:
         idx = sys.argv.index("--priority")
         if idx + 1 < len(sys.argv):
             priority = sys.argv[idx + 1]
 
-    # Get idea (non-flag arguments)
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    # Remove priority value if it was parsed
     if priority in args:
         args.remove(priority)
 

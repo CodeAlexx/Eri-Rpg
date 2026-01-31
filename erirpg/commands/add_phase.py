@@ -4,7 +4,6 @@
 
 Usage:
     python -m erirpg.commands.add_phase <name> [--json]
-    python -m erirpg.commands.add_phase <name> --goal <goal> [--json]
 """
 
 import json
@@ -12,13 +11,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.state import ensure_planning_dir
-from erirpg.coder.planning import add_phase_to_roadmap, get_roadmap_phases
+from erirpg.coder import ensure_planning_dir, load_roadmap
 
 
 def add_phase(
     name: str,
-    goal: Optional[str] = None,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -33,21 +30,31 @@ def add_phase(
     }
 
     try:
-        ensure_planning_dir(project_path)
+        planning_dir = ensure_planning_dir(project_path)
+        roadmap_path = planning_dir / "ROADMAP.md"
 
-        # Get existing phases to determine number
-        existing = get_roadmap_phases(project_path)
-        new_number = len(existing) + 1
+        # Count existing phases
+        roadmap = load_roadmap(project_path)
+        existing = len(roadmap.get("phases", []))
+        new_number = existing + 1
 
-        # Add phase
-        phase = add_phase_to_roadmap(
-            project_path,
-            number=new_number,
-            name=name,
-            goal=goal
-        )
+        # Append to ROADMAP.md
+        new_section = f"""
 
-        result["phase"] = phase
+## Phase {new_number}: {name}
+**Status:** pending
+**Goal:** [Define goal]
+
+### Success Criteria
+- [ ] [Criterion 1]
+"""
+
+        if roadmap_path.exists():
+            content = roadmap_path.read_text()
+            roadmap_path.write_text(content + new_section)
+        else:
+            roadmap_path.write_text(f"# Roadmap\n{new_section}")
+
         result["phase_number"] = new_number
         result["message"] = f"Phase {new_number}: {name} added to roadmap"
 
@@ -64,27 +71,17 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse --goal argument
-    goal = None
-    if "--goal" in sys.argv:
-        idx = sys.argv.index("--goal")
-        if idx + 1 < len(sys.argv):
-            goal = sys.argv[idx + 1]
-
-    # Get name (non-flag arguments)
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if goal and goal in args:
-        args.remove(goal)
 
     if not args:
         print(json.dumps({
             "error": "Phase name required",
-            "usage": "python -m erirpg.commands.add_phase <name> [--goal <goal>]"
+            "usage": "python -m erirpg.commands.add_phase <name>"
         }, indent=2))
         sys.exit(1)
 
     name = " ".join(args)
-    add_phase(name, goal=goal, output_json=output_json)
+    add_phase(name, output_json=output_json)
 
 
 if __name__ == "__main__":

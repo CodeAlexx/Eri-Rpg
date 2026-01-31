@@ -2,8 +2,6 @@
 """
 /coder:merge - Combine multiple plans.
 
-Merges multiple plan files into a single comprehensive plan.
-
 Usage:
     python -m erirpg.commands.merge <plan1> <plan2> [plan3...] [--json]
     python -m erirpg.commands.merge <plan1> <plan2> --output <file> [--json]
@@ -27,7 +25,6 @@ def merge(
     if project_path is None:
         project_path = Path.cwd()
 
-    # Resolve plan paths
     plan_paths = []
     for pf in plan_files:
         path = Path(pf)
@@ -42,16 +39,14 @@ def merge(
     }
 
     try:
-        # Check all plans exist
         missing = [str(p) for p in plan_paths if not p.exists()]
         if missing:
             result["error"] = f"Plan files not found: {missing}"
         else:
-            # Merge the plans
-            merged_path = merge_plans(plan_paths, output_file=output_file)
-            result["merged_plan"] = str(merged_path)
+            merged = merge_plans(plan_paths, output_file)
+            result["merged_plan"] = merged
             result["plans_merged"] = len(plan_paths)
-            result["message"] = f"Merged {len(plan_paths)} plans into {merged_path}"
+            result["message"] = f"Merged {len(plan_paths)} plans"
 
     except Exception as e:
         result["error"] = str(e)
@@ -66,14 +61,12 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse --output argument
     output_file = None
     if "--output" in sys.argv:
         idx = sys.argv.index("--output")
         if idx + 1 < len(sys.argv):
             output_file = sys.argv[idx + 1]
 
-    # Get plan files (non-flag arguments)
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if output_file and output_file in args:
         args.remove(output_file)

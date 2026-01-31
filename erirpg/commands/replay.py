@@ -2,8 +2,6 @@
 """
 /coder:replay - Re-run phase with different parameters.
 
-Re-executes a phase, optionally with different settings.
-
 Usage:
     python -m erirpg.commands.replay <phase-number> [--json]
     python -m erirpg.commands.replay <phase-number> --reset [--json]
@@ -14,12 +12,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.planning import (
-    get_phase_info,
-    reset_phase,
-    prepare_replay,
-)
-from erirpg.coder.git_ops import rollback_to_phase_start
+from erirpg.coder.planning import prepare_replay, list_phase_plans
+from erirpg.coder import load_roadmap
 
 
 def replay(
@@ -39,29 +33,20 @@ def replay(
     }
 
     try:
-        # Get phase info
-        phase_info = get_phase_info(project_path, phase_number)
-        if not phase_info:
-            result["error"] = f"Phase {phase_number} not found"
-        else:
-            result["phase_info"] = phase_info
+        # Get phase plans
+        plans = list_phase_plans(phase_number, project_path)
+        result["plans_found"] = len(plans)
+        result["plans"] = plans
 
-            if reset_first:
-                # Reset phase state and git
-                rollback_result = rollback_to_phase_start(project_path, phase_number)
-                reset_result = reset_phase(project_path, phase_number)
-                result["reset"] = True
-                result["rollback"] = rollback_result
-                result["reset_result"] = reset_result
+        # Prepare replay
+        replay_info = prepare_replay(phase_number, project_path)
+        result["replay_info"] = replay_info
 
-            # Prepare for replay
-            replay_info = prepare_replay(project_path, phase_number)
-            result["replay_info"] = replay_info
-            result["message"] = f"Phase {phase_number} prepared for replay"
-            result["next_steps"] = [
-                f"Run /coder:execute-phase {phase_number} to re-execute",
-                "Modify plans first if needed"
-            ]
+        result["message"] = f"Phase {phase_number} prepared for replay"
+        result["next_steps"] = [
+            f"Run /coder:execute-phase {phase_number} to re-execute",
+            "Modify plans first if needed"
+        ]
 
     except Exception as e:
         result["error"] = str(e)

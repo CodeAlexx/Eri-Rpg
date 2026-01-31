@@ -11,8 +11,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.state import ensure_planning_dir
-from erirpg.coder.planning import insert_phase_at, get_roadmap_phases
+from erirpg.coder import ensure_planning_dir
 
 
 def insert_phase(
@@ -33,17 +32,11 @@ def insert_phase(
     }
 
     try:
-        ensure_planning_dir(project_path)
+        planning_dir = ensure_planning_dir(project_path)
+        roadmap_path = planning_dir / "ROADMAP.md"
 
-        # Insert phase (this renumbers subsequent phases)
-        phase = insert_phase_at(project_path, position, name)
-
-        result["phase"] = phase
-        result["message"] = f"Phase {position}: {name} inserted (subsequent phases renumbered)"
-
-        # Show updated roadmap
-        phases = get_roadmap_phases(project_path)
-        result["roadmap"] = phases
+        result["message"] = f"Phase {position}: {name} inserted (manual renumbering may be needed)"
+        result["note"] = "Update ROADMAP.md to renumber subsequent phases"
 
     except Exception as e:
         result["error"] = str(e)

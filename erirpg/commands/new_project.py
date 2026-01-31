@@ -2,13 +2,6 @@
 """
 /coder:new-project - Initialize a new project.
 
-Creates project structure with:
-- PROJECT.md
-- config.json
-- REQUIREMENTS.md
-- ROADMAP.md
-- STATE.md
-
 Usage:
     python -m erirpg.commands.new_project [name] [--json]
 """
@@ -19,8 +12,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import ensure_planning_dir
-from erirpg.coder import save_config, get_default_config
+from erirpg.coder import ensure_planning_dir, save_config, get_default_config
 
 
 def new_project(

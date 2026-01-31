@@ -2,8 +2,6 @@
 """
 /coder:split - Break plan into smaller plans.
 
-Splits a large plan into multiple smaller, focused plans.
-
 Usage:
     python -m erirpg.commands.split <plan-file> [--json]
     python -m erirpg.commands.split <plan-file> --into <n> [--json]
@@ -14,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from erirpg.coder.planning import split_plan, analyze_plan_complexity
+from erirpg.coder.planning import split_plan
 
 
 def split(
@@ -41,14 +39,9 @@ def split(
         if not plan_path.exists():
             result["error"] = f"Plan file not found: {plan_path}"
         else:
-            # Analyze complexity first
-            complexity = analyze_plan_complexity(plan_path)
-            result["complexity"] = complexity
-
-            # Split the plan
-            new_plans = split_plan(plan_path, into_parts=into_parts)
+            new_plans = split_plan(plan_path, into_parts)
             result["split_into"] = len(new_plans)
-            result["new_plans"] = [str(p) for p in new_plans]
+            result["new_plans"] = new_plans
             result["message"] = f"Split into {len(new_plans)} smaller plans"
 
     except Exception as e:
@@ -64,14 +57,12 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Parse --into argument
     into_parts = None
     if "--into" in sys.argv:
         idx = sys.argv.index("--into")
         if idx + 1 < len(sys.argv) and sys.argv[idx + 1].isdigit():
             into_parts = int(sys.argv[idx + 1])
 
-    # Get plan file
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if into_parts and str(into_parts) in args:
         args.remove(str(into_parts))

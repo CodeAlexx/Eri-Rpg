@@ -2,11 +2,6 @@
 """
 /coder:pause - Create handoff state when stopping.
 
-Saves current state for later resume including:
-- Current position
-- Active tasks
-- Context
-
 Usage:
     python -m erirpg.commands.pause [reason] [--json]
 """
@@ -17,10 +12,8 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import (
-    save_pause_state,
-    get_current_position,
-)
+from erirpg.coder import ensure_planning_dir
+from erirpg.coder.state import get_progress
 
 
 def pause(
@@ -39,18 +32,39 @@ def pause(
     }
 
     try:
-        # Get current position
-        position = get_current_position(project_path)
-        result["position"] = position
+        planning_dir = ensure_planning_dir(project_path)
 
-        # Save pause state
-        pause_state = save_pause_state(
-            project_path,
-            reason=reason,
-            position=position
-        )
-        result["pause_state"] = pause_state
-        result["resume_file"] = str(pause_state.get("resume_file", ""))
+        # Get current progress
+        progress = get_progress(project_path)
+        result["progress"] = progress
+
+        # Create RESUME.md
+        resume_path = planning_dir / "RESUME.md"
+        resume_content = f"""---
+paused_at: {result['paused_at']}
+phase: {progress.get('current_phase')}
+status: {progress.get('status')}
+reason: {reason or 'Manual pause'}
+---
+
+# Resume Point
+
+## Current State
+- **Phase**: {progress.get('current_phase', 'N/A')}
+- **Status**: {progress.get('status', 'idle')}
+
+## Reason for Pause
+{reason or 'Manual pause - no specific reason given'}
+
+## Next Steps
+{progress.get('next_action', {}).get('description', 'Check /coder:progress')}
+
+## Context
+[Add any important context for the next session]
+"""
+
+        resume_path.write_text(resume_content)
+        result["resume_file"] = str(resume_path)
         result["message"] = "Session paused. Use /coder:resume to continue."
 
         if reason:
@@ -69,7 +83,6 @@ def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
 
-    # Get reason (non-flag arguments)
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     reason = " ".join(args) if args else None
 

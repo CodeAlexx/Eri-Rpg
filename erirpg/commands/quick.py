@@ -2,12 +2,6 @@
 """
 /coder:quick - Ad-hoc task with coder guarantees.
 
-Creates a quick task with:
-- Plan file
-- Execution tracking
-- Summary generation
-- Git checkpoint
-
 Usage:
     python -m erirpg.commands.quick <description> [--json]
 """
@@ -18,8 +12,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from erirpg.coder.state import ensure_planning_dir
-from erirpg.coder.git_ops import create_checkpoint
+from erirpg.coder import ensure_planning_dir
 
 
 def quick(
@@ -70,20 +63,12 @@ status: planning
     plan_path = task_dir / "PLAN.md"
     plan_path.write_text(plan_content)
 
-    # Create git checkpoint
-    checkpoint = None
-    try:
-        checkpoint = create_checkpoint(f"quick-{task_id}-start", project_path)
-    except Exception as e:
-        checkpoint = {"error": str(e)}
-
     result = {
         "command": "quick",
         "task_id": task_id,
         "description": description,
         "task_dir": str(task_dir),
         "plan_path": str(plan_path),
-        "checkpoint": checkpoint,
         "status": "created",
         "next_steps": [
             f"Edit {plan_path} to refine tasks",
