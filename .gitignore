@@ -62,3 +62,6 @@ todo.txt
 # Large files from research
 rlm-source/
 research/
+
+# Private commands (not for public release)
+erirpg/commands/clone_behavior.py

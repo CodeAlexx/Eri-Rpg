@@ -795,6 +795,66 @@ You describe what you want, Claude handles all the coding. No programming knowle
 
 ---
 
+### /coder:clone-behavior
+
+**Purpose:** Clone an entire program by extracting behaviors and reimplementing from scratch.
+
+**Usage:**
+```
+/coder:clone-behavior <source-path> <new-project-name> [options]
+
+# Examples
+/coder:clone-behavior ~/onetrainer eritrainer --language rust
+/coder:clone-behavior ~/comfyui eri-comfy --language rust --framework candle
+/coder:clone-behavior ~/myapp myapp-v2 --dry-run
+```
+
+**Options:**
+- `--language <lang>` - Target language (default: same as source)
+- `--framework <framework>` - Target framework
+- `--skip-tests` - Don't extract test contracts
+- `--dry-run` - Show plan without executing
+- `--modules <list>` - Only clone specific modules (comma-separated)
+- `--exclude <list>` - Skip specific modules (comma-separated)
+
+**The 5-Phase Pipeline:**
+
+| Phase | What Happens |
+|-------|--------------|
+| **1. SCAN** | Extract BEHAVIOR.md for every module in source |
+| **2. PLAN** | Create roadmap from behaviors (not source code) |
+| **3. IMPLEMENT** | Build each module using behavior as requirements |
+| **4. VERIFY** | Behavior diff - does target match source behavior? |
+| **5. COMPLETE** | All behaviors verified, tag release |
+
+**What it chains:**
+- `/coder:map-codebase` - Understand source architecture
+- `/coder:blueprint add --extract-tests` - Extract all behaviors
+- `/coder:new-project --from-behaviors` - Create behavior-based roadmap
+- `/coder:execute-phase` - Implement each module
+- `/coder:verify-behavior` - Verify parity for each module
+
+**When to use:**
+- Porting a project to another language (Python → Rust)
+- Complete rewrite with guaranteed feature parity
+- Modernizing legacy code without losing functionality
+- Creating a clean-room implementation
+
+**Why it's different:**
+```
+Traditional: Source Code ──copy/translate──► Target Code
+                         (carries implementation baggage)
+
+Clone-behavior: Source Code ──extract──► BEHAVIOR.md ──implement──► Target Code
+                                        (portable spec)    (native implementation)
+```
+
+Target code is written fresh, following target idioms. Only the BEHAVIOR is preserved.
+
+**See also:** [docs/BLUEPRINT-BEHAVIOR.md](BLUEPRINT-BEHAVIOR.md) for behavior spec format.
+
+---
+
 ## Quick Reference Table
 
 | Command | Purpose |
@@ -803,6 +863,7 @@ You describe what you want, Claude handles all the coding. No programming knowle
 | `add-phase` | Append phase to roadmap |
 | `add-todo` | Capture idea for later |
 | `blueprint` | Manage program blueprints and behavior specs |
+| `clone-behavior` | Clone entire program with behavior parity |
 | `compare` | Evaluate approaches before choosing |
 | `complete-milestone` | Archive and tag release |
 | `cost` | Estimate tokens and API cost |
