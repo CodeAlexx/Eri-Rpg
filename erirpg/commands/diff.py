@@ -48,9 +48,20 @@ def diff(
             result.update(diff_data)
 
         else:
-            # Diff from last checkpoint
-            diff_data = get_diff_since_checkpoint()
-            result.update(diff_data)
+            # Diff from last checkpoint - requires active phase
+            # Fall back to git diff HEAD~1 if no phase active
+            from erirpg.coder.state import get_progress
+            progress = get_progress(project_path)
+            current_phase = progress.get("current_phase")
+            if current_phase:
+                diff_data = get_diff_since_checkpoint(current_phase)
+                result.update(diff_data)
+            else:
+                # No active phase, show recent diff
+                diff_data = get_diff("HEAD~1", "HEAD")
+                result["from"] = "HEAD~1"
+                result["to"] = "HEAD"
+                result.update(diff_data)
 
     except Exception as e:
         result["error"] = str(e)

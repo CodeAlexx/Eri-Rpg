@@ -30,7 +30,7 @@ def add_todo(
     }
 
     try:
-        todo = _add_todo(project_path, idea, priority)
+        todo = _add_todo(idea, priority=priority, project_path=project_path)
         result["status"] = "added"
         result["todo"] = todo
         result["message"] = f"Todo added: {idea[:50]}..."

@@ -60,7 +60,10 @@ def learn(
 
         elif pattern_description:
             # Store manually described pattern
-            stored = add_pattern(project_path, pattern_description)
+            # Use first few words as name, rest as description
+            words = pattern_description.split()
+            name = " ".join(words[:3]) if len(words) > 3 else pattern_description
+            stored = add_pattern(name, pattern_description, project_path=project_path)
             result["stored"] = stored
             result["message"] = "Pattern stored in knowledge base"
 
