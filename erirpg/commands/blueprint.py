@@ -258,8 +258,9 @@ has_behavior: {str(extract_behavior).lower()}
 
 | Given | When | Then |
 |-------|------|------|
-| [Precondition] | [Action] | [Expected result] |
-| [Precondition] | [Action] | [Expected result] |
+| Empty dataset | train() called | Raises EmptyDataError |
+| Valid config | model.forward(x) | Output shape matches input batch |
+| OOM condition | Training step | Graceful checkpoint + exit |
 
 ### Critical Assertions
 - [ ] [Assertion 1 from tests]
@@ -283,7 +284,7 @@ updated: {today}
 > Use this to implement equivalent functionality in different languages/frameworks.
 
 ## Purpose
-<!-- What this feature accomplishes for the user -->
+<!-- What this feature accomplishes for the user. One paragraph. -->
 {description}
 
 ## Inputs
@@ -321,39 +322,111 @@ updated: {today}
 ### Detailed Steps
 <!-- For each major operation -->
 {test_section}
+## Interface Contract
+<!-- Method signatures for implementation -->
+
+### Source Signatures
+- **Input type:** [e.g., torch.Tensor, array, stream]
+- **Output type:** [e.g., torch.Tensor, Result, Promise]
+- **Error handling:** [e.g., raises Exception, returns Error]
+- **Required decorators:** [e.g., @dataclass, #[derive(Debug)]]
+
+### Target Must Adapt To
+<!-- Filled by add-feature after scanning target codebase -->
+- **Base trait:** [scanned from target]
+- **Input wrapper:** [scanned from target]
+- **Output wrapper:** [scanned from target]
+- **Required impl:** [scanned from target]
+
 ## Dependencies
 
 ### Hard Dependencies (must exist)
-- [Required service/feature]
-- [Required service/feature]
+- [Tokenizer service]
+- [Checkpoint storage]
 
 ### Soft Dependencies (expects interface)
-- [Service name] - [any implementation acceptable]
-- [Service name] - [optional, graceful degradation if missing]
+- [Logging service] - any implementation
+- [Metrics collector] - optional, graceful degradation
+- [Progress reporter] - any implementation
 
 ### Environment
-- [Hardware requirement]
-- [Software requirement]
+- [GPU with 24GB+ VRAM]
+- [CUDA 12.0+]
+
+## Global State Impact
+<!-- Side effects that affect system state -->
+
+### Environment Variables
+- **Reads:** [CUDA_VISIBLE_DEVICES, HF_HOME]
+- **Writes:** [None]
+- **Modifies:** [None]
+
+### File System
+- **Creates:** [checkpoints/{{run_id}}/*.pt]
+- **Locks:** [None]
+- **Watches:** [None]
+
+### Processes
+- **Spawns:** [None]
+- **Background threads:** [1 (data prefetch)]
+- **IPC:** [None]
+
+### Network
+- **Outbound:** [HuggingFace Hub (model download)]
+- **Listens:** [None]
+
+### Global Mutations
+- **Sets:** [torch.backends.cudnn.benchmark = True]
+- **Thread safety:** [NOT thread-safe (global model state)]
 
 ## Resource Budget
 
 ### Memory
-- **Peak VRAM:** [amount for base config]
-- **System RAM:** [recommended amount]
-- **Scales:** [how it changes with config]
+- **Peak VRAM:** [22GB for batch_size=1]
+- **System RAM:** [32GB recommended]
+- **Scales:** [+4GB per batch_size increment]
 
 ### Time
-- **Init:** [startup time]
-- **Per operation:** [time per unit of work]
-- **Checkpoint:** [save time]
+- **Init:** [<30s]
+- **Per step:** [~500ms on RTX 4090]
+- **Checkpoint:** [~5s]
 
 ### Tradeoffs
-- [Can trade X for Y via config option]
-- [Can trade X for Y via config option]
+- [Can trade memory for speed via gradient_checkpointing]
+- [Can trade quality for speed via mixed precision]
 
 ### Constraints
-- [Hard limit that must not be exceeded]
-- [Recovery requirement]
+- [Must not exceed 24GB VRAM on consumer GPU]
+- [Must checkpoint every N steps (crash recovery)]
+
+## Ownership Model
+<!-- Data ownership semantics for memory-safe languages -->
+
+### Inputs
+| Data | Ownership | Notes |
+|------|-----------|-------|
+| dataset | Borrow (read-only) | Iterated, not consumed |
+| config | Move (consumed) | Merged into internal state |
+| model_path | Borrow | Read once at init |
+
+### Internal State
+| Data | Lifetime | Cleanup |
+|------|----------|---------|
+| model_weights | 'static | Explicit unload() required |
+| optimizer_state | Tied to training | Dropped after train() |
+| cached_tensors | Per-step | Cleared each iteration |
+
+### Outputs
+| Data | Ownership | Notes |
+|------|-----------|-------|
+| trained_model | Move (returned) | Caller owns |
+| metrics | Clone | Internal copy retained |
+| checkpoints | None (written to disk) | Caller reads from path |
+
+### Rust Translation Hints
+- dataset: `&Dataset` or `impl Iterator`
+- config: `Config` (owned)
+- model_weights: `Arc<RwLock<Weights>>` if shared
 
 ## State Machine
 <!-- For complex features with multiple states -->
@@ -361,20 +434,27 @@ updated: {today}
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
-    Idle --> Active: start()
-    Active --> Active: process()
-    Active --> Complete: finish()
-    Active --> Error: failure
-    Complete --> [*]
+    Idle --> Loading: load_model()
+    Loading --> Ready: model_loaded
+    Loading --> Error: load_failed
+    Ready --> Training: train()
+    Training --> Training: step_complete
+    Training --> Checkpointing: checkpoint_interval
+    Checkpointing --> Training: checkpoint_saved
+    Training --> Ready: training_complete
+    Training --> Error: training_failed
+    Ready --> [*]: unload()
     Error --> Idle: reset()
 ```
 
 ### State Descriptions
 | State | Entry Condition | Valid Actions |
 |-------|-----------------|---------------|
-| Idle | Initial or after reset | start() |
-| Active | start() called | process(), finish(), cancel() |
-| Complete | finish() called | - |
+| Idle | Initial or after reset | load_model() |
+| Loading | load_model() called | wait |
+| Ready | Model in memory | train(), unload() |
+| Training | train() called | pause(), cancel() |
+| Checkpointing | Interval reached | wait |
 | Error | Any failure | reset(), get_error() |
 
 ## User-Facing
