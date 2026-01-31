@@ -58,7 +58,8 @@ def load_target_conventions(program: str, project_path: Optional[Path] = None) -
     result = {
         "program": program,
         "conventions": None,
-        "overview": None
+        "overview": None,
+        "architecture_pattern": None
     }
 
     # Try to load overview
@@ -71,12 +72,133 @@ def load_target_conventions(program: str, project_path: Optional[Path] = None) -
     if conventions_file.exists():
         result["conventions"] = conventions_file.read_text()
 
+    # Try to load architecture
+    arch_file = program_dir / "architecture.md"
+    if arch_file.exists():
+        result["architecture"] = arch_file.read_text()
+
     # Load index for metadata
     index_file = program_dir / "_index.json"
     if index_file.exists():
         result["index"] = json.loads(index_file.read_text())
 
+    # Detect architecture pattern from content
+    result["architecture_pattern"] = detect_architecture_pattern(result)
+
     return result if result["overview"] or result["conventions"] else None
+
+
+def detect_architecture_pattern(target_info: dict) -> Optional[dict]:
+    """Detect architecture pattern from target blueprints."""
+    content = ""
+    if target_info.get("overview"):
+        content += target_info["overview"].lower()
+    if target_info.get("architecture"):
+        content += target_info["architecture"].lower()
+    if target_info.get("conventions"):
+        content += target_info["conventions"].lower()
+
+    patterns = {
+        "hexagonal": ["hexagonal", "ports and adapters", "port", "adapter", "domain"],
+        "layered": ["layer", "service layer", "data layer", "presentation layer"],
+        "mvc": ["model", "view", "controller", "mvc"],
+        "clean": ["clean architecture", "use case", "entity", "interface adapter"],
+        "modular": ["module", "plugin", "extension"],
+        "microservices": ["microservice", "service mesh", "api gateway"],
+        "event-driven": ["event", "message", "queue", "subscriber", "publisher"],
+    }
+
+    detected = None
+    max_score = 0
+
+    for pattern_name, keywords in patterns.items():
+        score = sum(1 for kw in keywords if kw in content)
+        if score > max_score:
+            max_score = score
+            detected = pattern_name
+
+    if detected:
+        layer_mapping = {
+            "hexagonal": {"domain": "Core logic", "ports": "Interfaces", "adapters": "Implementations"},
+            "layered": {"domain": "Business logic", "service": "Orchestration", "data": "Persistence"},
+            "mvc": {"model": "Data/logic", "view": "Presentation", "controller": "Input handling"},
+            "clean": {"entities": "Business objects", "use_cases": "Application logic", "adapters": "External"},
+            "modular": {"core": "Shared logic", "modules": "Features", "plugins": "Extensions"},
+        }
+        return {
+            "pattern": detected,
+            "confidence": min(max_score / 3, 1.0),
+            "layers": layer_mapping.get(detected, {"core": "Core", "adapters": "Adapters"})
+        }
+
+    return None
+
+
+def parse_behavior_dependencies(behavior_content: str) -> dict:
+    """Extract dependencies from behavior spec."""
+    result = {
+        "hard": [],
+        "soft": [],
+        "environment": []
+    }
+
+    lines = behavior_content.split("\n")
+    current_section = None
+
+    for line in lines:
+        line_lower = line.lower().strip()
+        if "hard dependencies" in line_lower:
+            current_section = "hard"
+        elif "soft dependencies" in line_lower:
+            current_section = "soft"
+        elif "environment" in line_lower and "##" in line:
+            current_section = "environment"
+        elif line.startswith("- ") and current_section:
+            dep = line[2:].strip()
+            if dep and not dep.startswith("["):
+                result[current_section].append(dep)
+
+    return result
+
+
+def parse_resource_budget(behavior_content: str) -> dict:
+    """Extract resource budget from behavior spec."""
+    result = {
+        "memory": {},
+        "time": {},
+        "constraints": []
+    }
+
+    lines = behavior_content.split("\n")
+    current_section = None
+
+    for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+
+        if "## resource budget" in line_lower:
+            current_section = "budget"
+        elif "### memory" in line_lower:
+            current_section = "memory"
+        elif "### time" in line_lower:
+            current_section = "time"
+        elif "### constraints" in line_lower:
+            current_section = "constraints"
+        elif current_section == "memory" and "**" in line:
+            if "vram" in line_lower:
+                result["memory"]["vram"] = line.split(":")[-1].strip() if ":" in line else ""
+            elif "ram" in line_lower:
+                result["memory"]["ram"] = line.split(":")[-1].strip() if ":" in line else ""
+        elif current_section == "time" and "**" in line:
+            if "init" in line_lower:
+                result["time"]["init"] = line.split(":")[-1].strip() if ":" in line else ""
+            elif "per" in line_lower:
+                result["time"]["per_op"] = line.split(":")[-1].strip() if ":" in line else ""
+        elif current_section == "constraints" and line.startswith("- "):
+            constraint = line[2:].strip()
+            if constraint and not constraint.startswith("["):
+                result["constraints"].append(constraint)
+
+    return result
 
 
 def add_feature(
@@ -136,6 +258,22 @@ def add_feature(
                 result["warning"] = (result.get("warning", "") +
                     f" No blueprint found for target {target_program}. Create with: /coder:blueprint add {target_program} overview").strip()
 
+            # Parse behavior spec for dependencies and resources
+            behavior_deps = None
+            resource_budget = None
+            if behavior:
+                behavior_deps = parse_behavior_dependencies(behavior["content"])
+                resource_budget = parse_resource_budget(behavior["content"])
+                result["source_dependencies"] = behavior_deps
+                result["source_resources"] = resource_budget
+
+            # Detect architecture pattern
+            arch_pattern = None
+            if target_conv:
+                arch_pattern = target_conv.get("architecture_pattern")
+                if arch_pattern:
+                    result["target_architecture"] = arch_pattern
+
             # Create feature spec with reference
             feature_dir = planning_dir / "features"
             feature_dir.mkdir(exist_ok=True)
@@ -193,22 +331,130 @@ The target program {target_program} has conventions defined:
 
 """
 
+            # Add architectural gravity section
+            feature_content += """
+## Architectural Gravity
+
+"""
+            if arch_pattern:
+                feature_content += f"""
+**Detected Pattern:** {arch_pattern['pattern'].title()} (confidence: {arch_pattern['confidence']:.0%})
+
+**Layer Mapping:**
+"""
+                for layer, desc in arch_pattern.get('layers', {}).items():
+                    feature_content += f"- **{layer}:** {desc}\n"
+
+                feature_content += f"""
+
+**Implementation Strategy:**
+1. Map behavior to DOMAIN layer first (pure logic, no framework deps)
+2. Create ADAPTERS for framework-specific code
+3. Never leak framework into domain
+
+**Example Structure:**
+```
+Behavior: "{description}"
+Domain:   {feature_slug.title().replace('-', '')}Trait with core methods
+Adapter:  Framework{feature_slug.title().replace('-', '')} implements trait
+```
+"""
+            else:
+                feature_content += """
+> Architecture pattern not detected. Analyze target blueprint.
+> Default approach: Domain layer (pure logic) + Adapters (framework-specific)
+"""
+
+            # Add dependency mapping section
+            feature_content += """
+## Dependency Mapping
+
+"""
+            if behavior_deps:
+                if behavior_deps.get("hard"):
+                    feature_content += "### Hard Dependencies (must satisfy)\n"
+                    for dep in behavior_deps["hard"]:
+                        feature_content += f"- [ ] {dep}\n"
+                    feature_content += "\n"
+
+                if behavior_deps.get("soft"):
+                    feature_content += "### Soft Dependencies (interface required)\n"
+                    for dep in behavior_deps["soft"]:
+                        feature_content += f"- [ ] {dep}\n"
+                    feature_content += "\n"
+
+                if behavior_deps.get("environment"):
+                    feature_content += "### Environment Requirements\n"
+                    for dep in behavior_deps["environment"]:
+                        feature_content += f"- [ ] {dep}\n"
+                    feature_content += "\n"
+            else:
+                feature_content += "> Dependencies not specified in behavior spec. Review source manually.\n\n"
+
+            # Add resource budget section
+            feature_content += """
+## Resource Budget
+
+"""
+            if resource_budget:
+                if resource_budget.get("memory"):
+                    feature_content += "### Memory\n"
+                    for key, val in resource_budget["memory"].items():
+                        if val:
+                            feature_content += f"- **{key.upper()}:** {val}\n"
+                    feature_content += "\n"
+
+                if resource_budget.get("time"):
+                    feature_content += "### Time\n"
+                    for key, val in resource_budget["time"].items():
+                        if val:
+                            feature_content += f"- **{key}:** {val}\n"
+                    feature_content += "\n"
+
+                if resource_budget.get("constraints"):
+                    feature_content += "### Constraints\n"
+                    for constraint in resource_budget["constraints"]:
+                        feature_content += f"- {constraint}\n"
+                    feature_content += "\n"
+
+                feature_content += """
+**Target Compatibility:**
+- [ ] Can meet memory requirements
+- [ ] Can meet time requirements
+- [ ] All constraints acknowledged
+
+"""
+            else:
+                feature_content += "> Resource budget not specified in behavior spec.\n\n"
+
             feature_content += f"""
 ## Implementation Plan
 
 1. **Load source behavior**: `/coder:blueprint load {reference} --behavior`
 2. **Load target conventions**: `/coder:blueprint load {target_program}/overview`
-3. **Plan implementation** in target's style using source's behavior
-4. **Create files** following target's patterns
+3. **Satisfy dependencies** - stub or implement each requirement
+4. **Map to domain layer** - pure logic, no framework
+5. **Create adapters** - framework-specific implementations
+6. **Verify resource budget** - test against constraints
 
 ## Key Decisions
 - [ ] Language/framework choices aligned with target
 - [ ] API design matches target conventions
 - [ ] Error handling follows target patterns
 - [ ] Testing approach per target norms
+- [ ] State machine preserved from source
 
 ## Files to Create
-<!-- List files in target's structure -->
+<!-- List files in target's structure, organized by layer -->
+
+### Domain Layer
+- `src/domain/{feature_slug}.rs` (or appropriate extension)
+
+### Adapters
+- `src/adapters/{feature_slug}_impl.rs`
+
+### Tests
+- `tests/{feature_slug}_test.rs`
 
 ## Notes
 <!-- Implementation notes, gotchas from porting -->
@@ -220,6 +466,8 @@ The target program {target_program} has conventions defined:
             result["next_steps"] = [
                 f"Load source behavior: /coder:blueprint load {reference} --behavior",
                 f"Load target conventions: /coder:blueprint load {target_program}/overview",
+                "Review dependency mapping and satisfy requirements",
+                "Verify resource budget compatibility",
                 "Plan implementation in target's style",
                 f"Run /coder:plan-phase for the feature"
             ]

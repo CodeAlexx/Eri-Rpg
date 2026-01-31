@@ -170,6 +170,7 @@ def blueprint_add(
     source_path: Optional[str] = None,
     depends_on: Optional[List[str]] = None,
     extract_behavior: bool = False,
+    extract_tests: bool = False,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -248,11 +249,30 @@ has_behavior: {str(extract_behavior).lower()}
 
         # Create behavior file if requested
         if extract_behavior:
+            # Build test contracts section if requested
+            test_section = ""
+            if extract_tests:
+                test_section = """
+## Test Contracts
+<!-- Extracted from source tests - these become target validation requirements -->
+
+| Given | When | Then |
+|-------|------|------|
+| [Precondition] | [Action] | [Expected result] |
+| [Precondition] | [Action] | [Expected result] |
+
+### Critical Assertions
+- [ ] [Assertion 1 from tests]
+- [ ] [Assertion 2 from tests]
+
+"""
+
             behavior_content = f"""---
 program: {program}
 section: {section_name}
 type: behavior-spec
 portable: true
+has_tests: {str(extract_tests).lower()}
 created: {today}
 updated: {today}
 ---
@@ -268,62 +288,152 @@ updated: {today}
 
 ## Inputs
 <!-- What data/config it accepts -->
-- **Required inputs:**
-  - [Input 1]: [format, constraints]
-- **Optional inputs:**
-  - [Input 2]: [format, default value]
-- **Configuration:**
-  - [Config option]: [description]
+
+### Required
+- **[Input name]:** [Format, constraints, examples]
+
+### Optional
+- **[Input name]:** [Format, default value, effect]
+
+### Configuration
+- **[Option name]:** [Description, valid values, default]
 
 ## Outputs
 <!-- What it produces -->
-- **Primary output:**
-  - [Output description]
-- **Side effects:**
-  - [Files created, state changes]
-- **Artifacts:**
-  - [Logs, checkpoints, etc.]
+
+### Primary
+- [Main output description, format, location]
+
+### Side Effects
+- [Files created, state changes]
+
+### Artifacts
+- [Logs, checkpoints, intermediate files]
 
 ## Behavior
 <!-- Step by step what happens (user perspective, not code) -->
+
+### Normal Flow
 1. [First thing that happens]
 2. [Second thing that happens]
 3. [Result user sees]
 
-## Constraints
-<!-- Non-functional requirements -->
-- **Memory:** [limits, requirements]
-- **Performance:** [speed expectations]
-- **Dependencies:** [what other features must exist]
+### Detailed Steps
+<!-- For each major operation -->
+{test_section}
+## Dependencies
+
+### Hard Dependencies (must exist)
+- [Required service/feature]
+- [Required service/feature]
+
+### Soft Dependencies (expects interface)
+- [Service name] - [any implementation acceptable]
+- [Service name] - [optional, graceful degradation if missing]
+
+### Environment
+- [Hardware requirement]
+- [Software requirement]
+
+## Resource Budget
+
+### Memory
+- **Peak VRAM:** [amount for base config]
+- **System RAM:** [recommended amount]
+- **Scales:** [how it changes with config]
+
+### Time
+- **Init:** [startup time]
+- **Per operation:** [time per unit of work]
+- **Checkpoint:** [save time]
+
+### Tradeoffs
+- [Can trade X for Y via config option]
+- [Can trade X for Y via config option]
+
+### Constraints
+- [Hard limit that must not be exceeded]
+- [Recovery requirement]
+
+## State Machine
+<!-- For complex features with multiple states -->
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Active: start()
+    Active --> Active: process()
+    Active --> Complete: finish()
+    Active --> Error: failure
+    Complete --> [*]
+    Error --> Idle: reset()
+```
+
+### State Descriptions
+| State | Entry Condition | Valid Actions |
+|-------|-----------------|---------------|
+| Idle | Initial or after reset | start() |
+| Active | start() called | process(), finish(), cancel() |
+| Complete | finish() called | - |
+| Error | Any failure | reset(), get_error() |
 
 ## User-Facing
 <!-- How users interact with this -->
-- **CLI commands:**
-  - `command --flag`: [what it does]
-- **Config options:**
-  - `option_name`: [effect]
-- **Output files:**
-  - `path/to/output`: [contents]
+
+### CLI Commands
+- `command --flag`: [what it does]
+
+### Config Options
+```
+option_name: value  # effect
+```
+
+### Output Files
+- `path/to/output`: [what it contains]
 
 ## Edge Cases
 <!-- What happens in unusual situations -->
-- **When [condition X]:** [behavior]
-- **Error handling:** [what user sees on failure]
-- **Recovery:** [how to resume/retry]
+
+### Error Conditions
+- **When [condition X]:** [behavior, message user sees]
+- **When [condition Y]:** [behavior, message user sees]
+
+### Recovery
+- [How to resume after failure]
+- [How to retry operation]
+
+### Limits
+- [What happens at boundaries]
 
 ## Examples
 <!-- Concrete usage examples -->
-```
-# Example 1: Basic usage
-[command or config]
 
-# Example 2: Advanced usage
-[command or config]
+### Example 1: Basic Usage
+```
+# Input
+[what user provides]
+
+# Output
+[what user gets]
+```
+
+### Example 2: Advanced Usage
+```
+# Configuration
+[settings]
+
+# Command
+[what to run]
+
+# Result
+[outcome]
 ```
 """
             behavior_file.write_text(behavior_content)
             result["behavior_file"] = str(behavior_file)
             result["extract_behavior"] = True
+            if extract_tests:
+                result["extract_tests"] = True
 
         # Update index
         index = load_index(program, project_path)
@@ -336,6 +446,7 @@ updated: {today}
             if depends_on:
                 existing["depends_on"] = depends_on
             existing["has_behavior"] = extract_behavior
+            existing["has_tests"] = extract_tests
         else:
             index["sections"].append({
                 "name": section_name,
@@ -344,7 +455,8 @@ updated: {today}
                 "depends_on": depends_on or [],
                 "updated": today,
                 "description": description,
-                "has_behavior": extract_behavior
+                "has_behavior": extract_behavior,
+                "has_tests": extract_tests
             })
 
         if source_path:
@@ -365,6 +477,8 @@ updated: {today}
         ]
         if extract_behavior:
             next_steps.insert(1, f"Run behavior extractor: Task agent with eri-behavior-extractor on {source_path or 'source'}")
+        if extract_tests:
+            next_steps.insert(2, f"Extract test contracts from source tests")
         result["next_steps"] = next_steps
 
     except Exception as e:
@@ -761,9 +875,14 @@ def main():
         # Check for --extract-behavior
         extract_behavior = "--extract-behavior" in sys.argv
 
+        # Check for --extract-tests (implies --extract-behavior)
+        extract_tests = "--extract-tests" in sys.argv
+        if extract_tests:
+            extract_behavior = True
+
         blueprint_add(program, section, description, source_path=source_path,
                      depends_on=depends_on, extract_behavior=extract_behavior,
-                     output_json=output_json)
+                     extract_tests=extract_tests, output_json=output_json)
 
     elif subcommand == "load":
         if len(args) < 2:
