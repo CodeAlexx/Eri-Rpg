@@ -169,6 +169,7 @@ def blueprint_add(
     description: str,
     source_path: Optional[str] = None,
     depends_on: Optional[List[str]] = None,
+    extract_behavior: bool = False,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -196,9 +197,11 @@ def blueprint_add(
                 section_dir = section_dir / part
                 section_dir.mkdir(exist_ok=True)
             section_file = section_dir / f"{parts[-1]}.md"
+            behavior_file = section_dir / f"{parts[-1]}-BEHAVIOR.md"
             section_name = section
         else:
             section_file = program_dir / f"{section}.md"
+            behavior_file = program_dir / f"{section}-BEHAVIOR.md"
             section_name = section
 
         # Create blueprint file
@@ -210,6 +213,7 @@ source_path: {source_path or 'N/A'}
 created: {today}
 updated: {today}
 status: not_started
+has_behavior: {str(extract_behavior).lower()}
 ---
 
 # {section_name.replace('/', ' / ').title()}
@@ -242,6 +246,85 @@ status: not_started
         section_file.write_text(blueprint_content)
         result["blueprint_file"] = str(section_file)
 
+        # Create behavior file if requested
+        if extract_behavior:
+            behavior_content = f"""---
+program: {program}
+section: {section_name}
+type: behavior-spec
+portable: true
+created: {today}
+updated: {today}
+---
+
+# {section_name.replace('/', ' / ').title()} - Behavior Spec
+
+> Portable behavior specification. Describes WHAT this does, not HOW it's coded.
+> Use this to implement equivalent functionality in different languages/frameworks.
+
+## Purpose
+<!-- What this feature accomplishes for the user -->
+{description}
+
+## Inputs
+<!-- What data/config it accepts -->
+- **Required inputs:**
+  - [Input 1]: [format, constraints]
+- **Optional inputs:**
+  - [Input 2]: [format, default value]
+- **Configuration:**
+  - [Config option]: [description]
+
+## Outputs
+<!-- What it produces -->
+- **Primary output:**
+  - [Output description]
+- **Side effects:**
+  - [Files created, state changes]
+- **Artifacts:**
+  - [Logs, checkpoints, etc.]
+
+## Behavior
+<!-- Step by step what happens (user perspective, not code) -->
+1. [First thing that happens]
+2. [Second thing that happens]
+3. [Result user sees]
+
+## Constraints
+<!-- Non-functional requirements -->
+- **Memory:** [limits, requirements]
+- **Performance:** [speed expectations]
+- **Dependencies:** [what other features must exist]
+
+## User-Facing
+<!-- How users interact with this -->
+- **CLI commands:**
+  - `command --flag`: [what it does]
+- **Config options:**
+  - `option_name`: [effect]
+- **Output files:**
+  - `path/to/output`: [contents]
+
+## Edge Cases
+<!-- What happens in unusual situations -->
+- **When [condition X]:** [behavior]
+- **Error handling:** [what user sees on failure]
+- **Recovery:** [how to resume/retry]
+
+## Examples
+<!-- Concrete usage examples -->
+```
+# Example 1: Basic usage
+[command or config]
+
+# Example 2: Advanced usage
+[command or config]
+```
+"""
+            behavior_file.write_text(behavior_content)
+            result["behavior_file"] = str(behavior_file)
+            result["extract_behavior"] = True
+
         # Update index
         index = load_index(program, project_path)
 
@@ -252,6 +335,7 @@ status: not_started
             existing["status"] = "not_started"
             if depends_on:
                 existing["depends_on"] = depends_on
+            existing["has_behavior"] = extract_behavior
         else:
             index["sections"].append({
                 "name": section_name,
@@ -259,7 +343,8 @@ status: not_started
                 "status": "not_started",
                 "depends_on": depends_on or [],
                 "updated": today,
-                "description": description
+                "description": description,
+                "has_behavior": extract_behavior
             })
 
         if source_path:
@@ -273,11 +358,14 @@ status: not_started
         result["manifest_updated"] = True
 
         result["message"] = f"Blueprint created: {program}/{section_name}"
-        result["next_steps"] = [
+        next_steps = [
             f"Run codebase mapper on section: Task agent to analyze {source_path or 'source'}",
             f"Load blueprint: /coder:blueprint load {program}/{section_name}",
             f"Update status when complete: /coder:blueprint update {program}/{section_name}"
         ]
+        if extract_behavior:
+            next_steps.insert(1, f"Run behavior extractor: Task agent with eri-behavior-extractor on {source_path or 'source'}")
+        result["next_steps"] = next_steps
 
     except Exception as e:
         result["error"] = str(e)
@@ -290,6 +378,7 @@ status: not_started
 
 def blueprint_load(
     program_section: str,
+    behavior_only: bool = False,
     project_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
@@ -325,8 +414,10 @@ def blueprint_load(
             for part in section_parts[:-1]:
                 section_file = section_file / part
             section_file = section_file / f"{section_parts[-1]}.md"
+            behavior_file = section_file.parent / f"{section_parts[-1]}-BEHAVIOR.md"
         else:
             section_file = program_dir / f"{section}.md"
+            behavior_file = program_dir / f"{section}-BEHAVIOR.md"
 
         if not section_file.exists():
             result["error"] = f"Blueprint not found: {section_file}"
@@ -334,10 +425,27 @@ def blueprint_load(
                 print(json.dumps(result, indent=2))
             return result
 
-        # Load blueprint content
-        content = section_file.read_text()
-        result["content"] = content
-        result["file"] = str(section_file)
+        # Load blueprint content (unless behavior_only)
+        if not behavior_only:
+            content = section_file.read_text()
+            result["content"] = content
+            result["file"] = str(section_file)
+
+        # Load behavior spec if it exists
+        if behavior_file.exists():
+            result["behavior_content"] = behavior_file.read_text()
+            result["behavior_file"] = str(behavior_file)
+            result["has_behavior"] = True
+        else:
+            result["has_behavior"] = False
+
+        # If behavior_only but no behavior file
+        if behavior_only and not behavior_file.exists():
+            result["error"] = f"Behavior spec not found: {behavior_file}"
+            result["hint"] = "Create with: blueprint add --extract-behavior"
+            if output_json:
+                print(json.dumps(result, indent=2))
+            return result
 
         # Load index for dependency info
         index = load_index(program, project_path)
@@ -346,20 +454,21 @@ def blueprint_load(
         if section_info:
             result["section_info"] = section_info
 
-            # Load dependencies if any
-            deps = section_info.get("depends_on", [])
-            if deps:
-                result["dependencies"] = []
-                for dep in deps:
-                    dep_file = program_dir / f"{dep}.md"
-                    if dep_file.exists():
-                        result["dependencies"].append({
-                            "name": dep,
-                            "file": str(dep_file),
-                            "content": dep_file.read_text()
-                        })
+            # Load dependencies if any (skip for behavior_only)
+            if not behavior_only:
+                deps = section_info.get("depends_on", [])
+                if deps:
+                    result["dependencies"] = []
+                    for dep in deps:
+                        dep_file = program_dir / f"{dep}.md"
+                        if dep_file.exists():
+                            result["dependencies"].append({
+                                "name": dep,
+                                "file": str(dep_file),
+                                "content": dep_file.read_text()
+                            })
 
-        result["message"] = f"Loaded blueprint: {program_section}"
+        result["message"] = f"Loaded {'behavior spec' if behavior_only else 'blueprint'}: {program_section}"
 
     except Exception as e:
         result["error"] = str(e)
@@ -621,7 +730,19 @@ def main():
 
         program = args[1]
         section = args[2]
-        description = " ".join(args[3:])
+
+        # Filter out flag values from description
+        desc_args = []
+        skip_next = False
+        for i, arg in enumerate(args[3:]):
+            if skip_next:
+                skip_next = False
+                continue
+            if arg in ["--path", "--depends"]:
+                skip_next = True
+                continue
+            desc_args.append(arg)
+        description = " ".join(desc_args)
 
         # Check for --path
         source_path = None
@@ -637,8 +758,12 @@ def main():
             if idx + 1 < len(sys.argv):
                 depends_on = sys.argv[idx + 1].split(",")
 
+        # Check for --extract-behavior
+        extract_behavior = "--extract-behavior" in sys.argv
+
         blueprint_add(program, section, description, source_path=source_path,
-                     depends_on=depends_on, output_json=output_json)
+                     depends_on=depends_on, extract_behavior=extract_behavior,
+                     output_json=output_json)
 
     elif subcommand == "load":
         if len(args) < 2:
@@ -648,7 +773,8 @@ def main():
             }, indent=2))
             sys.exit(1)
 
-        blueprint_load(args[1], output_json=output_json)
+        behavior_only = "--behavior" in sys.argv or "--behavior-only" in sys.argv
+        blueprint_load(args[1], behavior_only=behavior_only, output_json=output_json)
 
     elif subcommand == "status":
         if len(args) < 2:
