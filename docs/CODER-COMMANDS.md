@@ -33,17 +33,28 @@ You describe what you want, Claude handles all the coding. No programming knowle
 
 **Usage:**
 ```
-/coder:add-feature <name> "<description>"
-/coder:add-feature auth "User authentication with email/password"
-/coder:add-feature payments "Stripe payment processing"
+# Standard mode - new feature
+/coder:add-feature "<description>"
+/coder:add-feature "User authentication with email/password"
+
+# Reference mode - port from another program
+/coder:add-feature <target> <feature> "<description>" --reference <source>/<section>
+/coder:add-feature eritrainer sana "Sana model training" --reference onetrainer/models/sana
 ```
 
 **When to use:**
 - Adding functionality to a working project
+- Porting features from one codebase to another
 - When you don't want to restructure the whole app
 - After running `/coder:map-codebase` to understand existing code
 
-**Why needed:** Lets you add features that respect existing architecture and conventions rather than starting from scratch.
+**Reference mode:**
+- Loads source behavior spec (what it does, not how)
+- Scans target for interface requirements
+- Checks ownership and side effect compatibility
+- Creates feature spec with implementation plan
+
+**Why needed:** Lets you add features that respect existing architecture. For porting, extracts behavior so you implement in target's native style.
 
 ---
 
@@ -83,6 +94,54 @@ You describe what you want, Claude handles all the coding. No programming knowle
 - Things to consider for v2
 
 **Why needed:** Don't lose good ideas. Captures them to `.planning/todos/` for later review.
+
+---
+
+### /coder:blueprint
+
+**Purpose:** Manage section-level blueprints of complex programs for documentation and feature porting.
+
+**Usage:**
+```
+# List all blueprints
+/coder:blueprint list
+
+# Add a blueprint section
+/coder:blueprint add <program> <section> "<description>"
+/coder:blueprint add onetrainer models/flux "Flux model training"
+
+# Add with behavior extraction (for porting)
+/coder:blueprint add onetrainer models/sana "Sana model" --extract-tests
+
+# Load a blueprint
+/coder:blueprint load onetrainer/models/sana
+
+# Load only behavior spec (portable)
+/coder:blueprint load onetrainer/models/sana --behavior
+
+# Check blueprint status
+/coder:blueprint status onetrainer
+
+# View dependencies
+/coder:blueprint deps onetrainer
+```
+
+**Flags:**
+- `--path <path>` - Source code path to analyze
+- `--depends <sections>` - Comma-separated dependencies
+- `--extract-behavior` - Create portable -BEHAVIOR.md file
+- `--extract-tests` - Also extract test contracts (implies --extract-behavior)
+- `--behavior` - Load only behavior spec (with load command)
+- `--status <status>` - Set status: complete, in_progress, not_started, outdated
+
+**When to use:**
+- Documenting complex programs section by section
+- Preparing features for porting to another language
+- Creating architectural reference for large codebases
+
+**Why needed:** Blueprints provide structured program documentation. Behavior specs enable cross-language porting by extracting WHAT not HOW.
+
+**See also:** [docs/BLUEPRINT-BEHAVIOR.md](BLUEPRINT-BEHAVIOR.md) for complete reference.
 
 ---
 
@@ -703,13 +762,47 @@ You describe what you want, Claude handles all the coding. No programming knowle
 
 ---
 
+### /coder:verify-behavior
+
+**Purpose:** Verify implementation matches behavior spec (behavior diff).
+
+**Usage:**
+```
+/coder:verify-behavior <program>/<feature>
+/coder:verify-behavior eritrainer/sana
+```
+
+**What it checks:**
+- Input/output types match spec
+- State machine preserved
+- No forbidden side effects
+- Ownership model compatible
+- Test contracts have tests
+- Resource constraints documented
+
+**Status values:**
+- ✅ Pass - code matches spec
+- ❌ Fail - must fix before done
+- ⚠️ Manual - needs human verification
+- ⏳ Pending - not yet analyzed
+
+**When to use:**
+- After implementing a feature from behavior spec
+- After refactoring ported feature
+- Before marking feature complete
+
+**Why needed:** Ensures implementation actually matches the behavior spec. Blocks completion on violations. See [docs/BLUEPRINT-BEHAVIOR.md](BLUEPRINT-BEHAVIOR.md).
+
+---
+
 ## Quick Reference Table
 
 | Command | Purpose |
 |---------|---------|
-| `add-feature` | Add feature to existing codebase |
+| `add-feature` | Add feature to existing codebase (or port with --reference) |
 | `add-phase` | Append phase to roadmap |
 | `add-todo` | Capture idea for later |
+| `blueprint` | Manage program blueprints and behavior specs |
 | `compare` | Evaluate approaches before choosing |
 | `complete-milestone` | Archive and tag release |
 | `cost` | Estimate tokens and API cost |
@@ -740,6 +833,7 @@ You describe what you want, Claude handles all the coding. No programming knowle
 | `settings` | View/change preferences |
 | `split` | Break plan into smaller ones |
 | `template` | Save as reusable template |
+| `verify-behavior` | Verify code matches behavior spec |
 | `verify-work` | Test completed phase |
 
 ---

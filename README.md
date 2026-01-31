@@ -189,6 +189,7 @@ This persists across sessions. Claude resumes where it left off.
 
 ### Guides
 - [docs/CODER-USAGE.md](docs/CODER-USAGE.md) - Vibe coding guide (no code required)
+- [docs/BLUEPRINT-BEHAVIOR.md](docs/BLUEPRINT-BEHAVIOR.md) - Cross-language feature porting
 - [docs/MANUAL.md](docs/MANUAL.md) - Complete EriRPG reference
 - [docs/TYPICAL_WORKFLOW.md](docs/TYPICAL_WORKFLOW.md) - Quick workflow guide
 
@@ -214,6 +215,67 @@ Based on: [Who's in Charge? Disempowerment Patterns in Real-World LLM Usage](htt
 > "Interactions with greater disempowerment potential receive higher user approval ratings, possibly suggesting a tension between short-term user preferences and long-term human empowerment."
 
 EriRPG optimizes for your growth, not your approval.
+
+## Blueprint & Behavior: Cross-Language Feature Porting
+
+EriRPG includes a **blueprint system** for documenting complex programs and a **behavior extraction** system for porting features across languages.
+
+### The Problem
+
+You have a Python ML training feature. You want to port it to Rust. Copy-pasting doesn't work - different idioms, different patterns, different memory models.
+
+### The Solution
+
+Extract **WHAT** it does (behavior), not **HOW** it's coded. Then implement the behavior in the target's style.
+
+```bash
+# 1. Create behavior spec from source
+/coder:blueprint add onetrainer models/sana "Sana model" --extract-tests
+
+# 2. Add feature to target using source behavior
+/coder:add-feature eritrainer sana "Sana model" --reference onetrainer/models/sana
+
+# 3. Verify implementation matches spec
+/coder:verify-behavior eritrainer/sana
+```
+
+### What Gets Extracted
+
+| Section | Purpose |
+|---------|---------|
+| **Interface Contract** | Input/output types, method signatures |
+| **Global State Impact** | Env vars, files, threads, network |
+| **Ownership Model** | Borrow/move/clone semantics for Rust |
+| **Resource Budget** | Memory, time, constraints |
+| **State Machine** | States, transitions, valid actions |
+| **Test Contracts** | Given/When/Then from source tests |
+
+### What Gets Checked
+
+When you run `add-feature --reference`:
+- ✅ Scans target for interface requirements (traits, wrappers)
+- ✅ Checks ownership compatibility
+- ✅ Checks side effect compatibility
+- ❌ Reports violations you must fix
+- ⚠️ Flags items needing manual review
+
+### Verification Table
+
+After implementation, `verify-behavior` generates:
+
+```
+| Behavior Spec           | Code Check              | Status |
+|-------------------------|-------------------------|--------|
+| Input: Dataset          | fn new(dataset: &Dataset)| ✅     |
+| State: Idle→Loading     | Found state enum        | ✅     |
+| No global mutations     | No static mut           | ✅     |
+| Resource: <24GB VRAM    | No check possible       | ⚠️ Manual |
+```
+
+**Guides:**
+- [docs/BLUEPRINT-BEHAVIOR.md](docs/BLUEPRINT-BEHAVIOR.md) - Complete blueprint & behavior reference
+
+---
 
 ## Eri-Coder: Vibe Code New Projects
 
@@ -262,10 +324,12 @@ Alpha v0.57 - usable but evolving.
 - ✅ Session context persistence (SQLite)
 - ✅ Automatic git branch tracking
 - ✅ **Eri-Coder vibe coding workflow**
+- ✅ **Blueprint system** (program documentation)
+- ✅ **Behavior extraction** (cross-language porting)
+- ✅ **Behavior verification** (implementation validation)
 
 ### In Progress
 - ⚠️ Multi-agent parallel execution
-- ⚠️ Transplant mode (copy features between projects)
 
 ## License
 
