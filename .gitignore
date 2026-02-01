@@ -65,3 +65,6 @@ research/
 
 # Private commands (not for public release)
 erirpg/commands/clone_behavior.py
+
+# Planning artifacts from clone-behavior workflow
+.planning/

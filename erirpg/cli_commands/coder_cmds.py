@@ -1772,7 +1772,7 @@ def get_codebase_overview(focus: str = "all") -> dict:
         project_type = "node"
     elif (cwd / "Cargo.toml").exists():
         project_type = "rust"
-    elif (cwd / "pyproject.toml").exists() or (cwd / "setup.py").exists():
+    elif (cwd / "pyproject.toml").exists() or (cwd / "setup.py").exists() or (cwd / "requirements.txt").exists():
         project_type = "python"
     elif (cwd / "go.mod").exists():
         project_type = "go"
@@ -1791,7 +1791,7 @@ def get_codebase_overview(focus: str = "all") -> dict:
     file_count = 0
     for pattern in patterns:
         for f in cwd.rglob(pattern):
-            if "node_modules" not in str(f) and ".venv" not in str(f) and "target" not in str(f):
+            if "node_modules" not in str(f) and "venv" not in str(f) and "target" not in str(f) and "__pycache__" not in str(f):
                 file_count += 1
 
     # Check for existing mapping
