@@ -4,6 +4,57 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ---
 
+## February 1, 2026
+
+### Clone Behavior Command
+
+Full program cloning by extracting WHAT code does (behavior), then reimplementing from scratch.
+
+**New Slash Command:**
+- `/coder:clone-behavior` - Clone a program via behavior extraction
+
+**New CLI Commands:**
+| Command | Description |
+|---------|-------------|
+| `clone-behavior <source> <target> [--language] [--framework]` | Start clone workflow |
+| `clone-behavior progress` | Check clone progress |
+
+**5-Phase Workflow:**
+1. **SCAN** - Extract BEHAVIOR.md for every module via AST analysis
+2. **PLAN** - Create PROJECT.md, ROADMAP.md, REQUIREMENTS.md from behaviors
+3. **IMPLEMENT** - Build from behaviors only (not source code)
+4. **VERIFY** - Run behavior diff on each module
+5. **COMPLETE** - Tag release, generate verification report
+
+**New Library Modules:**
+| Module | Purpose |
+|--------|---------|
+| `lib/behavior_extractor.py` | AST-based extraction of classes, functions, signatures |
+| `lib/file_parity.py` | Compare source/target file coverage |
+| `lib/behavior_verifier.py` | Verify implementation matches behavior spec |
+
+**Verification Checks:**
+- Class inheritance matching
+- Method signature matching
+- Critical import detection
+- Base class comparison
+
+**Example:**
+```bash
+/coder:clone-behavior ~/ai-toolkit eri-toolkit --language python
+```
+
+Creates behavior-compatible clone: different code, same functionality.
+
+### Coder Command Improvements
+
+**Python Project Detection:**
+- Added `requirements.txt` as Python project indicator
+- Fixed venv pattern matching (catches both `.venv` and `venv`)
+- Filter `__pycache__` directories from file counts
+
+---
+
 ## January 29, 2026
 
 ### Personal Todo List
@@ -439,9 +490,10 @@ Renamed `erirpg/hooks.py` to `erirpg/write_guard.py`:
 
 ## Summary Statistics
 
-- **Commits:** 31
-- **New files:** 40+
-- **New CLI commands:** 25+
-- **Lines added:** ~10,000+
+- **Commits:** 34+
+- **New files:** 45+
+- **New CLI commands:** 27+
+- **Lines added:** ~12,000+
+- **Major features:** Clone-behavior workflow, behavior extraction, automated verification
 - **Performance improvements:** O(n^2) -> O(n) for graph operations
-- **Bug fixes:** 46 silent exceptions, nested .eri-rpg detection, hooks.py shadowing
+- **Bug fixes:** 46 silent exceptions, nested .eri-rpg detection, hooks.py shadowing, Python detection
