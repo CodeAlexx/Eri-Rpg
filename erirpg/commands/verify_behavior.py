@@ -278,9 +278,20 @@ def generate_verification_report(
 def verify_behavior(
     program_feature: str,
     project_path: Optional[Path] = None,
+    source_path: Optional[Path] = None,
     output_json: bool = False
 ) -> dict:
-    """Verify implementation matches behavior spec."""
+    """Verify implementation matches behavior spec.
+    
+    Args:
+        program_feature: Format 'program/feature' to verify
+        project_path: Target project path (default: cwd)
+        source_path: Source project path for automated verification
+        output_json: Print result as JSON
+    
+    Returns:
+        Verification result dict with status, scores, and details
+    """
     if project_path is None:
         project_path = Path.cwd()
 
@@ -327,52 +338,108 @@ def verify_behavior(
 
         result["behavior_file"] = behavior["file"]
 
-        # Extract spec items
+        # Extract spec items from behavior file
         spec_items = extract_spec_items(behavior["content"])
         result["spec_items_count"] = len(spec_items)
 
-        # Generate verification report
-        # Note: In a real implementation, we would actually analyze the code
-        # For now, we generate a template for manual verification
-        report = generate_verification_report(spec_items)
+        # NEW: If source_path provided, do automated code verification
+        if source_path:
+            try:
+                from .lib.behavior_verifier import verify_module_behavior, format_verification_table
+                from .lib.file_parity import compute_file_parity
+                
+                source_path = Path(source_path).expanduser().resolve()
+                
+                # Compute file parity
+                parity = compute_file_parity(source_path, project_path, feature)
+                result["file_parity"] = parity.to_dict()
+                
+                # Run automated verification
+                verification_report = verify_module_behavior(
+                    source_path, project_path, feature
+                )
+                
+                result["automated_verification"] = verification_report.to_dict()
+                result["verification_table"] = format_verification_table(verification_report)
+                
+                # Determine status from automated results
+                if verification_report.total_missing > 0:
+                    result["status"] = "FAILED"
+                    result["message"] = f"🔴 {verification_report.total_missing} items MISSING in target"
+                    result["blocking"] = True
+                elif verification_report.total_failed > 0:
+                    result["status"] = "FAILED"
+                    result["message"] = f"❌ {verification_report.total_failed} failures found"
+                    result["blocking"] = True
+                elif verification_report.total_partial > 0:
+                    result["status"] = "PARTIAL"
+                    result["message"] = f"⚠️ {verification_report.total_partial} items need review"
+                    result["blocking"] = False
+                else:
+                    result["status"] = "PASSED"
+                    result["message"] = f"✅ All {verification_report.total_passed} checks passed"
+                    result["blocking"] = False
+                
+                result["next_steps"] = []
+                if parity.parity_score < 0.9:
+                    result["next_steps"].append(
+                        f"File parity is {parity.parity_score:.1%} - {len(parity.missing_in_target)} files missing"
+                    )
+                if verification_report.total_missing > 0:
+                    result["next_steps"].append("Implement all missing classes and functions")
+                if verification_report.total_failed > 0:
+                    result["next_steps"].append("Fix all signature/inheritance mismatches")
+                
+            except ImportError:
+                result["warning"] = "behavior_verifier not available, falling back to template verification"
+                source_path = None  # Fall back to template
+            except Exception as e:
+                result["warning"] = f"Automated verification failed: {e}"
+                source_path = None  # Fall back to template
+        
+        # Fall back to template-based verification if no source_path
+        if not source_path:
+            # Generate verification report (template-based)
+            # Note: This is paper-only verification - use --source for automated
+            report = generate_verification_report(spec_items)
+            result["report"] = report
+            result["verification_mode"] = "template"
 
-        result["report"] = report
+            # Generate markdown table for easy viewing
+            table_lines = [
+                "| Behavior Spec | Code Check | Status |",
+                "|---------------|------------|--------|"
+            ]
+            for item in report["items"]:
+                table_lines.append(f"| {item['spec'][:40]} | {item['code_check'][:20]} | {item['status']} |")
 
-        # Generate markdown table for easy viewing
-        table_lines = [
-            "| Behavior Spec | Code Check | Status |",
-            "|---------------|------------|--------|"
-        ]
-        for item in report["items"]:
-            table_lines.append(f"| {item['spec'][:40]} | {item['code_check'][:20]} | {item['status']} |")
+            result["verification_table"] = "\n".join(table_lines)
 
-        result["verification_table"] = "\n".join(table_lines)
+            # Determine overall status
+            if report["summary"]["failed"] > 0:
+                result["status"] = "FAILED"
+                result["message"] = f"❌ {report['summary']['failed']} violations found - fix before marking done"
+                result["blocking"] = True
+            elif report["summary"]["manual"] > 0:
+                result["status"] = "NEEDS_REVIEW"
+                result["message"] = f"⚠️ {report['summary']['manual']} items need manual verification"
+                result["blocking"] = False
+            elif report["summary"]["pending"] > 0:
+                result["status"] = "PENDING"
+                result["message"] = f"⏳ {report['summary']['pending']} items pending - use --source for automated verification"
+                result["blocking"] = False
+            else:
+                result["status"] = "PASSED"
+                result["message"] = "✅ All behavior spec items verified"
+                result["blocking"] = False
 
-        # Determine overall status
-        if report["summary"]["failed"] > 0:
-            result["status"] = "FAILED"
-            result["message"] = f"❌ {report['summary']['failed']} violations found - fix before marking done"
-            result["blocking"] = True
-        elif report["summary"]["manual"] > 0:
-            result["status"] = "NEEDS_REVIEW"
-            result["message"] = f"⚠️ {report['summary']['manual']} items need manual verification"
-            result["blocking"] = False
-        elif report["summary"]["pending"] > 0:
-            result["status"] = "PENDING"
-            result["message"] = f"⏳ {report['summary']['pending']} items pending code analysis"
-            result["blocking"] = False
-        else:
-            result["status"] = "PASSED"
-            result["message"] = "✅ All behavior spec items verified"
-            result["blocking"] = False
-
-        result["next_steps"] = []
-        if report["summary"]["failed"] > 0:
-            result["next_steps"].append("Fix all ❌ violations before continuing")
-        if report["summary"]["manual"] > 0:
-            result["next_steps"].append("Manually verify all ⚠️ items")
-        if report["summary"]["pending"] > 0:
-            result["next_steps"].append("Run code analysis for ⏳ items")
+            result["next_steps"] = []
+            if report["summary"]["failed"] > 0:
+                result["next_steps"].append("Fix all ❌ violations before continuing")
+            if report["summary"]["manual"] > 0:
+                result["next_steps"].append("Manually verify all ⚠️ items")
+            if report["summary"]["pending"] > 0:
+                result["next_steps"].append("Run with --source <path> for automated code analysis")
 
     except Exception as e:
         result["error"] = str(e)
@@ -386,17 +453,32 @@ def verify_behavior(
 def main():
     """CLI entry point."""
     output_json = "--json" in sys.argv
+    
+    # Parse --source flag
+    source_path = None
+    if "--source" in sys.argv:
+        idx = sys.argv.index("--source")
+        if idx + 1 < len(sys.argv):
+            source_path = Path(sys.argv[idx + 1])
+    
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    # Filter out the source path value if it was after --source
+    if source_path and str(source_path) in args:
+        args.remove(str(source_path))
 
     if not args:
         print(json.dumps({
             "error": "Target required",
-            "usage": "verify_behavior <program>/<feature>",
-            "example": "verify_behavior eritrainer/sana"
+            "usage": "verify_behavior <program>/<feature> [--source <source_path>] [--json]",
+            "example": "verify_behavior eritrainer/sana --source ~/onetrainer",
+            "options": {
+                "--source <path>": "Source project for automated code verification",
+                "--json": "Output as JSON"
+            }
         }, indent=2))
         sys.exit(1)
 
-    verify_behavior(args[0], output_json=output_json)
+    verify_behavior(args[0], source_path=source_path, output_json=output_json)
 
 
 if __name__ == "__main__":

@@ -249,10 +249,44 @@ has_behavior: {str(extract_behavior).lower()}
 
         # Create behavior file if requested
         if extract_behavior:
-            # Build test contracts section if requested
-            test_section = ""
-            if extract_tests:
-                test_section = """
+            behavior_content = None
+            extracted_from_source = False
+            
+            # NEW: If source_path provided, extract actual behavior from source code
+            if source_path:
+                source = Path(source_path).expanduser().resolve()
+                if source.exists():
+                    try:
+                        from .lib.behavior_extractor import extract_module_behavior, generate_behavior_markdown
+                        
+                        # Extract actual behavior from source
+                        extracted = extract_module_behavior(source)
+                        
+                        if extracted:
+                            behavior_content = generate_behavior_markdown(
+                                program=program,
+                                section=section_name,
+                                extracted=extracted,
+                                description=description
+                            )
+                            extracted_from_source = True
+                            result["extraction_stats"] = {
+                                "files": len(extracted),
+                                "classes": sum(len(m.classes) for m in extracted.values()),
+                                "functions": sum(len(m.functions) for m in extracted.values()),
+                                "lines": sum(m.line_count for m in extracted.values()),
+                            }
+                    except ImportError:
+                        result["warning"] = "behavior_extractor not available, using template"
+                    except Exception as e:
+                        result["warning"] = f"Extraction failed: {e}, using template"
+            
+            # Fall back to template if extraction didn't work
+            if behavior_content is None:
+                # Build test contracts section if requested
+                test_section = ""
+                if extract_tests:
+                    test_section = """
 ## Test Contracts
 <!-- Extracted from source tests - these become target validation requirements -->
 
@@ -268,7 +302,7 @@ has_behavior: {str(extract_behavior).lower()}
 
 """
 
-            behavior_content = f"""---
+                behavior_content = f"""---
 program: {program}
 section: {section_name}
 type: behavior-spec
@@ -512,6 +546,7 @@ option_name: value  # effect
             behavior_file.write_text(behavior_content)
             result["behavior_file"] = str(behavior_file)
             result["extract_behavior"] = True
+            result["extracted_from_source"] = extracted_from_source
             if extract_tests:
                 result["extract_tests"] = True
 
