@@ -211,6 +211,36 @@ def register(cli):
         click.echo(f"Switched to: {project}")
         click.echo(f"Path: {target_proj.path}")
 
+        # Find where .planning/ lives (might be in a subdirectory)
+        def find_coder_planning(base_path: Path) -> Path:
+            """Find coder workflow .planning/ directory."""
+            # Check base path
+            planning = base_path / ".planning"
+            if planning.is_dir() and (
+                (planning / "phases").is_dir() or
+                (planning / "STATE.md").exists() or
+                (planning / "ROADMAP.md").exists()
+            ):
+                return base_path
+            # Check one level down
+            for subdir in base_path.iterdir():
+                if subdir.is_dir():
+                    planning = subdir / ".planning"
+                    if planning.is_dir() and (
+                        (planning / "phases").is_dir() or
+                        (planning / "STATE.md").exists() or
+                        (planning / "ROADMAP.md").exists()
+                    ):
+                        return subdir
+            return base_path
+
+        proj_path = Path(target_proj.path)
+        work_path = find_coder_planning(proj_path)
+        if work_path != proj_path:
+            click.echo(f"")
+            click.echo(f"Coder workflow at: {work_path}")
+            click.echo(f"Run: cd {work_path}")
+
         # Show handoff from target project
         session = get_latest_session(target_proj.path)
         if session:
