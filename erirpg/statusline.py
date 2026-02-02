@@ -256,40 +256,18 @@ def get_coder_phase_info(cwd: str) -> Tuple[Optional[int], Optional[int], Option
 
 
 def get_coder_project_name(cwd: str) -> Optional[str]:
-    """Get project name from .planning/STATE.md or PROJECT.md for unregistered coder projects.
+    """Get project name for unregistered coder projects (have .planning/ but no registry entry).
+
+    Uses directory name - don't parse document titles as project names.
 
     Returns:
-        Project name or None
+        Project name (directory name) or None if no .planning/ found
     """
-    import re
-
     search_path = Path(cwd)
     for _ in range(5):  # Max 5 levels up
         planning_dir = search_path / ".planning"
         if planning_dir.exists():
-            # Try STATE.md first (has "Project State: <name>")
-            state_file = planning_dir / "STATE.md"
-            if state_file.exists():
-                try:
-                    content = state_file.read_text()
-                    match = re.search(r'#\s*Project State:\s*(\S+)', content)
-                    if match:
-                        return match.group(1)
-                except:
-                    pass
-
-            # Try PROJECT.md (has "# <name>")
-            project_file = planning_dir / "PROJECT.md"
-            if project_file.exists():
-                try:
-                    content = project_file.read_text()
-                    match = re.search(r'^#\s*(.+)$', content, re.MULTILINE)
-                    if match:
-                        return match.group(1).strip()
-                except:
-                    pass
-
-            # Fallback to directory name
+            # Use directory name - simple and reliable
             return search_path.name
 
         search_path = search_path.parent
