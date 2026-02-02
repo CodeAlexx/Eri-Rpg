@@ -2336,6 +2336,91 @@ def get_phase_plans(phase: int) -> dict:
     return result
 
 
+def get_phase_tasks(phase: int) -> dict:
+    """Get all tasks for a phase with completion status.
+
+    Parses plan files to extract task names, types, and status.
+    Checks SUMMARY files to determine completion.
+    """
+    import re
+
+    planning = get_planning_dir()
+    phases_dir = planning / "phases"
+
+    result = {
+        "phase": phase,
+        "phase_name": None,
+        "phase_dir": None,
+        "plans": [],
+        "total_tasks": 0,
+        "completed_tasks": 0,
+        "all_complete": False
+    }
+
+    if not phases_dir.exists():
+        result["error"] = "No phases directory found"
+        return result
+
+    # Find phase directory
+    phase_dir = None
+    for d in phases_dir.iterdir():
+        if d.is_dir() and d.name.startswith(f"{phase:02d}"):
+            phase_dir = d
+            result["phase_dir"] = str(d)
+            result["phase_name"] = d.name
+            break
+
+    if not phase_dir:
+        result["error"] = f"Phase {phase} not found"
+        return result
+
+    # Parse each plan file
+    for plan_file in sorted(phase_dir.glob("*-PLAN.md")):
+        fm = load_md_frontmatter(plan_file)
+        content = plan_file.read_text()
+
+        # Check if plan is completed (has SUMMARY)
+        plan_num = plan_file.stem.split("-")[1] if "-" in plan_file.stem else "01"
+        summary_pattern = f"SUMMARY-{plan_num}.md"
+        summary_file = phase_dir / summary_pattern
+        plan_completed = summary_file.exists()
+
+        # Extract tasks using regex
+        tasks = []
+        task_pattern = re.compile(
+            r'<task[^>]*type=["\']([^"\']+)["\'][^>]*>\s*'
+            r'<name>([^<]+)</name>',
+            re.DOTALL
+        )
+
+        for match in task_pattern.finditer(content):
+            task_type = match.group(1).strip()
+            task_name = match.group(2).strip()
+            tasks.append({
+                "name": task_name,
+                "type": task_type,
+                "completed": plan_completed
+            })
+            result["total_tasks"] += 1
+            if plan_completed:
+                result["completed_tasks"] += 1
+
+        plan_info = {
+            "plan": plan_num,
+            "wave": int(fm.get("wave", 1)),
+            "completed": plan_completed,
+            "tasks": tasks
+        }
+        result["plans"].append(plan_info)
+
+    result["all_complete"] = (
+        result["total_tasks"] > 0 and
+        result["completed_tasks"] == result["total_tasks"]
+    )
+
+    return result
+
+
 # ============================================================================
 # Command: coder-verify-work
 # ============================================================================
@@ -3252,3 +3337,123 @@ def register(cli):
                     break
 
         click.echo(json.dumps(result, indent=2))
+
+    @cli.command("coder-phase-tasks")
+    @click.argument("phase", type=int)
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def coder_phase_tasks_cmd(phase: int, as_json: bool):
+        """List all tasks for a phase with completion status.
+
+        Example:
+            eri-rpg coder-phase-tasks 3
+        """
+        result = get_phase_tasks(phase)
+
+        if as_json:
+            click.echo(json.dumps(result, indent=2))
+            return
+
+        # Human-readable output
+        if "error" in result:
+            click.echo(f"Error: {result['error']}")
+            return
+
+        phase_name = result.get("phase_name", f"Phase {phase}")
+        total = result["total_tasks"]
+        done = result["completed_tasks"]
+        status = "COMPLETE" if result["all_complete"] else "IN PROGRESS"
+
+        click.echo(f"\n{phase_name} ({done}/{total} tasks) - {status}\n")
+
+        for plan in result["plans"]:
+            plan_status = "[x]" if plan["completed"] else "[ ]"
+            click.echo(f"Plan {plan['plan']} (Wave {plan['wave']}) {plan_status}")
+            for task in plan["tasks"]:
+                task_status = "[x]" if task["completed"] else "[ ]"
+                task_type = f"({task['type']})" if task["type"] != "auto" else ""
+                click.echo(f"  {task_status} {task['name']} {task_type}")
+            click.echo()
+
+    @cli.command("coder-phase-list")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def coder_phase_list_cmd(as_json: bool):
+        """List all phases with status.
+
+        Example:
+            eri-rpg coder-phase-list
+        """
+        planning = get_planning_dir()
+        phases_dir = planning / "phases"
+
+        result = {
+            "phases": [],
+            "total": 0,
+            "completed": 0,
+            "current": None
+        }
+
+        if not phases_dir.exists():
+            if as_json:
+                result["error"] = "No phases directory found"
+                click.echo(json.dumps(result, indent=2))
+            else:
+                click.echo("No phases directory found")
+            return
+
+        # Read ROADMAP.md for phase names if available
+        roadmap_path = planning / "ROADMAP.md"
+        phase_goals = {}
+        if roadmap_path.exists():
+            import re
+            content = roadmap_path.read_text()
+            # Match "### Phase N: Name" or "### Phase N - Name"
+            for match in re.finditer(r'###\s*Phase\s*(\d+)[:\-\s]+([^\n]+)', content):
+                phase_goals[int(match.group(1))] = match.group(2).strip()
+
+        # Scan phase directories
+        for d in sorted(phases_dir.iterdir()):
+            if not d.is_dir():
+                continue
+
+            # Parse directory name like "03-jobs"
+            parts = d.name.split("-", 1)
+            if not parts[0].isdigit():
+                continue
+
+            phase_num = int(parts[0])
+            phase_name = parts[1] if len(parts) > 1 else f"Phase {phase_num}"
+
+            # Count plans and completions
+            plans = list(d.glob("*-PLAN.md"))
+            summaries = list(d.glob("SUMMARY-*.md"))
+
+            phase_info = {
+                "number": phase_num,
+                "name": phase_name,
+                "goal": phase_goals.get(phase_num, ""),
+                "plans": len(plans),
+                "completed_plans": len(summaries),
+                "status": "complete" if len(summaries) >= len(plans) and len(plans) > 0 else "pending"
+            }
+
+            if phase_info["status"] == "complete":
+                result["completed"] += 1
+            elif result["current"] is None:
+                result["current"] = phase_num
+
+            result["phases"].append(phase_info)
+            result["total"] += 1
+
+        if as_json:
+            click.echo(json.dumps(result, indent=2))
+            return
+
+        # Human-readable output
+        click.echo(f"\nPhases ({result['completed']}/{result['total']} complete)\n")
+
+        for p in result["phases"]:
+            status = "[x]" if p["status"] == "complete" else "[ ]"
+            current = " <-- current" if p["number"] == result["current"] else ""
+            goal = f" - {p['goal']}" if p["goal"] else ""
+            plans = f"({p['completed_plans']}/{p['plans']} plans)"
+            click.echo(f"{status} Phase {p['number']}: {p['name']}{goal} {plans}{current}")
