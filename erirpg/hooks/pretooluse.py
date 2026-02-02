@@ -233,6 +233,21 @@ def main():
         cwd = input_data.get("cwd", os.getcwd())
         log(f"tool_name={tool_name}, cwd={cwd}")
 
+        # Project detection - early exit if not an eri-rpg project
+        project_root = None
+        check = cwd
+        while check != '/':
+            if os.path.isdir(os.path.join(check, '.eri-rpg')):
+                project_root = check
+                break
+            check = os.path.dirname(check)
+
+        if project_root is None:
+            # Not an eri-rpg project. Allow all operations.
+            log(f"Not an eri-rpg project, allowing")
+            print(json.dumps({}))
+            sys.exit(0)
+
         # Track if this originated as a Bash command (for block_bash_writes check later)
         is_bash_write = False
 

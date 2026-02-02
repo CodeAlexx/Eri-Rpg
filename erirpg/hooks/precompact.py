@@ -317,6 +317,21 @@ def main():
         input_data = json.loads(raw_input) if raw_input.strip() else {}
         cwd = input_data.get("cwd", os.getcwd())
 
+        # Project detection - early exit if not an eri-rpg project
+        project_root = None
+        check = cwd
+        while check != '/':
+            if os.path.isdir(os.path.join(check, '.eri-rpg')):
+                project_root = check
+                break
+            check = os.path.dirname(check)
+
+        if project_root is None:
+            # Not an eri-rpg project. Output empty and exit.
+            log(f"Not an eri-rpg project, skipping")
+            print(json.dumps({}))
+            sys.exit(0)
+
         # Find project root
         project_path = find_project_root(cwd)
         log(f"Project path: {project_path}")

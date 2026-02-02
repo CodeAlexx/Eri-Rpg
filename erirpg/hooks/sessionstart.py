@@ -26,7 +26,7 @@ def log(msg: str):
         with open("/tmp/erirpg-sessionstart.log", "a") as f:
             f.write(f"[{datetime.now().isoformat()}] {msg}\n")
     except Exception as e:
-        import sys; print(f"[EriRPG] {e}", file=sys.stderr)
+        pass  # Error logged elsewhere
 
 
 def find_project_roots(start_path: str) -> list:
@@ -85,7 +85,7 @@ def get_incomplete_runs(project_path: str) -> list:
                     "age_days": age_days,
                 })
         except Exception as e:
-            import sys; print(f"[EriRPG] {e}", file=sys.stderr)
+            pass  # Error logged elsewhere
 
     return incomplete
 
@@ -100,7 +100,7 @@ def get_quick_fix_state(project_path: str) -> dict:
         with open(state_file) as f:
             return json.load(f)
     except Exception as e:
-        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
+        pass  # Error logged elsewhere; return None
 
 
 def get_resume_file(project_path: str) -> str:
@@ -112,7 +112,7 @@ def get_resume_file(project_path: str) -> str:
     try:
         return resume_path.read_text()
     except Exception as e:
-        import sys; print(f"[EriRPG] {e}", file=sys.stderr); return None
+        pass  # Error logged elsewhere; return None
 
 
 def get_project_name(project_path: str) -> str:
@@ -189,6 +189,70 @@ def get_git_branch(project_path: str) -> str:
     return None
 
 
+def get_planning_state(cwd: str) -> dict:
+    """Get .planning/ directory state for coder workflow."""
+    planning_dir = Path(cwd) / ".planning"
+    if not planning_dir.exists():
+        return None
+
+    state = {"exists": True}
+
+    # Check for status.md or STATE.md
+    for status_file in ["status.md", "STATE.md"]:
+        status_path = planning_dir / status_file
+        if status_path.exists():
+            try:
+                content = status_path.read_text()[:500]  # First 500 chars
+                state["status_file"] = status_file
+                state["status_preview"] = content
+                break
+            except Exception as e:
+                log(f"Error reading {status_file}: {e}")
+
+    # Check for ROADMAP.md
+    roadmap_path = planning_dir / "ROADMAP.md"
+    if roadmap_path.exists():
+        state["has_roadmap"] = True
+
+    # Check phases directory
+    phases_dir = planning_dir / "phases"
+    if phases_dir.exists():
+        # Count phases
+        phase_dirs = list(phases_dir.glob("*-*"))
+        state["phase_count"] = len(phase_dirs)
+
+        # Find active phase (one without SUMMARY.md in all plans)
+        for phase_dir in sorted(phase_dirs):
+            plans = list(phase_dir.glob("*-PLAN.md"))
+            summaries = list(phase_dir.glob("*-SUMMARY.md"))
+            if plans and len(summaries) < len(plans):
+                state["active_phase"] = phase_dir.name
+                state["active_phase_plans"] = len(plans)
+                state["active_phase_completed"] = len(summaries)
+                break
+
+    return state
+
+
+def get_claude_md_refs(cwd: str) -> list:
+    """Get @-references from CLAUDE.md if it exists."""
+    claude_md = Path(cwd) / "CLAUDE.md"
+    if not claude_md.exists():
+        return []
+
+    refs = []
+    try:
+        content = claude_md.read_text()
+        for line in content.split("\n"):
+            line = line.strip()
+            if line.startswith("@"):
+                refs.append(line)
+    except Exception as e:
+        log(f"Error reading CLAUDE.md: {e}")
+
+    return refs
+
+
 def start_new_sqlite_session(project_path: str) -> str:
     """Start a new SQLite session for this project."""
     try:
@@ -229,13 +293,50 @@ def main():
         input_data = json.loads(raw_input) if raw_input.strip() else {}
         cwd = input_data.get("cwd", os.getcwd())
 
+        # Project detection - early exit if not an eri-rpg project
+        project_root = None
+        check = cwd
+        while check != '/':
+            if os.path.isdir(os.path.join(check, '.eri-rpg')):
+                project_root = check
+                break
+            check = os.path.dirname(check)
+
+        if project_root is None:
+            # Not an eri-rpg project. Output empty and exit.
+            log(f"Not an eri-rpg project, skipping")
+            print(json.dumps({}))
+            sys.exit(0)
+
+        messages = []
+        context_found = False
+
+        # === CONTEXT RECOVERY (runs first) ===
+        # Check for CLAUDE.md references
+        claude_refs = get_claude_md_refs(cwd)
+        if claude_refs:
+            context_found = True
+            log(f"CLAUDE.md refs: {claude_refs}")
+
+        # Check for .planning/ state (coder workflow)
+        planning_state = get_planning_state(cwd)
+        if planning_state:
+            context_found = True
+            if planning_state.get("active_phase"):
+                phase = planning_state["active_phase"]
+                completed = planning_state.get("active_phase_completed", 0)
+                total = planning_state.get("active_phase_plans", 0)
+                messages.append(f"[CONTEXT RECOVERY] Active phase: {phase} ({completed}/{total} plans complete)")
+            elif planning_state.get("has_roadmap"):
+                messages.append(f"[CONTEXT RECOVERY] Project has ROADMAP.md - check .planning/ROADMAP.md for status")
+
         # Find project roots
         project_roots = find_project_roots(cwd)
         log(f"Project roots: {project_roots}")
 
-        messages = []
-
         for project_path in project_roots:
+            context_found = True  # EriRPG project found
+
             # Get SQLite context summary (new - takes priority)
             sqlite_summary = get_sqlite_context_summary(project_path)
             if sqlite_summary:
@@ -257,7 +358,7 @@ def main():
                 try:
                     (Path(project_path) / ".eri-rpg" / "resume.md").unlink()
                 except Exception as e:
-                    import sys; print(f"[EriRPG] {e}", file=sys.stderr)
+                    pass  # Error logged elsewhere
 
             # Check for incomplete runs
             incomplete = get_incomplete_runs(project_path)
@@ -293,13 +394,35 @@ def main():
         except Exception as e:
             log(f"Todo summary error: {e}")
 
-        # Output message if any
-        if messages:
+        # Build final output
+        if context_found or messages:
+            # Add recovery instruction at the start
+            final_messages = []
+
+            if context_found:
+                final_messages.append("=== SESSION START: CONTEXT RECOVERY REQUIRED ===")
+                final_messages.append("Before responding to user, confirm recovered context:")
+                final_messages.append(f"- Directory: {cwd}")
+                if planning_state and planning_state.get("active_phase"):
+                    final_messages.append(f"- Phase: {planning_state['active_phase']}")
+                if project_roots:
+                    final_messages.append(f"- EriRPG project: {get_project_name(project_roots[0])}")
+                final_messages.append("")
+
+            final_messages.extend(messages)
+
+            if context_found:
+                final_messages.append("")
+                final_messages.append("=== WAIT for user instructions before executing anything ===")
+
             output = {
-                "systemMessage": "\n".join(messages)
+                "systemMessage": "\n".join(final_messages)
             }
         else:
-            output = {}
+            # No context found
+            output = {
+                "systemMessage": f"No session context in {cwd}. Waiting for instructions."
+            }
 
         print(json.dumps(output))
         log(f"Output: {output}")

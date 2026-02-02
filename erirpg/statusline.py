@@ -348,10 +348,50 @@ def main():
     except:
         pass
 
-    # Load state
+    cwd = input_cwd or os.getcwd()
+
+    # Project detection - check if this is an eri-rpg project
+    project_root = None
+    check = cwd
+    while check != '/':
+        if os.path.isdir(os.path.join(check, '.eri-rpg')):
+            project_root = check
+            break
+        check = os.path.dirname(check)
+
+    if project_root is None:
+        # Not an eri-rpg project. Show minimal status.
+        line1_parts = []
+        line2_parts = []
+
+        if model_name:
+            line1_parts.append(f"🤖 {model_name}")
+
+        if context_pct is not None:
+            line1_parts.append(f"🔄 {context_pct}%")
+
+        branch = get_git_branch()
+        if branch:
+            branch_display = branch[:15] + "…" if len(branch) > 15 else branch
+            line2_parts.append(f"🌿 {branch_display}")
+
+        if tokens_used:
+            line2_parts.append(f"📊 {format_tokens(tokens_used)}")
+
+        line1 = " | ".join(line1_parts) if line1_parts else ""
+        line2 = " | ".join(line2_parts) if line2_parts else ""
+
+        if line1 and line2:
+            print(f"{line1}\n{line2}")
+        elif line1:
+            print(line1)
+        elif line2:
+            print(line2)
+        return
+
+    # Load state (only for eri-rpg projects)
     global_state = load_global_state()
     registry = load_registry()
-    cwd = input_cwd or os.getcwd()
 
     # Get project info - PRIORITIZE cwd-based detection over stale state
     project_name, project_path, tier = get_project_info(registry, cwd)
