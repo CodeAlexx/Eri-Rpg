@@ -68,6 +68,38 @@ def load_global_state() -> dict:
     return {}
 
 
+def get_active_edited_project(global_state: dict, registry: dict) -> tuple:
+    """Get actively edited project from state (set by PostToolUse hook).
+
+    Returns (project_name, project_path, tier) or (None, None, None).
+    Expires after 30 minutes of no edits.
+    """
+    from datetime import datetime, timedelta
+
+    edited_at = global_state.get("active_edited_at")
+    if not edited_at:
+        return None, None, None
+
+    # Check if stale (>30 minutes since last edit)
+    try:
+        last_edit = datetime.fromisoformat(edited_at)
+        if datetime.now() - last_edit > timedelta(minutes=30):
+            return None, None, None
+    except:
+        return None, None, None
+
+    project_name = global_state.get("active_edited_project")
+    project_path = global_state.get("active_edited_path")
+
+    if not project_name or not project_path:
+        return None, None, None
+
+    # Get tier from project config
+    tier = get_project_tier(project_path) if project_path else None
+
+    return project_name, project_path, tier
+
+
 def load_registry() -> dict:
     """Load project registry from ~/.eri-rpg/registry.json"""
     registry_path = Path.home() / ".eri-rpg" / "registry.json"
@@ -371,10 +403,15 @@ def main():
     global_state = load_global_state()
     registry = load_registry()
 
-    # Get project info - PRIORITIZE cwd-based detection over stale state
-    project_name, project_path, tier = get_project_info(registry, cwd)
+    # HIGHEST PRIORITY: Active edited project (set by PostToolUse hook)
+    # This tracks which project is being actively edited, regardless of cwd
+    project_name, project_path, tier = get_active_edited_project(global_state, registry)
 
-    # If no registry match, check for coder project (.planning/ directory)
+    # SECOND: cwd-based detection from registry
+    if not project_name:
+        project_name, project_path, tier = get_project_info(registry, cwd)
+
+    # THIRD: check for coder project (.planning/ directory)
     if not project_name:
         coder_name = get_coder_project_name(cwd)
         if coder_name:
@@ -382,7 +419,7 @@ def main():
             project_path = cwd  # Use cwd as project path
             tier = None  # Coder projects don't have tiers
 
-    # Only use active_project from state as LAST resort
+    # LAST RESORT: active_project from state
     if not project_name:
         state_project = global_state.get("active_project")
         if state_project and state_project in registry:

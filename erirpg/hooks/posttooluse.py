@@ -99,6 +99,48 @@ def track_modified_file(file_path: str, project_path: str) -> None:
 
     save_modified_files(data)
 
+    # Update active edited project in global state for statusline
+    update_active_edited_project(project_path)
+
+
+def update_active_edited_project(project_path: str) -> None:
+    """Update global state with the project being actively edited.
+
+    This allows the statusline to show the correct project even when
+    Claude Code's cwd is different from the project being edited.
+    """
+    state_path = Path.home() / ".eri-rpg" / "state.json"
+
+    # Find project name from registry
+    project_name = Path(project_path).name  # Default to directory name
+    registry_path = Path.home() / ".eri-rpg" / "registry.json"
+
+    try:
+        if registry_path.exists():
+            registry = json.loads(registry_path.read_text())
+            projects = registry.get("projects", {})
+            for name, info in projects.items():
+                if info.get("path") == project_path:
+                    project_name = name
+                    break
+    except Exception:
+        pass
+
+    # Update state
+    try:
+        state = {}
+        if state_path.exists():
+            state = json.loads(state_path.read_text())
+
+        state["active_edited_project"] = project_name
+        state["active_edited_path"] = project_path
+        state["active_edited_at"] = datetime.now().isoformat()
+
+        state_path.write_text(json.dumps(state, indent=2))
+        log(f"Updated active edited project: {project_name} ({project_path})")
+    except Exception as e:
+        log(f"Failed to update active edited project: {e}")
+
 
 def run_verification_and_commit(project_path: str) -> None:
     """Run verification and auto-commit if it passes."""
