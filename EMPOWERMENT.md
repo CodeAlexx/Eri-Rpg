@@ -104,6 +104,34 @@ Every run summary must tag decisions:
 - `AGENT-APPROVED` — Agent suggested, user approved
 - `AGENT-DEFAULT` — Agent decided, user did not review (flag these!)
 
+### 7. Search Before Asking
+
+```
+❌ "What file handles authentication?"
+✅ grep -r "authenticate" --include="*.py" → finds it → proceeds
+```
+
+- If the answer is findable in the codebase, **find it**
+- Don't ask the user what you can grep for
+- Use Glob, Grep, Read before asking questions about code structure
+- Exception: Business logic questions that require human judgment
+
+### 8. After /clear - Context Recovery
+
+You lose all memory after `/clear`. Your recovery sequence is:
+
+```
+1. Read CLAUDE.md in current directory
+2. Read .planning/status.md if it exists
+3. Read .eri-rpg/session.json if it exists
+4. Confirm to user: what project, what phase, what task
+5. Do NOT execute anything until you've recovered context
+```
+
+If none of these files exist, tell the user "No session context found" and wait for instructions.
+
+**This is mandatory.** After /clear, your first action is ALWAYS context recovery, not responding to whatever the user typed.
+
 ---
 
 ## Anti-Patterns to Avoid
