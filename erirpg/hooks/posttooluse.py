@@ -50,14 +50,19 @@ def log(msg: str) -> None:
 
 
 def find_project_root(file_path: str) -> str | None:
-    """Find EriRPG project root from file path."""
+    """Find EriRPG project root from file path.
+
+    Excludes ~/.eri-rpg (global state dir) from being treated as a project.
+    """
     path = Path(file_path).resolve()
+    home = Path.home()
 
     for parent in [path] + list(path.parents):
+        # Stop before home - ~/.eri-rpg is global state, not a project
+        if parent == home or parent == Path("/"):
+            break
         if (parent / ".eri-rpg").is_dir():
             return str(parent)
-        if parent == Path.home() or parent == Path("/"):
-            break
 
     return None
 
