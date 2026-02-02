@@ -2385,20 +2385,37 @@ def get_phase_tasks(phase: int) -> dict:
         summary_file = phase_dir / summary_pattern
         plan_completed = summary_file.exists()
 
-        # Extract tasks using regex
+        # Extract tasks using regex - get full task details
         tasks = []
-        task_pattern = re.compile(
-            r'<task[^>]*type=["\']([^"\']+)["\'][^>]*>\s*'
-            r'<name>([^<]+)</name>',
+
+        # Match entire task blocks
+        task_block_pattern = re.compile(
+            r'<task[^>]*type=["\']([^"\']+)["\'][^>]*>(.*?)</task>',
             re.DOTALL
         )
 
-        for match in task_pattern.finditer(content):
+        def extract_tag(block: str, tag: str) -> str:
+            """Extract content from a tag."""
+            match = re.search(rf'<{tag}>(.*?)</{tag}>', block, re.DOTALL)
+            return match.group(1).strip() if match else ""
+
+        for match in task_block_pattern.finditer(content):
             task_type = match.group(1).strip()
-            task_name = match.group(2).strip()
+            task_block = match.group(2)
+
+            task_name = extract_tag(task_block, "name")
+            files = extract_tag(task_block, "files")
+            action = extract_tag(task_block, "action")
+            verify = extract_tag(task_block, "verify")
+            done = extract_tag(task_block, "done")
+
             tasks.append({
                 "name": task_name,
                 "type": task_type,
+                "files": [f.strip() for f in files.split(",") if f.strip()] if files else [],
+                "action": action,
+                "verify": verify,
+                "done": done,
                 "completed": plan_completed
             })
             result["total_tasks"] += 1
@@ -3359,20 +3376,36 @@ def register(cli):
             return
 
         phase_name = result.get("phase_name", f"Phase {phase}")
-        total = result["total_tasks"]
-        done = result["completed_tasks"]
-        status = "COMPLETE" if result["all_complete"] else "IN PROGRESS"
-
-        click.echo(f"\n{phase_name} ({done}/{total} tasks) - {status}\n")
+        click.echo(f"\n# {phase_name}\n")
 
         for plan in result["plans"]:
-            plan_status = "[x]" if plan["completed"] else "[ ]"
-            click.echo(f"Plan {plan['plan']} (Wave {plan['wave']}) {plan_status}")
-            for task in plan["tasks"]:
-                task_status = "[x]" if task["completed"] else "[ ]"
-                task_type = f"({task['type']})" if task["type"] != "auto" else ""
-                click.echo(f"  {task_status} {task['name']} {task_type}")
-            click.echo()
+            click.echo(f"## Plan {plan['plan']} (Wave {plan['wave']})\n")
+
+            for i, task in enumerate(plan["tasks"], 1):
+                task_type = task.get("type", "auto")
+                name = task.get("name", "").strip()
+                # Remove redundant "Task N:" prefix if present
+                if name.lower().startswith(f"task {i}:"):
+                    name = name[len(f"task {i}:"):].strip()
+                click.echo(f"### Task {i}: {name}")
+                if task_type != "auto":
+                    click.echo(f"Type: {task_type}")
+
+                if task.get("files"):
+                    click.echo(f"Files: {', '.join(task['files'])}")
+
+                if task.get("action"):
+                    # Show first 3 lines of action, truncate rest
+                    lines = task["action"].strip().split("\n")
+                    preview = "\n".join(lines[:5])
+                    if len(lines) > 5:
+                        preview += f"\n... ({len(lines) - 5} more lines)"
+                    click.echo(f"Action:\n{preview}")
+
+                if task.get("done"):
+                    click.echo(f"Done when: {task['done']}")
+
+                click.echo()
 
     @cli.command("coder-phase-list")
     @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
