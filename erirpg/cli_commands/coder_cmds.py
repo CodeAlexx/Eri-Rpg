@@ -148,15 +148,24 @@ def load_md_frontmatter(path: Path) -> dict:
         return {}
     try:
         import re
+        import yaml
         match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
         if match:
-            # Simple YAML parsing for frontmatter
-            frontmatter = {}
-            for line in match.group(1).split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    frontmatter[key.strip()] = value.strip().strip('"\'')
-            return frontmatter
+            return yaml.safe_load(match.group(1)) or {}
+    except ImportError:
+        # Fallback to simple parsing if yaml not available
+        try:
+            import re
+            match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if match:
+                frontmatter = {}
+                for line in match.group(1).split('\n'):
+                    if ':' in line and not line.startswith(' '):
+                        key, value = line.split(':', 1)
+                        frontmatter[key.strip()] = value.strip().strip('"\'')
+                return frontmatter
+        except Exception:
+            pass
     except Exception:
         pass
     return {}
@@ -277,10 +286,15 @@ def get_progress_metrics() -> dict:
     phases_dir = planning / "phases"
     total_plans = 0
     completed_plans = 0
-    completed_phases = 0
+    executed_phases = 0
+    verified_phases = 0
     current_phase = None
     current_phase_plans = 0
     current_phase_completed = 0
+
+    # Load roadmap for verification check
+    roadmap_path = planning / "ROADMAP.md"
+    roadmap_content = roadmap_path.read_text() if roadmap_path.exists() else ""
 
     if phases_dir.exists():
         for phase_dir in sorted(phases_dir.iterdir()):
@@ -291,11 +305,30 @@ def get_progress_metrics() -> dict:
                 total_plans += plan_count
                 completed_plans += summary_count
 
-                # Count completed phases (all plans have summaries)
-                if plan_count > 0 and summary_count >= plan_count:
-                    completed_phases += 1
-                # Determine current phase (first incomplete)
-                elif current_phase is None:
+                # Extract phase number
+                parts = phase_dir.name.split("-", 1)
+                phase_num = int(parts[0]) if parts[0].isdigit() else 0
+
+                # Check if plans executed (summaries exist)
+                plans_executed = plan_count > 0 and summary_count >= plan_count
+                if plans_executed:
+                    executed_phases += 1
+
+                # Check ROADMAP criteria for true verification
+                criteria_verified = False
+                if roadmap_content and phase_num > 0:
+                    phase_pattern = rf'###\s*Phase\s*{phase_num}[:\-\s].*?(?=###\s*Phase\s*\d+|## |$)'
+                    phase_match = re.search(phase_pattern, roadmap_content, re.DOTALL)
+                    if phase_match:
+                        phase_section = phase_match.group(0)
+                        checked = len(re.findall(r'- \[x\]', phase_section, re.IGNORECASE))
+                        unchecked = len(re.findall(r'- \[ \]', phase_section))
+                        if checked > 0 and unchecked == 0:
+                            criteria_verified = True
+                            verified_phases += 1
+
+                # Determine current phase (first not verified)
+                if not criteria_verified and current_phase is None:
                     current_phase = phase_dir.name
                     current_phase_plans = plan_count
                     current_phase_completed = summary_count
@@ -317,7 +350,8 @@ def get_progress_metrics() -> dict:
 
     return {
         "total_phases": total_phases,
-        "completed_phases": completed_phases,
+        "executed_phases": executed_phases,
+        "verified_phases": verified_phases,
         "total_plans": total_plans,
         "completed_plans": completed_plans,
         "total_reqs": total_reqs,
@@ -326,7 +360,7 @@ def get_progress_metrics() -> dict:
         "current_phase_plans": current_phase_plans,
         "current_phase_completed": current_phase_completed,
         "status": state_fm.get("status", "unknown"),
-        "phase_percent": round((completed_phases / total_phases * 100) if total_phases > 0 else 0),
+        "phase_percent": round((verified_phases / total_phases * 100) if total_phases > 0 else 0),
         "plan_percent": round((completed_plans / total_plans * 100) if total_plans > 0 else 0),
         "req_percent": round((completed_reqs / total_reqs * 100) if total_reqs > 0 else 0),
     }
@@ -3469,16 +3503,36 @@ def register(cli):
             # Handle both naming conventions: SUMMARY-*.md and *-SUMMARY.md
             summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
 
+            # Check ROADMAP success criteria for true completion
+            criteria_complete = False
+            if roadmap_path.exists():
+                roadmap_content = roadmap_path.read_text()
+                # Find phase section and check success criteria
+                phase_pattern = rf'###\s*Phase\s*{phase_num}[:\-\s].*?(?=###\s*Phase\s*\d+|## |$)'
+                phase_match = re.search(phase_pattern, roadmap_content, re.DOTALL)
+                if phase_match:
+                    phase_section = phase_match.group(0)
+                    # Count checked vs unchecked criteria
+                    checked = len(re.findall(r'- \[x\]', phase_section, re.IGNORECASE))
+                    unchecked = len(re.findall(r'- \[ \]', phase_section))
+                    # Complete only if has criteria AND all are checked
+                    if checked > 0 and unchecked == 0:
+                        criteria_complete = True
+
+            # Plans executed = has summaries, but verified = criteria checked
+            plans_executed = len(summaries) >= len(plans) and len(plans) > 0
+
             phase_info = {
                 "number": phase_num,
                 "name": phase_name,
                 "goal": phase_goals.get(phase_num, ""),
                 "plans": len(plans),
                 "completed_plans": len(summaries),
-                "status": "complete" if len(summaries) >= len(plans) and len(plans) > 0 else "pending"
+                "criteria_checked": criteria_complete,
+                "status": "verified" if criteria_complete else ("executed" if plans_executed else "pending")
             }
 
-            if phase_info["status"] == "complete":
+            if phase_info["status"] == "verified":
                 result["completed"] += 1
             elif result["current"] is None:
                 result["current"] = phase_num
@@ -3491,10 +3545,15 @@ def register(cli):
             return
 
         # Human-readable output
-        click.echo(f"\nPhases ({result['completed']}/{result['total']} complete)\n")
+        click.echo(f"\nPhases ({result['completed']}/{result['total']} verified)\n")
 
         for p in result["phases"]:
-            status = "[x]" if p["status"] == "complete" else "[ ]"
+            if p["status"] == "verified":
+                status = "[✓]"
+            elif p["status"] == "executed":
+                status = "[~]"  # Executed but not verified
+            else:
+                status = "[ ]"
             current = " <-- current" if p["number"] == result["current"] else ""
             goal = f" - {p['goal']}" if p["goal"] else ""
             plans = f"({p['completed_plans']}/{p['plans']} plans)"
