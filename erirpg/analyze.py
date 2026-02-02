@@ -18,8 +18,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from collections import defaultdict
 
-from erirpg.graph import Graph, load_graph
-from erirpg.registry import registry
+from erirpg.graph import Graph
+from erirpg.storage import load_graph
+from erirpg.registry import Registry
 
 
 @dataclass
@@ -118,7 +119,18 @@ def save_patterns(project_path: str, patterns: ProjectPatterns):
 
 def analyze_project(project_path: str) -> ProjectPatterns:
     """Analyze codebase for patterns."""
-    graph = load_graph(project_path)
+    # Find project name from path
+    reg = Registry.get_instance()
+    project_name = None
+    for name, proj in reg.projects.items():
+        if proj.path == project_path:
+            project_name = name
+            break
+
+    graph = load_graph(project_name) if project_name else None
+    if graph is None:
+        # Fallback to empty graph
+        graph = Graph(modules={}, edges=[])
 
     patterns = ProjectPatterns(
         structure=detect_structure_patterns(project_path),
