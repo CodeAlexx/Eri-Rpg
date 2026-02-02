@@ -3300,6 +3300,108 @@ def register(cli):
         result = get_execute_phase_context(phase)
         click.echo(json.dumps(result, indent=2))
 
+    @cli.command("coder-start-plan")
+    @click.argument("phase", type=int)
+    @click.argument("plan", type=int)
+    def coder_start_plan_cmd(phase: int, plan: int):
+        """Start execution of a specific plan - enables file edits.
+
+        Creates EXECUTION_STATE.json with allowed files from the plan.
+        This unlocks the pretooluse hook for those files.
+        """
+        planning = get_planning_dir()
+        phases_dir = planning / "phases"
+
+        # Find phase directory
+        phase_dir = None
+        for d in phases_dir.iterdir():
+            if d.is_dir() and d.name.startswith(f"{phase:02d}"):
+                phase_dir = d
+                break
+
+        if not phase_dir:
+            click.echo(json.dumps({"error": f"Phase {phase} not found"}))
+            return
+
+        # Find plan file
+        plan_file = None
+        for p in phase_dir.glob(f"*-{plan:02d}-PLAN.md"):
+            plan_file = p
+            break
+        if not plan_file:
+            for p in phase_dir.glob(f"phase-{plan:02d}-PLAN.md"):
+                plan_file = p
+                break
+
+        if not plan_file:
+            click.echo(json.dumps({"error": f"Plan {plan} not found in phase {phase}"}))
+            return
+
+        # Extract files from plan frontmatter
+        fm = load_md_frontmatter(plan_file)
+        files_modified = fm.get("files_modified", [])
+        if isinstance(files_modified, str):
+            files_modified = [f.strip() for f in files_modified.split(",")]
+
+        # Also extract from must_haves artifacts
+        must_haves = fm.get("must_haves", {})
+        if isinstance(must_haves, dict):
+            for artifact in must_haves.get("artifacts", []):
+                if isinstance(artifact, dict) and artifact.get("path"):
+                    if artifact["path"] not in files_modified:
+                        files_modified.append(artifact["path"])
+
+        # Create execution state
+        exec_state = {
+            "active": True,
+            "phase": phase,
+            "plan": plan,
+            "plan_file": str(plan_file),
+            "allowed_files": files_modified,
+            "started_at": datetime.now().isoformat()
+        }
+
+        state_path = planning / "EXECUTION_STATE.json"
+        save_json_file(state_path, exec_state)
+
+        click.echo(json.dumps({
+            "started": True,
+            "phase": phase,
+            "plan": plan,
+            "allowed_files": files_modified,
+            "message": f"Plan {phase}.{plan} execution started. {len(files_modified)} files unlocked for editing."
+        }, indent=2))
+
+    @cli.command("coder-end-plan")
+    def coder_end_plan_cmd():
+        """End execution of current plan - locks file edits again.
+
+        Removes EXECUTION_STATE.json, re-enabling enforcement.
+        """
+        planning = get_planning_dir()
+        state_path = planning / "EXECUTION_STATE.json"
+
+        if not state_path.exists():
+            click.echo(json.dumps({"error": "No active plan execution"}))
+            return
+
+        # Read current state for reporting
+        try:
+            with open(state_path) as f:
+                exec_state = json.load(f)
+        except Exception:
+            exec_state = {}
+
+        # Remove state file
+        state_path.unlink()
+
+        click.echo(json.dumps({
+            "ended": True,
+            "phase": exec_state.get("phase"),
+            "plan": exec_state.get("plan"),
+            "message": "Plan execution ended. File edits are now blocked until next /coder:start-plan."
+        }, indent=2))
+
     @cli.command("coder-verify-work")
     @click.argument("phase", type=int)
     def coder_verify_work_cmd(phase: int):

@@ -379,6 +379,47 @@ def main():
             print(json.dumps(output))
             sys.exit(0)
 
+        # Check for CODER workflow (.planning/ directory)
+        planning_dir = os.path.join(project_path, ".planning")
+        if os.path.isdir(planning_dir):
+            log(f"CODER workflow detected: {planning_dir}")
+            rel_path = os.path.relpath(file_path, project_path)
+
+            # Check for active execution state
+            state_file = os.path.join(planning_dir, "EXECUTION_STATE.json")
+            active_plan = None
+            if os.path.exists(state_file):
+                try:
+                    with open(state_file) as f:
+                        exec_state = json.load(f)
+                        if exec_state.get("active"):
+                            active_plan = exec_state.get("plan")
+                            allowed_files = exec_state.get("allowed_files", [])
+                            # Check if file is in allowed list
+                            if rel_path in allowed_files or any(rel_path.startswith(p) for p in allowed_files):
+                                log(f"ALLOWING (coder plan): {rel_path}")
+                                print(json.dumps({"decision": "allow"}))
+                                sys.exit(0)
+                except Exception as e:
+                    log(f"Error reading execution state: {e}")
+
+            # No active plan or file not in allowed list - BLOCK
+            log(f"BLOCKING (coder workflow): no active plan for {rel_path}")
+            output = {
+                "decision": "block",
+                "reason": (
+                    f"ERI-RPG CODER ENFORCEMENT: No active execution plan.\n"
+                    f"File: {rel_path}\n\n"
+                    f"This project uses /coder workflow. You must:\n"
+                    f"  1. /coder:plan-phase N - Create a plan first\n"
+                    f"  2. /coder:execute-phase N - Start execution\n\n"
+                    f"Direct file edits without an active plan are BLOCKED.\n"
+                    f"The plan must explicitly list files to be modified."
+                )
+            }
+            print(json.dumps(output))
+            sys.exit(0)
+
         # Check for quick fix mode FIRST (lightweight mode, no full run required)
         log(f"Checking for quick fix in: {project_path}")
         quick_fix = get_quick_fix_state(project_path)
