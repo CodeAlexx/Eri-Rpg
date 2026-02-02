@@ -269,7 +269,18 @@ def register(cli):
             click.echo(f"Error: Project '{project}' not found", err=True)
             sys.exit(1)
 
-        plan = load_plan(proj.path, plan_id)
+        # Parse plan_id format: "phase-N" (e.g., "foundation-1")
+        try:
+            parts = plan_id.rsplit("-", 1)
+            if len(parts) != 2:
+                raise ValueError("Invalid format")
+            phase_name = parts[0]
+            plan_number = int(parts[1])
+        except (ValueError, IndexError):
+            click.echo(f"Error: Invalid plan_id format '{plan_id}'. Expected 'phase-N' (e.g., 'foundation-1')", err=True)
+            sys.exit(1)
+
+        plan = load_plan(proj.path, phase_name, plan_number)
         if not plan:
             click.echo(f"Error: Plan '{plan_id}' not found", err=True)
             sys.exit(1)
