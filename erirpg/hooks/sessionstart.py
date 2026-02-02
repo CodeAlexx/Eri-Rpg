@@ -29,6 +29,71 @@ def log(msg: str):
         pass  # Error logged elsewhere
 
 
+def get_active_project_info() -> tuple:
+    """Get active project name and path from global state.
+
+    Returns:
+        (project_name, project_path) or (None, None) if not found
+    """
+    state_file = Path.home() / ".eri-rpg" / "state.json"
+    registry_file = Path.home() / ".eri-rpg" / "registry.json"
+
+    if not state_file.exists() or not registry_file.exists():
+        return None, None
+
+    try:
+        with open(state_file) as f:
+            state = json.load(f)
+        with open(registry_file) as f:
+            registry = json.load(f)
+
+        active_project = state.get("active_project")
+        if not active_project:
+            return None, None
+
+        project_info = registry.get("projects", {}).get(active_project)
+        if not project_info:
+            return None, None
+
+        return active_project, project_info.get("path")
+    except Exception as e:
+        log(f"Error getting active project: {e}")
+        return None, None
+
+
+def find_planning_directory(project_path: str) -> str:
+    """Find where .planning/ lives under the project path.
+
+    Searches project root first, then common subdirectories.
+    Returns the directory containing .planning/, or project root if not found.
+    """
+    project = Path(project_path)
+
+    # Check direct location first
+    if (project / ".planning").exists():
+        return str(project)
+
+    # Check common subdirectories
+    for subdir in ["desktop", "src", "app", "packages", "apps"]:
+        subpath = project / subdir
+        if subpath.exists() and (subpath / ".planning").exists():
+            return str(subpath)
+
+    # Search recursively (limited depth to avoid slow searches)
+    try:
+        for planning_dir in project.glob("*/.planning"):
+            parent = planning_dir.parent
+            # Skip hidden dirs and node_modules
+            if not any(part.startswith('.') or part == 'node_modules'
+                      for part in parent.relative_to(project).parts):
+                return str(parent)
+    except Exception as e:
+        log(f"Error searching for .planning: {e}")
+
+    # No .planning found, return project root
+    return str(project)
+
+
 def find_project_roots(start_path: str) -> list:
     """Find all project roots with .eri-rpg directories."""
     roots = []
@@ -293,6 +358,19 @@ def main():
         input_data = json.loads(raw_input) if raw_input.strip() else {}
         cwd = input_data.get("cwd", os.getcwd())
 
+        # === CHECK ACTIVE PROJECT (advisory only) ===
+        active_project, project_path = get_active_project_info()
+        log(f"Active project: {active_project}, path: {project_path}")
+
+        # Track if we're in a different directory than active project
+        wrong_directory = False
+        target_dir = None
+        if active_project and project_path and os.path.isdir(project_path):
+            target_dir = find_planning_directory(project_path)
+            log(f"Target dir: {target_dir}, current: {cwd}")
+            if os.path.realpath(target_dir) != os.path.realpath(cwd):
+                wrong_directory = True
+
         # Project detection - early exit if not an eri-rpg project
         project_root = None
         check = cwd
@@ -400,20 +478,25 @@ def main():
             final_messages = []
 
             if context_found:
-                final_messages.append("=== SESSION START: CONTEXT RECOVERY REQUIRED ===")
-                final_messages.append("Before responding to user, confirm recovered context:")
-                final_messages.append(f"- Directory: {cwd}")
+                final_messages.append("=== SESSION START: CONTEXT RECOVERY ===")
+                final_messages.append(f"Directory: {cwd}")
                 if planning_state and planning_state.get("active_phase"):
-                    final_messages.append(f"- Phase: {planning_state['active_phase']}")
+                    final_messages.append(f"Phase: {planning_state['active_phase']}")
                 if project_roots:
-                    final_messages.append(f"- EriRPG project: {get_project_name(project_roots[0])}")
+                    final_messages.append(f"EriRPG project: {get_project_name(project_roots[0])}")
+                final_messages.append("")
+
+            # Advisory if in wrong directory
+            if wrong_directory and target_dir:
+                final_messages.append(f"NOTE: Active project '{active_project}' is at {target_dir}")
+                final_messages.append(f"You are currently in: {cwd}")
+                final_messages.append(f"To switch: cd {target_dir}")
                 final_messages.append("")
 
             final_messages.extend(messages)
 
             if context_found:
-                final_messages.append("")
-                final_messages.append("=== WAIT for user instructions before executing anything ===")
+                final_messages.append("Run /coder:init to load full context.")
 
             output = {
                 "systemMessage": "\n".join(final_messages)
