@@ -403,21 +403,31 @@ def main():
     global_state = load_global_state()
     registry = load_registry()
 
-    # HIGHEST PRIORITY: Active edited project (set by PostToolUse hook)
-    # This tracks which project is being actively edited, regardless of cwd
-    project_name, project_path, tier = get_active_edited_project(global_state, registry)
+    # HIGHEST PRIORITY: coder project in cwd (.planning/ directory)
+    # When cd'd into a directory with .planning/, show that project
+    project_name, project_path, tier = None, None, None
+    coder_name = get_coder_project_name(cwd)
+    if coder_name:
+        project_name = coder_name
+        # Find actual path where .planning/ exists
+        search_path = Path(cwd)
+        for _ in range(5):
+            if (search_path / ".planning").exists():
+                project_path = str(search_path)
+                break
+            search_path = search_path.parent
+        else:
+            project_path = cwd
+        tier = get_project_tier(project_path) if (Path(project_path) / ".eri-rpg").exists() else None
 
     # SECOND: cwd-based detection from registry
     if not project_name:
         project_name, project_path, tier = get_project_info(registry, cwd)
 
-    # THIRD: check for coder project (.planning/ directory)
+    # THIRD: Active edited project (set by PostToolUse hook)
+    # Fallback when cwd isn't in a project
     if not project_name:
-        coder_name = get_coder_project_name(cwd)
-        if coder_name:
-            project_name = coder_name
-            project_path = cwd  # Use cwd as project path
-            tier = None  # Coder projects don't have tiers
+        project_name, project_path, tier = get_active_edited_project(global_state, registry)
 
     # LAST RESORT: active_project from state
     if not project_name:

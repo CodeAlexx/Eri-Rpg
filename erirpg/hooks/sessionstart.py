@@ -289,7 +289,8 @@ def get_planning_state(cwd: str) -> dict:
         # Find active phase (one without SUMMARY.md in all plans)
         for phase_dir in sorted(phase_dirs):
             plans = list(phase_dir.glob("*-PLAN.md"))
-            summaries = list(phase_dir.glob("*-SUMMARY.md"))
+            # Handle both naming conventions: SUMMARY-*.md and *-SUMMARY.md
+            summaries = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
             if plans and len(summaries) < len(plans):
                 state["active_phase"] = phase_dir.name
                 state["active_phase_plans"] = len(plans)

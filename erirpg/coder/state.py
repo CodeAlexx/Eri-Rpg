@@ -182,7 +182,8 @@ def get_progress(project_path: Optional[Path] = None) -> Dict[str, Any]:
         phase_dir = _find_phase_dir(planning_dir, phase_num)
         if phase_dir and phase_dir.exists():
             plan_files = list(phase_dir.glob("*-PLAN.md"))
-            summary_files = list(phase_dir.glob("*-SUMMARY.md"))
+            # Handle both naming conventions
+            summary_files = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
             plan_progress["total"] = len(plan_files)
             plan_progress["current"] = len(summary_files)
 

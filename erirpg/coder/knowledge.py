@@ -335,8 +335,9 @@ def import_from_phase(
     phases_dir = planning_dir / "phases"
     for d in phases_dir.iterdir() if phases_dir.exists() else []:
         if d.name.startswith(f"{phase:02d}-"):
-            # Process summary files
-            for summary_file in d.glob("*-SUMMARY.md"):
+            # Process summary files (handle both naming conventions)
+            summary_files = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
+            for summary_file in summary_files:
                 content = summary_file.read_text()
 
                 # Extract decisions

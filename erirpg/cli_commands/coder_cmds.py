@@ -268,18 +268,16 @@ def get_progress_metrics() -> dict:
     roadmap_path = planning / "ROADMAP.md"
     roadmap_content = roadmap_path.read_text() if roadmap_path.exists() else ""
 
-    # Count phases (look for ## Phase N patterns)
+    # Count phases (look for ### Phase N patterns)
     import re
-    phase_matches = re.findall(r'## Phase (\d+)', roadmap_content)
+    phase_matches = re.findall(r'###\s*Phase\s*(\d+)', roadmap_content)
     total_phases = len(phase_matches)
-
-    # Count completed phases (look for status: complete)
-    completed_phases = roadmap_content.lower().count("status: complete")
 
     # Count plans in phases directory
     phases_dir = planning / "phases"
     total_plans = 0
     completed_plans = 0
+    completed_phases = 0
     current_phase = None
     current_phase_plans = 0
     current_phase_completed = 0
@@ -288,12 +286,16 @@ def get_progress_metrics() -> dict:
         for phase_dir in sorted(phases_dir.iterdir()):
             if phase_dir.is_dir():
                 plan_count = count_files_in_dir(phase_dir, "*-PLAN.md")
-                summary_count = count_files_in_dir(phase_dir, "*-SUMMARY.md")
+                # Handle both naming conventions: SUMMARY-*.md and *-SUMMARY.md
+                summary_count = count_files_in_dir(phase_dir, "SUMMARY-*.md") + count_files_in_dir(phase_dir, "*-SUMMARY.md")
                 total_plans += plan_count
                 completed_plans += summary_count
 
+                # Count completed phases (all plans have summaries)
+                if plan_count > 0 and summary_count >= plan_count:
+                    completed_phases += 1
                 # Determine current phase (first incomplete)
-                if plan_count > summary_count and current_phase is None:
+                elif current_phase is None:
                     current_phase = phase_dir.name
                     current_phase_plans = plan_count
                     current_phase_completed = summary_count
@@ -957,7 +959,9 @@ def extract_patterns(project_path: Path = None) -> list[dict]:
     if phases_dir.exists():
         for phase_dir in phases_dir.iterdir():
             if phase_dir.is_dir():
-                for summary in phase_dir.glob("*-SUMMARY.md"):
+                # Handle both naming conventions
+                summaries = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
+                for summary in summaries:
                     fm = load_md_frontmatter(summary)
                     if fm.get("patterns"):
                         patterns.extend([
@@ -1270,8 +1274,9 @@ def get_replay_context(phase: int, plan: int = None) -> dict:
             "name": plan_file.stem
         })
 
-    # Get summaries
-    for summary_file in sorted(phase_dir.glob("*-SUMMARY.md")):
+    # Get summaries (handle both naming conventions)
+    summary_files = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
+    for summary_file in sorted(summary_files):
         result["summaries"].append({
             "path": str(summary_file),
             "name": summary_file.stem
@@ -1502,7 +1507,8 @@ def get_remove_phase_info(phase_num: int) -> dict:
     if phases_dir.exists():
         for d in phases_dir.iterdir():
             if d.is_dir() and d.name.startswith(f"{phase_num:02d}"):
-                if list(d.glob("*-PLAN.md")) or list(d.glob("*-SUMMARY.md")):
+                summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
+                if list(d.glob("*-PLAN.md")) or summaries:
                     phase_started = True
                 break
 
@@ -2080,8 +2086,9 @@ def validate_phase_insertion(after_phase: int) -> dict:
     if phases_dir.exists():
         for phase_dir in phases_dir.iterdir():
             if phase_dir.is_dir():
-                # Check if has plans or summaries
-                if list(phase_dir.glob("*-PLAN.md")) or list(phase_dir.glob("*-SUMMARY.md")):
+                # Check if has plans or summaries (handle both naming conventions)
+                summaries = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
+                if list(phase_dir.glob("*-PLAN.md")) or summaries:
                     try:
                         phase_num = int(phase_dir.name.split("-")[0])
                         if phase_num > after_phase:
@@ -2122,7 +2129,8 @@ def validate_phase_removal(phase: int) -> dict:
     if phases_dir.exists():
         for phase_dir in phases_dir.iterdir():
             if phase_dir.is_dir() and phase_dir.name.startswith(f"{phase:02d}"):
-                if list(phase_dir.glob("*-PLAN.md")) or list(phase_dir.glob("*-SUMMARY.md")):
+                summaries = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
+                if list(phase_dir.glob("*-PLAN.md")) or summaries:
                     return {"valid": False, "error": f"Phase {phase} has work started"}
 
     # Get requirements assigned to this phase
@@ -2539,9 +2547,9 @@ def get_milestone_status() -> dict:
 
             for d in phases_dir.iterdir():
                 if d.is_dir() and d.name.startswith(f"{phase_num:02d}"):
-                    # Check for summaries (completion)
+                    # Check for summaries (completion) - handle both naming conventions
                     plans = list(d.glob("*-PLAN.md"))
-                    summaries = list(d.glob("*-SUMMARY.md"))
+                    summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
 
                     if plans and len(summaries) >= len(plans):
                         phase_complete = True
@@ -3458,7 +3466,8 @@ def register(cli):
 
             # Count plans and completions
             plans = list(d.glob("*-PLAN.md"))
-            summaries = list(d.glob("SUMMARY-*.md"))
+            # Handle both naming conventions: SUMMARY-*.md and *-SUMMARY.md
+            summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
 
             phase_info = {
                 "number": phase_num,

@@ -336,15 +336,17 @@ def prepare_replay(
 
     archived = []
     if plan:
-        # Archive specific plan's summary
-        pattern = f"*{phase:02d}-{plan:02d}*-SUMMARY.md"
-        for summary in phase_dir.glob(pattern):
-            archive_path = archive_dir / f"{summary.name}.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            summary.rename(archive_path)
-            archived.append(str(archive_path))
+        # Archive specific plan's summary (handle both naming conventions)
+        patterns = [f"*{phase:02d}-{plan:02d}*-SUMMARY.md", f"SUMMARY-{plan:02d}.md"]
+        for pattern in patterns:
+            for summary in phase_dir.glob(pattern):
+                archive_path = archive_dir / f"{summary.name}.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                summary.rename(archive_path)
+                archived.append(str(archive_path))
     else:
-        # Archive all summaries
-        for summary in phase_dir.glob("*-SUMMARY.md"):
+        # Archive all summaries (handle both naming conventions)
+        summaries = list(phase_dir.glob("SUMMARY-*.md")) + list(phase_dir.glob("*-SUMMARY.md"))
+        for summary in summaries:
             archive_path = archive_dir / f"{summary.name}.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             summary.rename(archive_path)
             archived.append(str(archive_path))
