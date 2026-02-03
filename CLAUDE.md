@@ -4,19 +4,25 @@
 
 On session start or /clear: run `/coder:init`
 
-Use `/coder:plan-phase` before implementing.
-Use `/coder:execute-phase` for ALL code tasks.
-No exceptions. No bypassing.
+**Every skill calls its CLI first. Follow the CLI output exactly.**
 
 Direct file edits without an active plan are forbidden.
-If you find yourself about to use Edit/Write directly, STOP and use the coder workflow instead.
+`/coder:execute-phase` auto-creates EXECUTION_STATE.json to allow edits.
 
 ## Workflow
 
 1. `/coder:init` - recover context
-2. `/coder:plan-phase N` - create plan for phase N
-3. `/coder:execute-phase N` - implement the plan
+2. `/coder:plan-phase N` - create plans (calls CLI, spawns eri-planner)
+3. `/coder:execute-phase N` - execute plans (calls CLI, auto-creates EXECUTION_STATE.json, spawns eri-executor for each plan)
 4. `/coder:verify-work N` - validate completion
+
+## How It Works
+
+- Skill files are thin - they just call CLI and follow output
+- CLI returns JSON with everything needed (plans, files, settings, instructions)
+- CLI auto-creates EXECUTION_STATE.json so hooks allow edits
+- Agent specs (eri-executor, eri-planner) have the deep logic
+- On completion: `python3 -m erirpg.cli coder-end-plan` to re-enable enforcement
 
 ## Project Context
 

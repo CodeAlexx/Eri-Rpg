@@ -3295,9 +3295,131 @@ def register(cli):
     def coder_execute_phase_cmd(phase: int):
         """Get context for /coder:execute-phase skill.
 
-        Load plans and execution state.
+        Load plans, create EXECUTION_STATE.json, and return instructions.
+        This command auto-creates the execution state so hooks allow edits.
         """
-        result = get_execute_phase_context(phase)
+        planning = get_planning_dir()
+        phases_dir = planning / "phases"
+
+        if not phases_dir.exists():
+            click.echo(json.dumps({"error": f"No phases directory found at {phases_dir}"}))
+            return
+
+        # Find phase directory
+        phase_dir = None
+        phase_name = None
+        for d in phases_dir.iterdir():
+            if d.is_dir() and d.name.startswith(f"{phase:02d}"):
+                phase_dir = d
+                phase_name = d.name
+                break
+
+        if not phase_dir:
+            click.echo(json.dumps({"error": f"Phase {phase} directory not found"}))
+            return
+
+        # Collect ALL files from ALL plans in this phase
+        all_allowed_files = []
+        plans = []
+        waves = {}
+
+        for plan_path in sorted(phase_dir.glob("*-PLAN.md")):
+            fm = load_md_frontmatter(plan_path)
+            plan_content = plan_path.read_text()
+
+            # Extract plan number from filename
+            plan_num = 1
+            parts = plan_path.stem.split("-")
+            for i, part in enumerate(parts):
+                if part.isdigit() and i > 0:
+                    plan_num = int(part)
+                    break
+
+            # Get files from frontmatter
+            files_modified = fm.get("files_modified", [])
+            if isinstance(files_modified, str):
+                files_modified = [f.strip() for f in files_modified.split(",") if f.strip()]
+
+            # Extract from must_haves artifacts
+            must_haves = fm.get("must_haves", {})
+            if isinstance(must_haves, dict):
+                for artifact in must_haves.get("artifacts", []):
+                    if isinstance(artifact, dict) and artifact.get("path"):
+                        path = artifact["path"]
+                        if path not in files_modified:
+                            files_modified.append(path)
+
+            # Extract files from <files> tags in plan content
+            import re
+            file_tags = re.findall(r'<files>(.*?)</files>', plan_content, re.DOTALL)
+            for tag_content in file_tags:
+                for f in tag_content.split(","):
+                    f = f.strip()
+                    if f and f not in files_modified:
+                        files_modified.append(f)
+
+            # Add to all allowed files
+            for f in files_modified:
+                if f not in all_allowed_files:
+                    all_allowed_files.append(f)
+
+            # Check completion status
+            summary_path = plan_path.with_name(plan_path.stem.replace("-PLAN", "-SUMMARY") + ".md")
+            completed = summary_path.exists()
+
+            wave = int(fm.get("wave", 1))
+            plan_info = {
+                "path": str(plan_path),
+                "name": plan_path.stem,
+                "plan_number": plan_num,
+                "wave": wave,
+                "completed": completed,
+                "files": files_modified
+            }
+            plans.append(plan_info)
+
+            # Group by wave
+            if wave not in waves:
+                waves[wave] = []
+            waves[wave].append(plan_info)
+
+        # Create EXECUTION_STATE.json with ALL phase files
+        exec_state = {
+            "active": True,
+            "phase": phase,
+            "phase_name": phase_name,
+            "allowed_files": all_allowed_files,
+            "plans": [p["path"] for p in plans],
+            "started_at": datetime.now().isoformat()
+        }
+
+        state_path = planning / "EXECUTION_STATE.json"
+        save_json_file(state_path, exec_state)
+
+        # Build result with instructions for Claude
+        result = {
+            "phase": phase,
+            "phase_name": phase_name,
+            "phase_dir": str(phase_dir),
+            "plans": plans,
+            "waves": {str(k): v for k, v in sorted(waves.items())},
+            "total_plans": len(plans),
+            "completed_plans": len([p for p in plans if p["completed"]]),
+            "pending_plans": len([p for p in plans if not p["completed"]]),
+            "execution_state_created": True,
+            "allowed_files": all_allowed_files,
+            "settings": get_settings(),
+            "instructions": (
+                f"Execute phase {phase} ({phase_name}) with {len(plans)} plans.\n\n"
+                f"EXECUTION_STATE.json created - {len(all_allowed_files)} files unlocked for editing.\n\n"
+                f"For each wave in order ({', '.join(str(w) for w in sorted(waves.keys()))}):\n"
+                f"  1. Spawn eri-executor for EACH plan in the wave (parallel within wave)\n"
+                f"  2. Wait for all wave plans to complete (check for SUMMARY.md)\n"
+                f"  3. Move to next wave\n\n"
+                f"After all plans complete, spawn eri-verifier to validate.\n\n"
+                f"On completion, run: python3 -m erirpg.cli coder-end-plan"
+            )
+        }
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-start-plan")

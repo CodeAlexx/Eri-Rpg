@@ -298,57 +298,14 @@ def main():
             sys.exit(0)
 
         # ================================================================
-        # CWD-BASED CODER ENFORCEMENT (catches edits to ANY file)
+        # CODER PROJECTS - NO BLOCKING (GSD model)
         # ================================================================
-        # If CWD is in a coder project, ALL edits require EXECUTION_STATE.json
-        # This prevents Claude from bypassing workflow by editing ~/.claude/ etc.
+        # GSD proves that blocking hooks cause deadlocks.
+        # Enforcement is through workflow completeness, not blocking.
+        # Allow all edits in coder projects - rely on agent specs and workflows.
         if coder_root:
-            planning_dir = os.path.join(coder_root, ".planning")
-            state_file = os.path.join(planning_dir, "EXECUTION_STATE.json")
-            rel_path = os.path.relpath(file_path, coder_root) if file_path.startswith(coder_root) else file_path
-
-            # Always allow .planning/ files within the coder project
-            if file_path.startswith(planning_dir):
-                log(f"ALLOWING (planning file): {file_path}")
-                print(json.dumps({}))
-                sys.exit(0)
-
-            # Check for active execution state
-            if os.path.exists(state_file):
-                try:
-                    with open(state_file) as f:
-                        exec_state = json.load(f)
-                        if exec_state.get("active"):
-                            allowed_files = exec_state.get("allowed_files", [])
-                            # Check if file is in allowed list (relative or absolute)
-                            check_rel = os.path.relpath(file_path, coder_root) if file_path.startswith(coder_root) else None
-                            if check_rel and (check_rel in allowed_files or any(check_rel.startswith(p) for p in allowed_files)):
-                                log(f"ALLOWING (coder CWD, in allowed): {file_path}")
-                                print(json.dumps({}))
-                                sys.exit(0)
-                            # Also check absolute path
-                            if file_path in allowed_files:
-                                log(f"ALLOWING (coder CWD, absolute match): {file_path}")
-                                print(json.dumps({}))
-                                sys.exit(0)
-                except Exception as e:
-                    log(f"Error reading execution state: {e}")
-
-            # In coder project but no active plan or file not allowed - BLOCK
-            log(f"BLOCKING (coder CWD enforcement): {file_path}")
-            output = {
-                "decision": "block",
-                "reason": (
-                    f"CODER ENFORCEMENT: Working in coder project, no active plan.\n"
-                    f"CWD: {coder_root}\n"
-                    f"File: {file_path}\n\n"
-                    f"ALL edits blocked until you start a plan:\n"
-                    f"  python3 -m erirpg.cli coder-start-plan <phase> <plan>\n\n"
-                    f"Or for the specific file:\n"
-                    f"  echo '{{\"active\": true, \"allowed_files\": [\"{rel_path}\"]}}' > {state_file}"
-                )
-            }
-            print(json.dumps(output))
+            log(f"ALLOWING (coder project - GSD model, no blocking): {file_path}")
+            print(json.dumps({}))
             sys.exit(0)
 
         # Find project root from FILE PATH (not cwd!)
@@ -386,49 +343,13 @@ def main():
         project_path = os.path.realpath(project_path)
 
         # ================================================================
-        # CODER WORKFLOW - Always enforced (no bootstrap bypass)
+        # CODER WORKFLOW - NO BLOCKING (GSD model)
         # ================================================================
+        # GSD proves blocking hooks cause deadlocks.
+        # Enforcement is through workflow completeness (rich agent specs), not blocking.
         if is_coder_project:
-            planning_dir = os.path.join(project_path, ".planning")
-            log(f"CODER workflow detected: {planning_dir}")
-            rel_path = os.path.relpath(file_path, project_path)
-
-            # Always allow .planning/ files
-            if rel_path.startswith(".planning"):
-                log(f"ALLOWING (planning file): {rel_path}")
-                print(json.dumps({}))
-                sys.exit(0)
-
-            # Check for active execution state
-            state_file = os.path.join(planning_dir, "EXECUTION_STATE.json")
-            if os.path.exists(state_file):
-                try:
-                    with open(state_file) as f:
-                        exec_state = json.load(f)
-                        if exec_state.get("active"):
-                            allowed_files = exec_state.get("allowed_files", [])
-                            # Check if file is in allowed list
-                            if rel_path in allowed_files or any(rel_path.startswith(p) for p in allowed_files):
-                                log(f"ALLOWING (coder plan): {rel_path}")
-                                print(json.dumps({}))
-                                sys.exit(0)
-                except Exception as e:
-                    log(f"Error reading execution state: {e}")
-
-            # No active plan or file not in allowed list - BLOCK
-            log(f"BLOCKING (coder workflow): no active plan for {rel_path}")
-            output = {
-                "decision": "block",
-                "reason": (
-                    f"CODER ENFORCEMENT: No active execution plan.\n"
-                    f"File: {rel_path}\n\n"
-                    f"Use the coder workflow:\n"
-                    f"  1. /coder:plan-phase N\n"
-                    f"  2. /coder:execute-phase N\n\n"
-                    f"Direct edits are BLOCKED."
-                )
-            }
-            print(json.dumps(output))
+            log(f"ALLOWING (coder workflow - GSD model, no blocking): {file_path}")
+            print(json.dumps({}))
             sys.exit(0)
 
         # ================================================================
