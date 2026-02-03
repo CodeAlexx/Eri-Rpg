@@ -250,8 +250,8 @@ def register(cli):
                     save_session_state(current_proj.path, session)
                     click.echo(f"Saved session for '{state.active_project}'")
 
-        # Switch to new project
-        state.set_active_project(project)
+        # Switch to new project (sets target_project which persists)
+        state.set_active_project(project, target_proj.path)
         click.echo(f"Switched to: {project}")
         click.echo(f"Path: {target_proj.path}")
 

@@ -116,7 +116,13 @@ def track_modified_file(file_path: str, project_path: str) -> None:
 def update_active_edited_project(project_path: str) -> None:
     """Update global state with the project being actively edited.
 
-    Simple: just use the directory name. No registry lookups.
+    Tracks two things:
+    - active_edited_project: What we just edited (for statusline)
+    - target_project: What user is actually working ON (set by /coder:switch, NOT here)
+
+    We do NOT overwrite target_project from file edits. That's set explicitly
+    by the user switching projects. This prevents editing eri-rpg code from
+    losing track of the real project (e.g., serenity_ui).
     """
     state_path = Path.home() / ".eri-rpg" / "state.json"
     project_name = Path(project_path).name
@@ -126,11 +132,19 @@ def update_active_edited_project(project_path: str) -> None:
         if state_path.exists():
             state = json.loads(state_path.read_text())
 
+        # Always track what was just edited (for statusline)
         state["active_edited_project"] = project_name
         state["active_edited_at"] = datetime.now().isoformat()
-        # Also set active_project so /coder:init knows where to resume after /clear
-        state["active_project"] = project_name
-        state["active_project_path"] = project_path
+
+        # Set target_project ONLY if not already set
+        # (first edit of session establishes target, explicit switch changes it)
+        if "target_project" not in state or not state.get("target_project"):
+            state["target_project"] = project_name
+            state["target_project_path"] = project_path
+
+        # Legacy fields for backwards compat (deprecated - use target_project)
+        state["active_project"] = state.get("target_project", project_name)
+        state["active_project_path"] = state.get("target_project_path", project_path)
 
         state_path.write_text(json.dumps(state, indent=2))
     except Exception as e:

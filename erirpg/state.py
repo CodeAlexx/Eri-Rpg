@@ -25,8 +25,15 @@ class State:
     - "implementing": Claude is implementing
     - "validating": Validating implementation
     - "done": Task complete
+
+    Project tracking:
+    - target_project: The project user is working ON (set by explicit switch)
+    - target_project_path: Path to target project
+    - active_project: Legacy, mirrors target_project for backwards compat
     """
-    active_project: Optional[str] = None  # Currently active project name
+    active_project: Optional[str] = None  # Legacy - use target_project
+    target_project: Optional[str] = None  # Project user is working ON
+    target_project_path: Optional[str] = None  # Path to target project
     current_task: Optional[str] = None
     phase: str = "idle"
     waiting_on: Optional[str] = None  # "user" | "claude" | None
@@ -71,9 +78,14 @@ class State:
         # Note: active_project is NOT reset - it persists across sessions
         self.save()
 
-    def set_active_project(self, name: str) -> None:
-        """Set the active project."""
-        self.active_project = name
+    def set_active_project(self, name: str, path: str = None) -> None:
+        """Set the active project (explicit switch).
+
+        This sets target_project which persists across /clear and file edits.
+        """
+        self.target_project = name
+        self.target_project_path = path
+        self.active_project = name  # Legacy backwards compat
         self.save()
 
     def get_active_project(self) -> Optional[str]:
@@ -118,8 +130,20 @@ class State:
         """Save state to disk."""
         os.makedirs(self._state_dir, exist_ok=True)
 
+        # Load existing state to preserve fields we don't track (like persona)
+        existing = {}
+        if os.path.exists(self._state_path):
+            try:
+                with open(self._state_path, "r") as f:
+                    existing = json.load(f)
+            except Exception:
+                pass
+
         data = {
+            **existing,  # Preserve fields we don't manage
             "active_project": self.active_project,
+            "target_project": self.target_project,
+            "target_project_path": self.target_project_path,
             "current_task": self.current_task,
             "phase": self.phase,
             "waiting_on": self.waiting_on,
@@ -144,6 +168,8 @@ class State:
             with open(state_path, "r") as f:
                 data = json.load(f)
             state.active_project = data.get("active_project")
+            state.target_project = data.get("target_project")
+            state.target_project_path = data.get("target_project_path")
             state.current_task = data.get("current_task")
             state.phase = data.get("phase", "idle")
             state.waiting_on = data.get("waiting_on")

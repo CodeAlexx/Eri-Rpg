@@ -21,32 +21,56 @@ from typing import Optional, Dict, Any, List
 def get_active_project_info() -> tuple:
     """Get active project name and path from global state.
 
+    Uses target_project (set by explicit switch) NOT active_edited_project.
+    This ensures editing eri-rpg code doesn't lose track of the real project.
+
     Returns:
-        (project_name, project_path) or (None, None) if not found
+        (project_name, project_path, is_meta_mode) or (None, None, False)
+
+    is_meta_mode is True when cwd is eri-rpg but target is different project.
     """
     state_file = Path.home() / ".eri-rpg" / "state.json"
     registry_file = Path.home() / ".eri-rpg" / "registry.json"
 
-    if not state_file.exists() or not registry_file.exists():
-        return None, None
+    if not state_file.exists():
+        return None, None, False
 
     try:
         with open(state_file) as f:
             state = json.load(f)
+
+        # Prefer target_project (explicit switch) over active_project (legacy)
+        target_project = state.get("target_project") or state.get("active_project")
+        target_path = state.get("target_project_path") or state.get("active_project_path")
+
+        if not target_project:
+            return None, None, False
+
+        # If we have path directly, use it
+        if target_path and Path(target_path).exists():
+            # Check if we're in meta mode (cwd is eri-rpg but target is different)
+            cwd = str(Path.cwd())
+            is_meta = "eri-rpg" in cwd and target_path != cwd
+            return target_project, target_path, is_meta
+
+        # Otherwise look up in registry
+        if not registry_file.exists():
+            return None, None, False
+
         with open(registry_file) as f:
             registry = json.load(f)
 
-        active_project = state.get("active_project")
-        if not active_project:
-            return None, None
-
-        project_info = registry.get("projects", {}).get(active_project)
+        project_info = registry.get("projects", {}).get(target_project)
         if not project_info:
-            return None, None
+            return None, None, False
 
-        return active_project, project_info.get("path")
+        path = project_info.get("path")
+        cwd = str(Path.cwd())
+        is_meta = "eri-rpg" in cwd and path != cwd
+
+        return target_project, path, is_meta
     except Exception:
-        return None, None
+        return None, None, False
 
 
 def find_planning_directory(project_path: str) -> Optional[str]:
@@ -250,8 +274,8 @@ def coder_init(output_json: bool = False) -> dict:
         "cwd": str(Path.cwd()),
     }
 
-    # Get active project from global state
-    active_name, active_path = get_active_project_info()
+    # Get active project from global state (uses target_project, not active_edited)
+    active_name, active_path, is_meta_mode = get_active_project_info()
 
     if active_name and active_path and Path(active_path).exists():
         result["active_project"] = {
@@ -259,6 +283,14 @@ def coder_init(output_json: bool = False) -> dict:
             "path": active_path,
             "is_cwd": str(Path.cwd()) == active_path,
         }
+
+        # Flag meta mode (working on eri-rpg but target is different project)
+        if is_meta_mode:
+            result["is_meta_mode"] = True
+            result["meta_note"] = (
+                f"You're in eri-rpg directory but target project is '{active_name}' at {active_path}. "
+                f"Read context from {active_name}, not eri-rpg."
+            )
 
         # Ensure STATE.md exists (create if .planning/ exists but STATE.md doesn't)
         state_created = ensure_state_md(active_path)
@@ -270,7 +302,7 @@ def coder_init(output_json: bool = False) -> dict:
 
         # Check if cwd is different from active project
         if str(Path.cwd()) != active_path:
-            result["note"] = f"Active project '{active_name}' is at {active_path}, not cwd"
+            result["note"] = f"Target project '{active_name}' is at {active_path}, not cwd"
             result["cwd_context"] = get_cwd_context()
 
         result["status"] = "active_project_found"
