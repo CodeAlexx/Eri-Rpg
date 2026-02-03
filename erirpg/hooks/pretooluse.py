@@ -304,13 +304,13 @@ def main():
             sys.exit(0)
 
         # ================================================================
-        # CODER PROJECTS - NO BLOCKING (GSD model)
+        # CODER PROJECTS - NO BLOCKING
         # ================================================================
-        # GSD proves blocking hooks cause deadlocks and break workflows.
+        # Blocking hooks cause deadlocks and break workflows.
         # Enforcement is through context engineering (STATE.md always current),
         # not blocking. Allow all edits in coder projects.
         if coder_root:
-            log(f"ALLOWING (coder project - GSD model): {file_path}")
+            log(f"ALLOWING (coder project): {file_path}")
             print(json.dumps({}))
             sys.exit(0)
                 sys.exit(0)
@@ -350,12 +350,12 @@ def main():
         project_path = os.path.realpath(project_path)
 
         # ================================================================
-        # CODER WORKFLOW - NO BLOCKING (GSD model)
+        # CODER WORKFLOW - NO BLOCKING
         # ================================================================
-        # GSD proves blocking hooks cause deadlocks.
+        # Blocking hooks cause deadlocks.
         # Enforcement is through workflow completeness (rich agent specs), not blocking.
         if is_coder_project:
-            log(f"ALLOWING (coder workflow - GSD model, no blocking): {file_path}")
+            log(f"ALLOWING (coder workflow): {file_path}")
             print(json.dumps({}))
             sys.exit(0)
 
