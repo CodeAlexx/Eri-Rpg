@@ -313,7 +313,6 @@ def main():
             log(f"ALLOWING (coder project): {file_path}")
             print(json.dumps({}))
             sys.exit(0)
-                sys.exit(0)
 
         # Find project root from FILE PATH (not cwd!)
         # Look for .planning/ (coder workflow) or .eri-rpg/ (erirpg project)
