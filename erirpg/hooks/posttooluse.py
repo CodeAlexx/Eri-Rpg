@@ -128,6 +128,7 @@ def update_active_edited_project(project_path: str) -> None:
 
         state["active_edited_project"] = project_name
         state["active_edited_at"] = datetime.now().isoformat()
+        state["active_project"] = project_name  # Auto-switch active project on edit
 
         state_path.write_text(json.dumps(state, indent=2))
     except Exception as e:
