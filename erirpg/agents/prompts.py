@@ -1,7 +1,9 @@
 """
 Agent prompt loading and management.
 
-Prompts are stored in ~/.eri-rpg/agents/ as markdown files.
+Prompts are stored in ~/.eri-rpg/agents/ for production use.
+The erirpg/agents/ package directory stores them for version control.
+Environment variable ERI_AGENTS_DIR can override the default location.
 """
 
 import os
@@ -9,10 +11,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
-# Default agents directory
+# Default agents directory - user's home for production
 DEFAULT_AGENTS_DIR = Path.home() / ".eri-rpg" / "agents"
 
 # Agent types with their prompt files
+# Note: Most files have 'eri-' prefix, behavior-extractor does not
 AGENT_PROMPTS: Dict[str, str] = {
     "planner": "planner.md",
     "executor": "executor.md",
