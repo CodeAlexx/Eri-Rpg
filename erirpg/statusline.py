@@ -392,8 +392,21 @@ def main():
     global_state = load_global_state()
     registry = load_registry()
 
-    # Get project name - active edited project takes priority
+    # Get project name - priority order:
+    # 1. active_edited_project (recently edited, expires in 30min)
+    # 2. active_project (from /eri:switch, persists)
+    # 3. cwd-based detection
     project_name = get_active_edited_project(global_state)
+
+    if not project_name:
+        # Check active_project from global state (set by /eri:switch)
+        active_proj = global_state.get("active_project")
+        if active_proj:
+            project_name = active_proj
+            # Also get project_path from registry for this project
+            proj_info = registry.get(active_proj, {})
+            if proj_info.get("path"):
+                project_path = proj_info["path"]
 
     # Fallback to cwd-based detection
     if not project_name:
