@@ -50,7 +50,11 @@ def log(msg: str) -> None:
 
 
 def find_project_root(file_path: str) -> str | None:
-    """Find EriRPG project root from file path.
+    """Find project root from file path.
+
+    Detects both:
+    - EriRPG projects (.eri-rpg/ directory)
+    - Coder workflow projects (.planning/ directory)
 
     Excludes ~/.eri-rpg (global state dir) from being treated as a project.
     """
@@ -61,7 +65,8 @@ def find_project_root(file_path: str) -> str | None:
         # Stop before home - ~/.eri-rpg is global state, not a project
         if parent == home or parent == Path("/"):
             break
-        if (parent / ".eri-rpg").is_dir():
+        # Check for either project type
+        if (parent / ".eri-rpg").is_dir() or (parent / ".planning").is_dir():
             return str(parent)
 
     return None
@@ -111,38 +116,20 @@ def track_modified_file(file_path: str, project_path: str) -> None:
 def update_active_edited_project(project_path: str) -> None:
     """Update global state with the project being actively edited.
 
-    This allows the statusline to show the correct project even when
-    Claude Code's cwd is different from the project being edited.
+    Simple: just use the directory name. No registry lookups.
     """
     state_path = Path.home() / ".eri-rpg" / "state.json"
+    project_name = Path(project_path).name
 
-    # Find project name from registry
-    project_name = Path(project_path).name  # Default to directory name
-    registry_path = Path.home() / ".eri-rpg" / "registry.json"
-
-    try:
-        if registry_path.exists():
-            registry = json.loads(registry_path.read_text())
-            projects = registry.get("projects", {})
-            for name, info in projects.items():
-                if info.get("path") == project_path:
-                    project_name = name
-                    break
-    except Exception:
-        pass
-
-    # Update state
     try:
         state = {}
         if state_path.exists():
             state = json.loads(state_path.read_text())
 
         state["active_edited_project"] = project_name
-        state["active_edited_path"] = project_path
         state["active_edited_at"] = datetime.now().isoformat()
 
         state_path.write_text(json.dumps(state, indent=2))
-        log(f"Updated active edited project: {project_name} ({project_path})")
     except Exception as e:
         log(f"Failed to update active edited project: {e}")
 
@@ -213,17 +200,18 @@ def main():
         tool_input = input_data.get("tool_input", {})
         cwd = input_data.get("cwd", os.getcwd())
 
-        # Project detection - early exit if not an eri-rpg project
+        # Project detection - early exit if not a tracked project
+        # Tracks both EriRPG (.eri-rpg/) and coder workflow (.planning/) projects
         project_root = None
         check = cwd
         while check != '/':
-            if os.path.isdir(os.path.join(check, '.eri-rpg')):
+            if os.path.isdir(os.path.join(check, '.eri-rpg')) or os.path.isdir(os.path.join(check, '.planning')):
                 project_root = check
                 break
             check = os.path.dirname(check)
 
         if project_root is None:
-            # Not an eri-rpg project. Output empty and exit.
+            # Not a tracked project. Output empty and exit.
             print(json.dumps({"continue": True}))
             return
 

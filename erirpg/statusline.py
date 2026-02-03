@@ -68,36 +68,25 @@ def load_global_state() -> dict:
     return {}
 
 
-def get_active_edited_project(global_state: dict, registry: dict) -> tuple:
-    """Get actively edited project from state (set by PostToolUse hook).
+def get_active_edited_project(global_state: dict) -> str | None:
+    """Get actively edited project name from state.
 
-    Returns (project_name, project_path, tier) or (None, None, None).
-    Expires after 30 minutes of no edits.
+    Simple: just return the name. Expires after 30 minutes.
     """
     from datetime import datetime, timedelta
 
     edited_at = global_state.get("active_edited_at")
     if not edited_at:
-        return None, None, None
+        return None
 
-    # Check if stale (>30 minutes since last edit)
     try:
         last_edit = datetime.fromisoformat(edited_at)
         if datetime.now() - last_edit > timedelta(minutes=30):
-            return None, None, None
+            return None
     except:
-        return None, None, None
+        return None
 
-    project_name = global_state.get("active_edited_project")
-    project_path = global_state.get("active_edited_path")
-
-    if not project_name or not project_path:
-        return None, None, None
-
-    # Get tier from project config
-    tier = get_project_tier(project_path) if project_path else None
-
-    return project_name, project_path, tier
+    return global_state.get("active_edited_project")
 
 
 def load_registry() -> dict:
@@ -403,39 +392,26 @@ def main():
     global_state = load_global_state()
     registry = load_registry()
 
-    # HIGHEST PRIORITY: coder project in cwd (.planning/ directory)
-    # When cd'd into a directory with .planning/, show that project
-    project_name, project_path, tier = None, None, None
-    coder_name = get_coder_project_name(cwd)
-    if coder_name:
-        project_name = coder_name
-        # Find actual path where .planning/ exists
-        search_path = Path(cwd)
-        for _ in range(5):
-            if (search_path / ".planning").exists():
-                project_path = str(search_path)
-                break
-            search_path = search_path.parent
-        else:
-            project_path = cwd
-        tier = get_project_tier(project_path) if (Path(project_path) / ".eri-rpg").exists() else None
+    # Get project name - active edited project takes priority
+    project_name = get_active_edited_project(global_state)
 
-    # SECOND: cwd-based detection from registry
+    # Fallback to cwd-based detection
     if not project_name:
-        project_name, project_path, tier = get_project_info(registry, cwd)
+        project_name = get_coder_project_name(cwd)
 
-    # THIRD: Active edited project (set by PostToolUse hook)
-    # Fallback when cwd isn't in a project
     if not project_name:
-        project_name, project_path, tier = get_active_edited_project(global_state, registry)
+        project_name, project_path, _ = get_project_info(registry, cwd)
 
-    # LAST RESORT: active_project from state
-    if not project_name:
-        state_project = global_state.get("active_project")
-        if state_project and state_project in registry:
-            project_name = state_project
-            project_path = registry[state_project].get("path")
-            tier = get_project_tier(project_path) if project_path else "lite"
+    # For tier, check cwd
+    project_path = cwd
+    tier = None
+    search_path = Path(cwd)
+    for _ in range(5):
+        if (search_path / ".eri-rpg").exists():
+            project_path = str(search_path)
+            tier = get_project_tier(project_path)
+            break
+        search_path = search_path.parent
 
     # Gather all info
     persona = get_active_persona(global_state)

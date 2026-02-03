@@ -208,14 +208,9 @@ def detect_bash_file_write(command: str) -> str:
 
 def main():
     """Main hook entry point."""
-    # Toggle check - allow disabling hooks via env var or file flag
-    # See docs/INSTALL.md for usage
+    # ONLY allow disabling via env var set BEFORE session starts
+    # File-based disable removed - Claude could bypass enforcement by creating the file
     if os.environ.get("ERIRPG_HOOKS_DISABLED"):
-        print(json.dumps({}))
-        sys.exit(0)
-
-    hooks_disabled_file = Path.home() / ".eri-rpg" / ".hooks_disabled"
-    if hooks_disabled_file.exists():
         print(json.dumps({}))
         sys.exit(0)
 
@@ -307,98 +302,66 @@ def main():
             print(json.dumps({}))
             sys.exit(0)
 
-        # Find project root (look for .eri-rpg directory)
-        # IMPORTANT: Find ALL .eri-rpg directories going up, then use the OUTERMOST one
-        # This handles nested .eri-rpg directories (e.g., /project/erirpg/.eri-rpg vs /project/.eri-rpg)
-        project_path = cwd
-        found_eri_rpg_paths = []
+        # Find project root from FILE PATH (not cwd!)
+        # Look for .planning/ (coder workflow) or .eri-rpg/ (erirpg project)
+        project_path = None
+        is_coder_project = False
         check_path = Path(file_path).parent
         home_dir = os.path.expanduser("~")
-        log(f"Looking for .eri-rpg starting from: {check_path}")
+        log(f"Looking for project root from: {check_path}")
+
         while check_path != check_path.parent:
-            # Stop at home directory - not a project root
             if str(check_path) == home_dir:
                 log(f"Reached home dir, stopping search")
                 break
+            # Check for coder project first (.planning/)
+            if (check_path / ".planning").exists():
+                project_path = str(check_path)
+                is_coder_project = True
+                log(f"Found coder project at: {project_path}")
+                break
+            # Then check for eri-rpg project
             if (check_path / ".eri-rpg").exists():
-                found_eri_rpg_paths.append(str(check_path))
-                log(f"Found .eri-rpg at: {check_path}")
+                project_path = str(check_path)
+                log(f"Found eri-rpg project at: {project_path}")
+                break
             check_path = check_path.parent
 
-        if found_eri_rpg_paths:
-            # First, prefer paths that have quick_fix_state.json (active quick fix)
-            for candidate in reversed(found_eri_rpg_paths):
-                qf_path = Path(candidate) / ".eri-rpg" / "quick_fix_state.json"
-                if qf_path.exists():
-                    project_path = candidate
-                    log(f"Using path with quick_fix_state: {project_path}")
-                    break
-            else:
-                # No quick_fix_state found, use outermost .eri-rpg
-                project_path = found_eri_rpg_paths[-1]
-                log(f"Using outermost project path: {project_path}")
-        else:
-            log(f"No .eri-rpg found, using cwd: {project_path}")
+        if not project_path:
+            # File not in any tracked project - allow
+            log(f"File not in tracked project, allowing")
+            print(json.dumps({}))
+            sys.exit(0)
 
         # SECURITY: Resolve symlinks in project_path
         project_path = os.path.realpath(project_path)
 
         # ================================================================
-        # BOOTSTRAP MODE CHECK - No enforcement in bootstrap mode
+        # CODER WORKFLOW - Always enforced (no bootstrap bypass)
         # ================================================================
-        mode = get_project_mode(project_path)
-        log(f"Project mode: {mode}")
-
-        if mode == "bootstrap":
-            # Bootstrap mode = pass through, no enforcement
-            log(f"ALLOWING (bootstrap mode): enforcement disabled")
-            print(json.dumps({}))
-            sys.exit(0)
-
-        # ================================================================
-        # MAINTAIN MODE - Full enforcement below
-        # ================================================================
-
-        # Load enforcement config for additional checks
-        enforcement = get_enforcement_config(project_path)
-        log(f"Enforcement config: {enforcement}")
-
-        # Check for block_bash_writes - if enabled, block ALL Bash file writes
-        if is_bash_write and enforcement.get("block_bash_writes", False):
-            rel_path = os.path.relpath(file_path, project_path)
-            log(f"BLOCKING (block_bash_writes): {rel_path}")
-            output = {
-                "decision": "block",
-                "reason": (
-                    f"ERI-RPG ENFORCEMENT: Bash file writes are blocked.\n"
-                    f"File: {rel_path}\n\n"
-                    f"Use Edit/Write tools instead, or disable this check:\n"
-                    f"  Set enforcement.block_bash_writes=false in .eri-rpg/config.json"
-                )
-            }
-            print(json.dumps(output))
-            sys.exit(0)
-
-        # Check for CODER workflow (.planning/ directory)
-        planning_dir = os.path.join(project_path, ".planning")
-        if os.path.isdir(planning_dir):
+        if is_coder_project:
+            planning_dir = os.path.join(project_path, ".planning")
             log(f"CODER workflow detected: {planning_dir}")
             rel_path = os.path.relpath(file_path, project_path)
 
+            # Always allow .planning/ files
+            if rel_path.startswith(".planning"):
+                log(f"ALLOWING (planning file): {rel_path}")
+                print(json.dumps({}))
+                sys.exit(0)
+
             # Check for active execution state
             state_file = os.path.join(planning_dir, "EXECUTION_STATE.json")
-            active_plan = None
             if os.path.exists(state_file):
                 try:
                     with open(state_file) as f:
                         exec_state = json.load(f)
                         if exec_state.get("active"):
-                            active_plan = exec_state.get("plan")
                             allowed_files = exec_state.get("allowed_files", [])
                             # Check if file is in allowed list
                             if rel_path in allowed_files or any(rel_path.startswith(p) for p in allowed_files):
                                 log(f"ALLOWING (coder plan): {rel_path}")
-                                print(json.dumps({"decision": "allow"}))
+                                print(json.dumps({}))
                                 sys.exit(0)
                 except Exception as e:
                     log(f"Error reading execution state: {e}")
@@ -408,14 +371,39 @@ def main():
             output = {
                 "decision": "block",
                 "reason": (
-                    f"ERI-RPG CODER ENFORCEMENT: No active execution plan.\n"
+                    f"CODER ENFORCEMENT: No active execution plan.\n"
                     f"File: {rel_path}\n\n"
-                    f"This project uses /coder workflow. You must:\n"
-                    f"  1. /coder:plan-phase N - Create a plan first\n"
-                    f"  2. /coder:execute-phase N - Start execution\n\n"
-                    f"Direct file edits without an active plan are BLOCKED.\n"
-                    f"The plan must explicitly list files to be modified."
+                    f"Use the coder workflow:\n"
+                    f"  1. /coder:plan-phase N\n"
+                    f"  2. /coder:execute-phase N\n\n"
+                    f"Direct edits are BLOCKED."
                 )
+            }
+            print(json.dumps(output))
+            sys.exit(0)
+
+        # ================================================================
+        # ERI-RPG PROJECT - Check mode and enforcement
+        # ================================================================
+        mode = get_project_mode(project_path)
+        log(f"Project mode: {mode}")
+
+        if mode == "bootstrap":
+            log(f"ALLOWING (bootstrap mode)")
+            print(json.dumps({}))
+            sys.exit(0)
+
+        # Load enforcement config
+        enforcement = get_enforcement_config(project_path)
+        log(f"Enforcement config: {enforcement}")
+
+        # Check for block_bash_writes
+        if is_bash_write and enforcement.get("block_bash_writes", False):
+            rel_path = os.path.relpath(file_path, project_path)
+            log(f"BLOCKING (block_bash_writes): {rel_path}")
+            output = {
+                "decision": "block",
+                "reason": f"Bash file writes blocked. Use Edit/Write tools."
             }
             print(json.dumps(output))
             sys.exit(0)
