@@ -248,6 +248,20 @@ def update_state_md(planning: Path, current_phase: int = None, last_action: str 
     state_path.write_text("\n".join(lines))
 
 
+def safe_update_state(last_action: str = None, next_step: str = None) -> None:
+    """Safely update STATE.md - called after EVERY operation.
+
+    This ensures context recovery after /clear works reliably.
+    Catches all errors to never break command execution.
+    """
+    try:
+        planning = get_planning_dir()
+        if planning.exists():
+            update_state_md(planning, last_action=last_action, next_step=next_step)
+    except Exception:
+        pass  # Never break commands due to state tracking
+
+
 def load_md_frontmatter(path: Path) -> dict:
     """Load YAML frontmatter from markdown file."""
     if not path.exists():
@@ -3107,6 +3121,7 @@ def register(cli):
         result["requested_phase"] = phase
         result["requested_plan"] = plan
         result["git_status"] = get_git_status()
+        safe_update_state("Resumed session", "Continue work")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-progress")
@@ -3123,6 +3138,7 @@ def register(cli):
         result["focus_phase"] = phase
 
         if as_json or True:  # Always JSON for Claude Code
+            safe_update_state("Checked progress")
             click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-settings")
@@ -3139,15 +3155,18 @@ def register(cli):
             planning = ensure_planning_dir()
             config_path = planning / "config.json"
             save_json_file(config_path, DEFAULT_SETTINGS.copy())
+            safe_update_state("Reset settings")
             click.echo(json.dumps({"reset": True, "settings": DEFAULT_SETTINGS}, indent=2))
             return
 
         if key and value:
             result = set_setting(key, value)
+            safe_update_state(f"Changed setting {key}")
             click.echo(json.dumps(result, indent=2))
             return
 
         settings = get_settings()
+        safe_update_state("Viewed settings")
         click.echo(json.dumps({
             "settings": settings,
             "defaults": DEFAULT_SETTINGS,
@@ -3179,6 +3198,7 @@ def register(cli):
 
         result = get_rollback_preview(scope, identifier)
         result["dry_run"] = dry_run
+        safe_update_state(f"Prepared rollback ({scope})")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-diff")
@@ -3204,6 +3224,7 @@ def register(cli):
 
         result = get_diff_stats(ref)
         result["mode"] = "files" if files else "stat" if stats_only else "full"
+        safe_update_state("Viewed diff")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-cost")
@@ -3224,6 +3245,7 @@ def register(cli):
         result = estimate_cost(operation, context)
         result["detailed"] = detailed
         result["compare_with"] = compare
+        safe_update_state("Estimated cost")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-metrics")
@@ -3238,12 +3260,14 @@ def register(cli):
             try:
                 data_dict = json.loads(data)
                 result = record_metric(record, data_dict)
+                safe_update_state(f"Recorded {record} metric")
                 click.echo(json.dumps(result, indent=2))
             except json.JSONDecodeError:
                 click.echo(json.dumps({"error": "Invalid JSON data"}, indent=2))
             return
 
         metrics = load_metrics()
+        safe_update_state("Viewed metrics")
         click.echo(json.dumps(metrics, indent=2))
 
     @cli.command("coder-history")
@@ -3254,6 +3278,7 @@ def register(cli):
         Returns recent execution events from metrics and git.
         """
         history = get_execution_history(limit)
+        safe_update_state("Viewed history")
         click.echo(json.dumps({"history": history, "count": len(history)}, indent=2))
 
     @cli.command("coder-quick")
@@ -3268,6 +3293,7 @@ def register(cli):
         """
         if list_tasks:
             tasks = get_quick_tasks()
+            safe_update_state("Listed quick tasks")
             click.echo(json.dumps({"tasks": tasks}, indent=2))
             return
 
@@ -3275,6 +3301,7 @@ def register(cli):
             tasks = get_quick_tasks()
             task = next((t for t in tasks if t["id"] == resume), None)
             if task:
+                safe_update_state(f"Resumed quick task {resume}")
                 click.echo(json.dumps({"resume": True, "task": task}, indent=2))
             else:
                 click.echo(json.dumps({"error": f"Task {resume} not found"}, indent=2))
@@ -3282,12 +3309,14 @@ def register(cli):
 
         if description:
             result = init_quick_task(description, scope)
+            safe_update_state(f"Started quick task: {description[:30]}")
             click.echo(json.dumps(result, indent=2))
             return
 
         # Default: show status
         tasks = get_quick_tasks()
         active = [t for t in tasks if t["status"] == "in_progress"]
+        safe_update_state("Viewed quick tasks")
         click.echo(json.dumps({
             "active_task": active[0] if active else None,
             "total_tasks": len(tasks),
@@ -3306,11 +3335,13 @@ def register(cli):
         """
         if list_sessions:
             result = list_debug_sessions()
+            safe_update_state("Listed debug sessions")
             click.echo(json.dumps(result, indent=2))
             return
 
         if resume:
             session = get_debug_session()
+            safe_update_state("Resumed debug session")
             click.echo(json.dumps(session, indent=2))
             return
 
@@ -3326,6 +3357,7 @@ def register(cli):
                 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
                 resolved_path = resolved_dir / f"{timestamp}-resolved.md"
                 active_session.rename(resolved_path)
+                safe_update_state("Resolved debug session")
                 click.echo(json.dumps({
                     "resolved": True,
                     "archived_to": str(resolved_path)
@@ -3336,11 +3368,13 @@ def register(cli):
 
         if description:
             result = init_debug_session(description)
+            safe_update_state(f"Started debug: {description[:30]}")
             click.echo(json.dumps(result, indent=2))
             return
 
         # Default: show current session
         session = get_debug_session()
+        safe_update_state("Viewed debug session")
         click.echo(json.dumps(session, indent=2))
 
     @cli.command("coder-learn")
@@ -3364,6 +3398,7 @@ def register(cli):
             "export_requested": export,
             "focus_phase": phase
         }
+        safe_update_state("Extracted patterns")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-handoff")
@@ -3378,6 +3413,7 @@ def register(cli):
         result = generate_handoff(target)
         result["focus_phase"] = phase
         result["brief"] = brief
+        safe_update_state("Generated handoff")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-add-todo")
@@ -3389,6 +3425,7 @@ def register(cli):
         Capture an idea for later implementation.
         """
         result = add_todo(description, priority)
+        safe_update_state(f"Added todo: {description[:30]}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-todos")
@@ -3396,6 +3433,7 @@ def register(cli):
     def coder_todos_cmd(include_done: bool):
         """List todos for /coder:add-todo skill."""
         todos = list_todos(include_done)
+        safe_update_state("Listed todos")
         click.echo(json.dumps({"todos": todos, "count": len(todos)}, indent=2))
 
     @cli.command("coder-template")
@@ -3408,6 +3446,7 @@ def register(cli):
         """
         if list_templates_flag or not name:
             templates = list_templates()
+            safe_update_state("Listed templates")
             click.echo(json.dumps({"templates": templates}, indent=2))
             return
 
@@ -3415,6 +3454,7 @@ def register(cli):
         templates = list_templates()
         template = next((t for t in templates if t["name"] == name), None)
         if template:
+            safe_update_state(f"Loaded template: {name}")
             click.echo(json.dumps({"template": template}, indent=2))
         else:
             click.echo(json.dumps({"error": f"Template '{name}' not found"}, indent=2))
@@ -3428,6 +3468,7 @@ def register(cli):
         Show differences between branches.
         """
         result = compare_branches(branch1, branch2)
+        safe_update_state("Compared branches")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-split")
@@ -3438,6 +3479,7 @@ def register(cli):
         Suggest how to break a plan into smaller plans.
         """
         result = analyze_plan_for_split(plan_path)
+        safe_update_state("Analyzed plan for split")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-merge")
@@ -3448,6 +3490,7 @@ def register(cli):
         Check if plans can be combined.
         """
         result = analyze_plans_for_merge(list(plan_paths))
+        safe_update_state("Analyzed plans for merge")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-replay")
@@ -3459,6 +3502,7 @@ def register(cli):
         Prepare to re-run a phase or plan.
         """
         result = get_replay_context(phase, plan)
+        safe_update_state(f"Prepared replay for phase {phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-phase-assumptions")
@@ -3469,6 +3513,7 @@ def register(cli):
         Display planning approach before execution.
         """
         result = get_phase_assumptions(phase)
+        safe_update_state(f"Viewed phase {phase} assumptions")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-gaps")
@@ -3478,6 +3523,7 @@ def register(cli):
         List gaps from failed verifications.
         """
         gaps = find_milestone_gaps()
+        safe_update_state("Found milestone gaps")
         click.echo(json.dumps({"gaps": gaps, "count": len(gaps)}, indent=2))
 
     @cli.command("coder-pause")
@@ -3488,6 +3534,7 @@ def register(cli):
         Capture current state for seamless resume later.
         """
         result = create_pause_file(reason)
+        safe_update_state("Paused session", reason or "Session paused")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-new-project")
@@ -3501,10 +3548,12 @@ def register(cli):
         """
         if check or not name:
             result = check_project_exists()
+            safe_update_state("Checked project state")
             click.echo(json.dumps(result, indent=2))
             return
 
         result = init_new_project(name, description)
+        safe_update_state(f"Initialized project: {name}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-add-phase")
@@ -3516,6 +3565,7 @@ def register(cli):
         Prepare to add a new phase to roadmap.
         """
         result = add_phase_info(name, goal or "")
+        safe_update_state(f"Added phase: {name}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-insert-phase")
@@ -3528,6 +3578,7 @@ def register(cli):
         Prepare to insert a phase at specific position.
         """
         result = get_insert_phase_info(after_phase, name, goal or "")
+        safe_update_state(f"Inserted phase: {name} after phase {after_phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-remove-phase")
@@ -3538,6 +3589,7 @@ def register(cli):
         Check if phase can be removed.
         """
         result = get_remove_phase_info(phase)
+        safe_update_state(f"Removed phase {phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-discuss-phase")
@@ -3548,6 +3600,7 @@ def register(cli):
         Load phase info for implementation discussion.
         """
         result = get_discuss_phase_context(phase)
+        safe_update_state(f"Discussing phase {phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-plan-phase")
@@ -3559,6 +3612,7 @@ def register(cli):
         Load all context needed for planning.
         """
         result = get_plan_phase_context(phase, gaps)
+        safe_update_state(f"Planning phase {phase}", f"Create plans for phase {phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-execute-phase")
@@ -3796,6 +3850,7 @@ def register(cli):
         state_path = planning / "EXECUTION_STATE.json"
         save_json_file(state_path, exec_state)
 
+        safe_update_state(f"Started plan {phase}.{plan}", f"Execute plan {plan} in phase {phase}")
         click.echo(json.dumps({
             "started": True,
             "phase": phase,
@@ -3827,6 +3882,7 @@ def register(cli):
         # Remove state file
         state_path.unlink()
 
+        safe_update_state(f"Ended plan execution", "Run verification or continue")
         click.echo(json.dumps({
             "ended": True,
             "phase": exec_state.get("phase"),
@@ -3842,6 +3898,7 @@ def register(cli):
         Load must-haves and verification state.
         """
         result = get_verify_work_context(phase)
+        safe_update_state(f"Verifying phase {phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-gate")
@@ -3870,6 +3927,7 @@ def register(cli):
         Check if all phases complete and prepare for archive.
         """
         result = get_complete_milestone_context(milestone)
+        safe_update_state(f"Completing milestone: {milestone or 'current'}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-new-milestone")
@@ -3880,6 +3938,7 @@ def register(cli):
         Prepare to start a new milestone.
         """
         result = get_new_milestone_context(name)
+        safe_update_state(f"Starting milestone: {name}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-map-codebase")
@@ -3890,6 +3949,7 @@ def register(cli):
         Analyze existing codebase structure.
         """
         result = get_codebase_overview(focus)
+        safe_update_state("Mapped codebase")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-help")
@@ -3947,6 +4007,7 @@ def register(cli):
                     result["matching"] = matching
                     break
 
+        safe_update_state("Viewed help")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-phase-tasks")
@@ -3961,6 +4022,7 @@ def register(cli):
         result = get_phase_tasks(phase)
 
         if as_json:
+            safe_update_state(f"Listed tasks for phase {phase}")
             click.echo(json.dumps(result, indent=2))
             return
 
@@ -3969,6 +4031,7 @@ def register(cli):
             click.echo(f"Error: {result['error']}")
             return
 
+        safe_update_state(f"Listed tasks for phase {phase}")
         phase_name = result.get("phase_name", f"Phase {phase}")
         click.echo(f"\n# {phase_name}\n")
 
@@ -4093,10 +4156,12 @@ def register(cli):
             result["total"] += 1
 
         if as_json:
+            safe_update_state("Listed phases")
             click.echo(json.dumps(result, indent=2))
             return
 
         # Human-readable output
+        safe_update_state("Listed phases")
         click.echo(f"\nPhases ({result['completed']}/{result['total']} verified)\n")
 
         for p in result["phases"]:

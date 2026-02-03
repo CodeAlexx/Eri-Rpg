@@ -116,6 +116,105 @@ def get_context_files(project_path: str) -> Dict[str, Any]:
     return context
 
 
+def ensure_state_md(project_path: str) -> Optional[str]:
+    """Create STATE.md if .planning/ exists but STATE.md doesn't.
+
+    Returns path to STATE.md if created/exists, None otherwise.
+    """
+    project = Path(project_path)
+    planning_base = find_planning_directory(project_path)
+
+    if not planning_base:
+        return None
+
+    planning = Path(planning_base) / ".planning"
+    state_path = planning / "STATE.md"
+
+    if state_path.exists():
+        return str(state_path)
+
+    # Planning dir exists but no STATE.md - create one by scanning phases
+    phases_dir = planning / "phases"
+    roadmap_path = planning / "ROADMAP.md"
+
+    # Scan for phase info
+    phases_status = []
+    current_phase = None
+
+    if phases_dir.exists():
+        import re
+        # Get phase names from ROADMAP.md
+        phase_names = {}
+        if roadmap_path.exists():
+            content = roadmap_path.read_text()
+            for match in re.finditer(r'###?\s*Phase\s*(\d+)[:\-\s]+([^\n]+)', content):
+                phase_names[int(match.group(1))] = match.group(2).strip()
+
+        for d in sorted(phases_dir.iterdir()):
+            if not d.is_dir():
+                continue
+            parts = d.name.split("-", 1)
+            if not parts[0].isdigit():
+                continue
+
+            phase_num = int(parts[0])
+            phase_name = phase_names.get(phase_num, parts[1] if len(parts) > 1 else f"Phase {phase_num}")
+
+            plans = list(d.glob("*-PLAN.md"))
+            summaries = list(d.glob("*-SUMMARY.md")) + list(d.glob("SUMMARY-*.md"))
+
+            if len(summaries) >= len(plans) and plans:
+                status = "completed"
+            elif summaries:
+                status = "in_progress"
+            elif plans:
+                status = "planned"
+            else:
+                status = "pending"
+
+            phases_status.append((phase_num, phase_name, status))
+
+            if current_phase is None and status != "completed":
+                current_phase = phase_num
+
+    # Generate STATE.md
+    project_name = project.name
+    lines = [
+        "# Current State",
+        "",
+        "## Project",
+        f"**Name:** {project_name}",
+        f"**Path:** {project}",
+        "",
+        "## Current Phase",
+    ]
+
+    if current_phase:
+        name = next((n for num, n, s in phases_status if num == current_phase), f"Phase {current_phase}")
+        lines.append(f"Phase {current_phase}: {name}")
+    elif phases_status:
+        lines.append("All phases completed")
+    else:
+        lines.append("No phases defined yet")
+
+    lines.extend(["", "## Phase Status", "| Phase | Name | Status |", "|-------|------|--------|"])
+    for num, name, status in phases_status:
+        lines.append(f"| {num} | {name} | {status} |")
+
+    lines.extend([
+        "",
+        "## Last Action",
+        "- STATE.md auto-generated from project scan",
+        "",
+        "## Updated",
+        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+        "",
+    ])
+
+    state_path.write_text("\n".join(lines))
+    return str(state_path)
+
+
 def get_cwd_context() -> Dict[str, Any]:
     """Get context for current working directory (fallback)."""
     cwd = Path.cwd()
@@ -161,6 +260,11 @@ def coder_init(output_json: bool = False) -> dict:
             "is_cwd": str(Path.cwd()) == active_path,
         }
 
+        # Ensure STATE.md exists (create if .planning/ exists but STATE.md doesn't)
+        state_created = ensure_state_md(active_path)
+        if state_created:
+            result["state_md_ensured"] = state_created
+
         # Get context files from active project
         result["context"] = get_context_files(active_path)
 
@@ -174,6 +278,13 @@ def coder_init(output_json: bool = False) -> dict:
     else:
         # No active project - fall back to cwd
         result["active_project"] = None
+
+        # Ensure STATE.md exists for cwd if it has .planning/
+        cwd = str(Path.cwd())
+        state_created = ensure_state_md(cwd)
+        if state_created:
+            result["state_md_ensured"] = state_created
+
         result["context"] = get_cwd_context()
         result["status"] = "no_active_project"
         result["note"] = "No active project. Using current directory."
