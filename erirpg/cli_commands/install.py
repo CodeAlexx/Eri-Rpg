@@ -52,3 +52,16 @@ def register(cli):
         """
         from erirpg.install import install_commands
         install_commands()
+
+    @cli.command("install-agents")
+    def install_agents_cmd():
+        """Symlink agent specifications to ~/.claude/agents/.
+
+        Creates symlinks so changes to project agent specs are
+        automatically reflected in Claude Code.
+
+        Example:
+            eri-rpg install-agents
+        """
+        from erirpg.install import install_agents
+        install_agents()

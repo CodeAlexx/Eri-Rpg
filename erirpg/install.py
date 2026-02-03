@@ -124,6 +124,13 @@ def install_claude_code(verbose: bool = True) -> bool:
         print(f"  PreCompact  - Saves state before compaction")
         print(f"  SessionStart - Reminds about incomplete runs")
         print(f"\nCommands: {', '.join(commands_installed)}")
+
+    # Also install agent specifications
+    if verbose:
+        print(f"\nInstalling agent specifications...")
+    install_agents(verbose=verbose)
+
+    if verbose:
         print(f"\nRestart Claude Code to load changes.")
 
     return True
@@ -314,6 +321,47 @@ def install_commands(verbose: bool = True) -> bool:
 
     if verbose:
         print(f"\nSynced {len(commands_installed)} commands to {commands_dir}")
+
+    return True
+
+
+def install_agents(verbose: bool = True) -> bool:
+    """
+    Install agent specifications as symlinks to ~/.claude/agents/.
+
+    Creates symlinks so changes to project agent specs are
+    automatically reflected in Claude Code.
+
+    Returns:
+        True if successful
+    """
+    home = Path.home()
+    agents_dir = home / ".claude" / "agents"
+    erirpg_root = get_erirpg_root()
+    src_agents = erirpg_root / "erirpg" / "agents"
+
+    # Create target directory
+    agents_dir.mkdir(parents=True, exist_ok=True)
+
+    agents_installed = []
+
+    # Symlink all eri-*.md files
+    for agent_file in src_agents.glob("eri-*.md"):
+        target = agents_dir / agent_file.name
+
+        # Remove existing (file or symlink)
+        if target.exists() or target.is_symlink():
+            target.unlink()
+
+        # Create symlink
+        target.symlink_to(agent_file)
+        agents_installed.append(agent_file.stem)
+        if verbose:
+            print(f"  Linked: {agent_file.name}")
+
+    if verbose:
+        print(f"\nInstalled {len(agents_installed)} agent specs to {agents_dir}")
+        print("Changes to project files are now automatically reflected.")
 
     return True
 
