@@ -1,63 +1,73 @@
 # EriRPG Development Roadmap
 
-## Completed Phases (v1.0 - v2.0)
+## Milestone: v1 - Core Framework
 
-| Phase | Name | Status |
-|-------|------|--------|
-| 01 | Core Infrastructure | ✅ Complete |
-| 02 | Knowledge System | ✅ Complete |
-| 03 | Agent Workflow | ✅ Complete |
-| 04 | Quick Fix Mode | ✅ Complete |
-| 05 | Discuss & Roadmap | ✅ Complete |
-| 06 | Claude Integration | ✅ Complete |
+### Phase 1: Core Infrastructure
+- Goals:
+  - [ ] Build project registry (add/remove/list projects)
+  - [ ] Create code indexer (scan files, extract modules)
+  - [ ] Implement dependency graph (track imports)
+  - [ ] Add language parsers (Python, Rust, C)
+- Dependencies: none
+- Status: pending
 
-## Planned Features (v2.1+)
+### Phase 2: Knowledge System
+- Goals:
+  - [ ] Implement memory/learning storage
+  - [ ] Add module recall functionality
+  - [ ] Create pattern storage system
+  - [ ] Build decision logging
+- Dependencies: 1
+- Status: pending
+
+### Phase 3: Agent Workflow
+- Goals:
+  - [ ] Create agent API for Claude Code
+  - [ ] Implement run state management
+  - [ ] Add verification system
+  - [ ] Build execution tracking
+- Dependencies: 1, 2
+- Status: pending
+
+### Phase 4: Quick Fix Mode
+- Goals:
+  - [ ] Implement snapshot/restore for quick fixes
+  - [ ] Add single-file edit tracking
+  - [ ] Create lightweight workflow bypass
+- Dependencies: 3
+- Status: pending
+
+### Phase 5: Discuss & Roadmap
+- Goals:
+  - [ ] Build goal clarification flow
+  - [ ] Implement roadmap generation from spec
+  - [ ] Add phase planning helpers
+- Dependencies: 3
+- Status: pending
+
+### Phase 6: Claude Integration
+- Goals:
+  - [ ] Create CLI commands for Claude Code
+  - [ ] Implement hook-based enforcement
+  - [ ] Add skill file integration
+  - [ ] Build session state management
+- Dependencies: 3, 4, 5
+- Status: pending
+
+## Future Features (v2.0+)
 
 ### Language Support
-- [ ] **Dart parser** - For Flutter/Dart projects
-- [ ] **Go parser** - For Go projects
-- [ ] **TypeScript parser** - Improve beyond regex
-- [ ] **Java parser** - For Android/backend
+- Dart parser - For Flutter/Dart projects
+- Go parser - For Go projects
+- TypeScript parser - Improve beyond regex
+- Java parser - For Android/backend
 
 ### Performance
-- [ ] **Incremental indexing** - Only re-index changed files
-- [ ] **SQLite backend** - For large projects (>10k files)
-- [ ] **Parallel parsing** - Multi-threaded indexing
-
-### Workflow
-- [ ] **Wave execution** - Parallel step execution
-- [ ] **Metrics tracking** - Time, tokens, success rate
-- [ ] **Integration audit** - Verify transplants work correctly
-- [ ] **Batch learning** - Learn entire directories
-
-### Claude Code
-- [ ] **MCP server** - Native protocol integration
-- [ ] **Better error messages** - More actionable guidance
-- [ ] **Auto-resume** - Automatically resume after compaction
+- Incremental indexing - Only re-index changed files
+- SQLite backend - For large projects (>10k files)
+- Parallel parsing - Multi-threaded indexing
 
 ### Quality
-- [ ] **Test coverage** - Improve from current ~70%
-- [ ] **Documentation** - API docs, tutorials
-- [ ] **CI/CD** - Automated testing and releases
-
-## Version Plan
-
-### v2.1 (Next)
-- Dart parser
-- Incremental indexing
-- Batch learning
-
-### v2.2
-- Go parser  
-- Wave execution
-- Metrics tracking
-
-### v3.0
-- MCP server
-- SQLite backend
-- TypeScript/Java parsers
-
-## Contributing
-
-See main README for contribution guidelines.
-Priorities are marked with issue labels on GitHub.
+- Test coverage - Improve from current ~70%
+- Documentation - API docs, tutorials
+- CI/CD - Automated testing and releases
