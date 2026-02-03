@@ -168,24 +168,68 @@ def register(cli):
         Saves current session (if any) and switches to the target project.
         State persists across /clear and new sessions.
 
+        If PROJECT is a path to an existing directory, auto-registers it.
+
         Example:
             eri-rpg switch myapp
             eri-rpg switch eritrainer
+            eri-rpg switch /home/user/projects/newapp  # auto-registers
         """
         from erirpg.state import State
         from erirpg.memory import get_latest_session, save_session_state
+        from erirpg.registry import detect_project_language
 
         state = State.load()
 
-        # Validate target project exists
+        # Check if project exists in registry
         target_proj = registry.get(project)
+
+        # If not found, check if it's a path that exists
         if not target_proj:
-            click.echo(f"Project '{project}' not found in registry")
-            click.echo("")
-            click.echo("Registered projects:")
-            for p in registry.list():
-                click.echo(f"  - {p.name}: {p.path}")
-            raise SystemExit(1)
+            expanded_path = os.path.expanduser(project)
+            if os.path.isdir(expanded_path):
+                abs_path = os.path.abspath(expanded_path)
+
+                # First check if this path is already registered under a different name
+                for existing in registry.list():
+                    if os.path.abspath(existing.path) == abs_path:
+                        target_proj = existing
+                        project = existing.name
+                        click.echo(f"Path matches registered project: {existing.name}")
+                        break
+
+                # If still not found, auto-register
+                if not target_proj:
+                    # Use directory name as project name
+                    proj_name = Path(abs_path).name
+                    # Make name unique if collision
+                    base_name = proj_name
+                    counter = 1
+                    while registry.get(proj_name):
+                        proj_name = f"{base_name}_{counter}"
+                        counter += 1
+                    # Detect language
+                    lang = detect_project_language(abs_path)
+                    if lang == "unknown":
+                        lang = "python"  # Default
+                    # Register it
+                    target_proj = registry.add(proj_name, abs_path, lang)
+                    click.echo(f"Auto-registered project: {proj_name}")
+                    click.echo(f"  Path: {abs_path}")
+                    click.echo(f"  Language: {lang}")
+                    click.echo("")
+                    # Update project var to use the registered name
+                    project = proj_name
+            else:
+                click.echo(f"Project '{project}' not found in registry")
+                click.echo("")
+                click.echo("Registered projects:")
+                for p in registry.list():
+                    click.echo(f"  - {p.name}: {p.path}")
+                click.echo("")
+                click.echo("Tip: You can also pass a path to auto-register:")
+                click.echo(f"  eri-rpg switch /path/to/project")
+                raise SystemExit(1)
 
         # Check if switching to same project
         if state.active_project == project:
