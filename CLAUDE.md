@@ -39,3 +39,36 @@ Key modules:
 For this project:
 - Run: `python -m pytest tests/ -v`
 - Or syntax check: `python -m py_compile erirpg/<file>.py`
+
+## Self-Correction Protocol
+
+When I make a mistake or break something:
+1. **Document the fix in CLAUDE.md** - Add what went wrong and how to prevent it
+2. **Return to planning mode** - Don't push through suboptimal solutions
+3. **Create snapshots before risky changes** - Always have a restore point
+
+## Guardrails (from Boris Cherny's tips)
+
+### Planning First
+- Invest effort in planning before implementation
+- When issues arise, return to planning mode rather than pushing through
+
+### Self-Documentation
+- After corrections, update CLAUDE.md with lessons learned
+- Establish personalized guidelines that reduce future mistakes
+
+### Quality Gates
+- "Grill me on these changes" - challenge my own work
+- Request elegant reimplementations when code smells
+- Write detailed specifications to reduce ambiguity
+
+### Subagents for Context
+- Delegate complex tasks to subagents to preserve main context
+- Don't try to hold everything in one session
+
+## Lessons Learned
+
+### Bootstrap Deadlock (2026-02-03)
+**Problem**: Added coder-gate enforcement that parsed EXECUTION_STATE.json, but if JSON was corrupted, couldn't fix it because the hook blocked all edits.
+**Fix**: Added `.planning/` to early-exit list in pretooluse.py (line 295-299).
+**Prevention**: Always allow writes to config/state directories before enforcement checks run.

@@ -139,6 +139,115 @@ def save_json_file(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2))
 
 
+
+def update_state_md(planning: Path, current_phase: int = None, last_action: str = None, next_step: str = None) -> None:
+    """Update STATE.md with current workflow state.
+
+    This is the file Claude reads after /clear to know where we are.
+    Must always be current and accurate.
+    """
+    import re
+    roadmap_path = planning / "ROADMAP.md"
+    phases_dir = planning / "phases"
+    state_path = planning / "STATE.md"
+
+    project_root = planning.parent
+    project_name = project_root.name
+
+    # Parse roadmap for phase names and milestone
+    phase_names = {}
+    milestone = "Unknown"
+    if roadmap_path.exists():
+        content = roadmap_path.read_text()
+        milestone_match = re.search(r'##\s*Milestone[:\s]+(.+)', content)
+        if milestone_match:
+            milestone = milestone_match.group(1).strip()
+        for match in re.finditer(r'###\s*Phase\s*(\d+)[:\s]+([^\n]+)', content):
+            phase_names[int(match.group(1))] = match.group(2).strip()
+
+    # Scan phases for actual status
+    phases_status = []
+    detected_current = None
+
+    if phases_dir.exists():
+        for d in sorted(phases_dir.iterdir()):
+            if not d.is_dir():
+                continue
+            parts = d.name.split("-", 1)
+            if not parts[0].isdigit():
+                continue
+
+            phase_num = int(parts[0])
+            phase_name = phase_names.get(phase_num, parts[1] if len(parts) > 1 else f"Phase {phase_num}")
+
+            plans = list(d.glob("*-PLAN.md"))
+            summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
+            verification = list(d.glob("VERIFICATION*.md"))
+
+            if verification:
+                status = "completed (verified)"
+            elif len(summaries) >= len(plans) and plans:
+                status = "completed"
+            elif summaries:
+                status = "in progress"
+            elif plans:
+                status = "planned"
+            else:
+                status = "pending"
+
+            phases_status.append((phase_num, phase_name, status))
+
+            if detected_current is None and "completed" not in status:
+                detected_current = phase_num
+
+    # Add phases from roadmap that don't have directories yet
+    for num, name in phase_names.items():
+        if not any(p[0] == num for p in phases_status):
+            phases_status.append((num, name, "pending"))
+
+    phases_status.sort(key=lambda x: x[0])
+
+    if current_phase is None:
+        current_phase = detected_current or (phases_status[0][0] if phases_status else 1)
+
+    current_name = phase_names.get(current_phase, f"Phase {current_phase}")
+    current_status = next((s for n, _, s in phases_status if n == current_phase), "pending")
+
+    lines = [
+        "# Current State",
+        "",
+        "## Project",
+        f"**Name:** {project_name}",
+        f"**Path:** {project_root}",
+        f"**Milestone:** {milestone}",
+        "",
+        "## Current Phase",
+        f"**Phase {current_phase}: {current_name}** - {current_status}",
+        "",
+        "## Phase Status",
+        "| Phase | Name | Status |",
+        "|-------|------|--------|",
+    ]
+
+    for num, name, status in phases_status:
+        lines.append(f"| {num} | {name} | {status} |")
+
+    lines.extend([
+        "",
+        "## Last Action",
+        last_action or "- Session started",
+        "",
+        "## Next Step",
+        next_step or f"Run `/coder:plan-phase {current_phase}` or `/coder:execute-phase {current_phase}`",
+        "",
+        "## Updated",
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "",
+    ])
+
+    state_path.write_text("\n".join(lines))
+
+
 def load_md_frontmatter(path: Path) -> dict:
     """Load YAML frontmatter from markdown file."""
     if not path.exists():
@@ -3579,6 +3688,14 @@ def register(cli):
 
         state_path = planning / "EXECUTION_STATE.json"
         save_json_file(state_path, exec_state)
+
+        # Update STATE.md for context recovery after /clear
+        update_state_md(
+            planning,
+            current_phase=phase,
+            last_action=f"- Started phase {phase} execution",
+            next_step=f"Execute plans in waves, then run `/coder:verify-work {phase}`"
+        )
 
         # Add warning if previous phase not verified
         if verification_warning:
