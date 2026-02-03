@@ -28,6 +28,13 @@ Direct file edits without an active plan are forbidden.
 
 EriRPG is a spec-driven development framework that enforces structured execution with verification.
 
+### Directory Architecture
+
+- `erirpg/agents/` - Version control storage for agent specs (eri-*.md prefix)
+- `~/.eri-rpg/agents/` - Production loading directory (*.md, no prefix)
+- Files are copied/renamed during install from repo → production
+- **Do not change DEFAULT_AGENTS_DIR to package directory** - that breaks the architecture
+
 Key modules:
 - `erirpg/agent/` - Agent API for Claude Code integration
 - `erirpg/cli.py` - Command-line interface
