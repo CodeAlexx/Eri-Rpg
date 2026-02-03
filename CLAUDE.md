@@ -68,6 +68,17 @@ When I make a mistake or break something:
 
 ## Lessons Learned
 
+### Never Improvise When Agents Fail (2026-02-03)
+**Problem**: When Task tool fails (API 500, timeout), I default to "I'll do it myself" - reading agent specs and manually doing the work. This causes context exhaustion and state drift.
+**Fix**: Added explicit failure handling to skill files (plan-phase.md, execute-phase.md).
+**Rule**: When agent spawn fails:
+1. Retry once
+2. If still fails, STOP and report to user with options
+3. NEVER do the agent's job manually
+4. Wait for user decision
+
+**Why**: Agents have isolated context by design. Manual execution defeats the purpose and degrades quality.
+
 ### Bootstrap Deadlock (2026-02-03)
 **Problem**: Added coder-gate enforcement that parsed EXECUTION_STATE.json, but if JSON was corrupted, couldn't fix it because the hook blocked all edits.
 **Fix**: Added `.planning/` to early-exit list in pretooluse.py (line 295-299).

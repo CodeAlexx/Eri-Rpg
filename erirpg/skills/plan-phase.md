@@ -57,6 +57,26 @@ The CLI returns everything you need:
    git commit -m "plan(phase-N): create execution plans"
    ```
 
+## If Agent Spawn Fails
+
+If the Task tool returns an error (API 500, timeout, rejection):
+
+1. **Retry once** - transient errors are common
+2. **If still fails, STOP and report:**
+   ```
+   Agent spawn failed: {error}
+
+   Options:
+   - Retry: I can try spawning the agent again
+   - Manual: You can run the agent manually in a new session
+   - Skip: Continue without this step (not recommended)
+   ```
+3. **DO NOT improvise** - Never try to do the agent's job yourself
+4. **Wait for user decision** - Don't proceed until user responds
+
+**Why this matters:** Improvising causes context drift and state inconsistencies.
+The workflow is designed for agents - doing it manually breaks the system.
+
 ## On Completion
 
 Suggest: `/coder:execute-phase N`
