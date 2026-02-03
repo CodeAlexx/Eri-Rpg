@@ -228,18 +228,21 @@ def main():
         cwd = input_data.get("cwd", os.getcwd())
         log(f"tool_name={tool_name}, cwd={cwd}")
 
-        # Project detection - early exit if not an eri-rpg project
+        # Project detection - check CWD for both .eri-rpg and .planning (coder)
         project_root = None
+        coder_root = None
         check = cwd
         while check != '/':
+            if os.path.isdir(os.path.join(check, '.planning')):
+                coder_root = check
             if os.path.isdir(os.path.join(check, '.eri-rpg')):
                 project_root = check
                 break
             check = os.path.dirname(check)
 
-        if project_root is None:
-            # Not an eri-rpg project. Allow all operations.
-            log(f"Not an eri-rpg project, allowing")
+        if project_root is None and coder_root is None:
+            # Not an eri-rpg or coder project. Allow all operations.
+            log(f"Not an eri-rpg/coder project, allowing")
             print(json.dumps({}))
             sys.exit(0)
 
@@ -294,12 +297,58 @@ def main():
             print(json.dumps({}))
             sys.exit(0)
 
-        # Always allow Claude Code system files (~/.claude/)
-        home = os.path.expanduser("~")
-        claude_dir = os.path.join(home, ".claude")
-        if file_path.startswith(claude_dir):
-            log(f"Allowing Claude Code system file: {file_path}")
-            print(json.dumps({}))
+        # ================================================================
+        # CWD-BASED CODER ENFORCEMENT (catches edits to ANY file)
+        # ================================================================
+        # If CWD is in a coder project, ALL edits require EXECUTION_STATE.json
+        # This prevents Claude from bypassing workflow by editing ~/.claude/ etc.
+        if coder_root:
+            planning_dir = os.path.join(coder_root, ".planning")
+            state_file = os.path.join(planning_dir, "EXECUTION_STATE.json")
+            rel_path = os.path.relpath(file_path, coder_root) if file_path.startswith(coder_root) else file_path
+
+            # Always allow .planning/ files within the coder project
+            if file_path.startswith(planning_dir):
+                log(f"ALLOWING (planning file): {file_path}")
+                print(json.dumps({}))
+                sys.exit(0)
+
+            # Check for active execution state
+            if os.path.exists(state_file):
+                try:
+                    with open(state_file) as f:
+                        exec_state = json.load(f)
+                        if exec_state.get("active"):
+                            allowed_files = exec_state.get("allowed_files", [])
+                            # Check if file is in allowed list (relative or absolute)
+                            check_rel = os.path.relpath(file_path, coder_root) if file_path.startswith(coder_root) else None
+                            if check_rel and (check_rel in allowed_files or any(check_rel.startswith(p) for p in allowed_files)):
+                                log(f"ALLOWING (coder CWD, in allowed): {file_path}")
+                                print(json.dumps({}))
+                                sys.exit(0)
+                            # Also check absolute path
+                            if file_path in allowed_files:
+                                log(f"ALLOWING (coder CWD, absolute match): {file_path}")
+                                print(json.dumps({}))
+                                sys.exit(0)
+                except Exception as e:
+                    log(f"Error reading execution state: {e}")
+
+            # In coder project but no active plan or file not allowed - BLOCK
+            log(f"BLOCKING (coder CWD enforcement): {file_path}")
+            output = {
+                "decision": "block",
+                "reason": (
+                    f"CODER ENFORCEMENT: Working in coder project, no active plan.\n"
+                    f"CWD: {coder_root}\n"
+                    f"File: {file_path}\n\n"
+                    f"ALL edits blocked until you start a plan:\n"
+                    f"  python3 -m erirpg.cli coder-start-plan <phase> <plan>\n\n"
+                    f"Or for the specific file:\n"
+                    f"  echo '{{\"active\": true, \"allowed_files\": [\"{rel_path}\"]}}' > {state_file}"
+                )
+            }
+            print(json.dumps(output))
             sys.exit(0)
 
         # Find project root from FILE PATH (not cwd!)
