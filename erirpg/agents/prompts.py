@@ -25,6 +25,7 @@ AGENT_PROMPTS: Dict[str, str] = {
     "debugger": "debugger.md",
     "codebase-mapper": "codebase-mapper.md",
     "integration-checker": "integration-checker.md",
+    "behavior-extractor": "behavior-extractor.md",
 }
 
 
@@ -115,6 +116,7 @@ def get_agent_description(agent_type: str) -> str:
         "debugger": "Systematically debugs issues using scientific method",
         "codebase-mapper": "Creates detailed maps of codebase structure",
         "integration-checker": "Verifies component integrations and connections",
+        "behavior-extractor": "Extracts portable behavior specs from source code",
     }
     return descriptions.get(agent_type, f"Agent type: {agent_type}")
 

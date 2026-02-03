@@ -396,3 +396,35 @@ def spawn_roadmapper(
         context=roadmap_context,
         description="Create roadmap",
     )
+
+
+def spawn_behavior_extractor(
+    project_path: str,
+    source_path: str,
+    module_name: str,
+    extract_tests: bool = True,
+) -> Dict[str, Any]:
+    """Spawn a behavior extractor agent.
+
+    Args:
+        project_path: Path to target project
+        source_path: Path to source code to extract from
+        module_name: Name of module to extract
+        extract_tests: Whether to extract test contracts
+
+    Returns:
+        Task tool parameters
+    """
+    context = f"""## Source Path: {source_path}
+## Module: {module_name}
+## Extract Tests: {extract_tests}
+
+Extract portable behavior specification from the source code.
+Output to: .planning/blueprints/{module_name}-BEHAVIOR.md
+"""
+    return spawn_agent(
+        project_path,
+        "behavior-extractor",
+        context=context,
+        description=f"Extract behavior: {module_name}",
+    )
