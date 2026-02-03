@@ -68,6 +68,7 @@ If the Task tool returns an error (API 500, timeout, rejection):
 **Why this matters:** Manual execution causes context exhaustion and quality degradation.
 Agents have isolated context - that's by design.
 
+<completion>
 ## On Completion
 
 Only after verification passes:
@@ -81,3 +82,68 @@ This checks verification status and:
 - If failed: **BLOCKS** completion, returns error with instructions
 
 **Never bypass verification.** Use `--force` only in emergencies (will mark phase as incomplete).
+
+### 1. Verify Git Status Clean
+
+Before presenting completion, check no uncommitted changes:
+
+```bash
+git status --short
+```
+
+If uncommitted files related to this phase exist, commit them:
+```bash
+git add <files>
+git commit -m "chore(phase-{N}): complete execution artifacts"
+```
+
+### 2. Update STATE.md
+
+Update `.planning/STATE.md` with full context:
+
+```markdown
+## Current Phase
+**Phase {N}: {phase-name}** - executed (pending user verification)
+
+## Last Action
+Completed execute-phase {N}
+- Plans executed: {X}/{Y}
+- Verification: {passed|gaps_found}
+
+## Next Step
+Run `/coder:verify-work {N}` for user acceptance testing
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+**You MUST show this box - do not say "ready when you are":**
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE {N} EXECUTED                                          ║
+╠════════════════════════════════════════════════════════════════╣
+║  Plans completed: {X}/{Y}                                      ║
+║  Verification: {status}                                        ║
+║  Commits: {commit hashes}                                      ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: User Acceptance Testing
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:verify-work {N}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This runs user acceptance testing to confirm the phase works as expected.
+```
+
+**Why this matters:** Without this box, users don't know what to do next.
+The /clear → /coder:init → next-command flow ensures context recovery works.
+</completion>
