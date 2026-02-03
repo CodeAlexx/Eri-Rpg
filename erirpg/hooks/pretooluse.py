@@ -292,21 +292,67 @@ def main():
             print(json.dumps({}))
             sys.exit(0)
 
+        # Always allow writes to .planning directory (prevents bootstrap deadlock)
+        if "/.planning/" in file_path or file_path.endswith("/.planning"):
+            log(f"ALLOWING (planning directory): {file_path}")
+            print(json.dumps({}))
+            sys.exit(0)
+
         # Always allow temp files
         if file_path.startswith("/tmp/") or file_path.startswith("/var/tmp/"):
             print(json.dumps({}))
             sys.exit(0)
 
         # ================================================================
-        # CODER PROJECTS - NO BLOCKING (GSD model)
+        # CODER PROJECTS - WORKFLOW GATE ENFORCEMENT
         # ================================================================
-        # GSD proves that blocking hooks cause deadlocks.
-        # Enforcement is through workflow completeness, not blocking.
-        # Allow all edits in coder projects - rely on agent specs and workflows.
+        # Call coder-gate to check workflow compliance:
+        # - EXECUTION_STATE.json must exist
+        # - File must be in allowed_files
+        # - Previous phase should be verified
         if coder_root:
-            log(f"ALLOWING (coder project - GSD model, no blocking): {file_path}")
-            print(json.dumps({}))
-            sys.exit(0)
+            log(f"Checking coder workflow gate for: {file_path}")
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["python3", "-m", "erirpg.cli", "coder-gate", file_path, "--cwd", coder_root],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    gate_result = json.loads(result.stdout)
+                    if gate_result.get("allow"):
+                        # Log any warnings but allow
+                        for warning in gate_result.get("warnings", []):
+                            log(f"GATE WARNING: {warning}")
+                        log(f"ALLOWING (coder gate passed): {file_path}")
+                        print(json.dumps({}))
+                        sys.exit(0)
+                    else:
+                        # Block with reason
+                        reason = gate_result.get("reason", "Workflow gate check failed")
+                        log(f"BLOCKING (coder gate): {reason}")
+                        output = {
+                            "decision": "block",
+                            "reason": f"CODER WORKFLOW ENFORCEMENT:\n{reason}"
+                        }
+                        print(json.dumps(output))
+                        sys.exit(0)
+                else:
+                    # Gate command failed - log and allow (fail-open for now)
+                    log(f"GATE COMMAND FAILED: {result.stderr}")
+                    log(f"ALLOWING (gate command error, fail-open): {file_path}")
+                    print(json.dumps({"systemMessage": f"Coder gate check failed: {result.stderr[:100]}"}))
+                    sys.exit(0)
+            except subprocess.TimeoutExpired:
+                log(f"GATE TIMEOUT - allowing (fail-open)")
+                print(json.dumps({"systemMessage": "Coder gate check timed out"}))
+                sys.exit(0)
+            except Exception as e:
+                log(f"GATE EXCEPTION: {e}")
+                print(json.dumps({"systemMessage": f"Coder gate error: {e}"}))
+                sys.exit(0)
 
         # Find project root from FILE PATH (not cwd!)
         # Look for .planning/ (coder workflow) or .eri-rpg/ (erirpg project)

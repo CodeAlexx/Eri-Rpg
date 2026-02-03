@@ -1772,6 +1772,168 @@ def get_verify_work_context(phase_num: int) -> dict:
 
 
 # ============================================================================
+# Command: coder-gate (workflow enforcement)
+# ============================================================================
+
+def compute_file_hash(path: Path) -> str:
+    """Compute MD5 hash of file content for change detection."""
+    import hashlib
+    if not path.exists():
+        return ""
+    try:
+        return hashlib.md5(path.read_bytes()).hexdigest()
+    except Exception:
+        return ""
+
+
+def check_workflow_gate(file_path: str, cwd: str = None) -> dict:
+    """Check if a file edit should be allowed based on workflow compliance.
+
+    Returns:
+        dict with keys:
+        - allow: bool
+        - reason: str (if blocked)
+        - warnings: list[str] (advisory messages)
+    """
+    if cwd is None:
+        cwd = os.getcwd()
+
+    # Find planning directory
+    planning = None
+    check = Path(cwd)
+    while check != check.parent:
+        if (check / ".planning").exists():
+            planning = check / ".planning"
+            break
+        check = check.parent
+
+    if not planning:
+        # Not a coder project, allow
+        return {"allow": True, "reason": "Not a coder project", "warnings": []}
+
+    # Check for EXECUTION_STATE.json
+    state_path = planning / "EXECUTION_STATE.json"
+    if not state_path.exists():
+        return {
+            "allow": False,
+            "reason": (
+                "No active execution state.\n"
+                "Run /coder:execute-phase N to start phase execution.\n"
+                "This creates EXECUTION_STATE.json which unlocks file edits."
+            ),
+            "warnings": []
+        }
+
+    # Load execution state
+    try:
+        with open(state_path) as f:
+            exec_state = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        return {
+            "allow": False,
+            "reason": f"Invalid EXECUTION_STATE.json: {e}",
+            "warnings": []
+        }
+
+    if not exec_state.get("active"):
+        return {
+            "allow": False,
+            "reason": "Execution state is not active. Run /coder:execute-phase to start.",
+            "warnings": []
+        }
+
+    current_phase = exec_state.get("phase", 0)
+    allowed_files = exec_state.get("allowed_files", [])
+
+    # Normalize file path for comparison
+    file_path = os.path.normpath(file_path)
+    if not os.path.isabs(file_path):
+        file_path = os.path.normpath(os.path.join(cwd, file_path))
+
+    # Get relative path from project root
+    project_root = planning.parent
+    try:
+        rel_path = os.path.relpath(file_path, project_root)
+    except ValueError:
+        rel_path = file_path
+
+    # Always allow writes to .planning directory
+    if ".planning" in rel_path or str(file_path).startswith(str(planning)):
+        return {"allow": True, "reason": "Planning directory always allowed", "warnings": []}
+
+    # Check if file is in allowed list
+    normalized_allowed = [os.path.normpath(f) for f in allowed_files]
+    if rel_path not in normalized_allowed and file_path not in allowed_files:
+        return {
+            "allow": False,
+            "reason": (
+                f"File not in allowed list for phase {current_phase}.\n"
+                f"Requested: {rel_path}\n"
+                f"Allowed: {normalized_allowed[:10]}{'...' if len(normalized_allowed) > 10 else ''}\n\n"
+                f"Either:\n"
+                f"1. Add file to plan's files_modified list\n"
+                f"2. Re-run /coder:execute-phase {current_phase}"
+            ),
+            "warnings": []
+        }
+
+    # Check previous phase verification (for phase > 1)
+    warnings = []
+    if current_phase > 1:
+        phases_dir = planning / "phases"
+        prev_phase = current_phase - 1
+        prev_phase_dir = None
+
+        if phases_dir.exists():
+            for d in phases_dir.iterdir():
+                if d.is_dir() and d.name.startswith(f"{prev_phase:02d}"):
+                    prev_phase_dir = d
+                    break
+
+        if prev_phase_dir:
+            verification_path = prev_phase_dir / "VERIFICATION.md"
+            if not verification_path.exists():
+                # Check if enforcement is strict
+                config_path = planning / "config.json"
+                strict_verification = False
+                if config_path.exists():
+                    try:
+                        config = json.loads(config_path.read_text())
+                        strict_verification = config.get("enforcement", {}).get("strict_verification", False)
+                    except Exception:
+                        pass
+
+                if strict_verification:
+                    return {
+                        "allow": False,
+                        "reason": (
+                            f"Phase {prev_phase} not verified.\n"
+                            f"Run /coder:verify-work {prev_phase} before starting phase {current_phase}.\n"
+                            f"This creates VERIFICATION.md confirming phase completion."
+                        ),
+                        "warnings": []
+                    }
+                else:
+                    warnings.append(f"WARNING: Phase {prev_phase} not verified (VERIFICATION.md missing)")
+
+    # Check STATE.md freshness (advisory)
+    state_md = planning / "STATE.md"
+    if state_md.exists():
+        current_hash = compute_file_hash(state_md)
+        saved_hash = exec_state.get("state_md_hash", "")
+        if saved_hash and current_hash == saved_hash:
+            warnings.append("WARNING: STATE.md not updated since phase started")
+
+    return {
+        "allow": True,
+        "reason": "File in allowed list, workflow checks passed",
+        "warnings": warnings,
+        "phase": current_phase,
+        "file": rel_path
+    }
+
+
+# ============================================================================
 # Command: coder-complete-milestone
 # ============================================================================
 
@@ -3383,18 +3545,44 @@ def register(cli):
                 waves[wave] = []
             waves[wave].append(plan_info)
 
-        # Create EXECUTION_STATE.json with ALL phase files
+        # Capture STATE.md hash for change detection
+        state_md_path = planning / "STATE.md"
+        state_md_hash = compute_file_hash(state_md_path)
+
+        # Check previous phase verification (for phase > 1)
+        prev_phase_verified = True
+        verification_warning = None
+        if phase > 1:
+            prev_phase = phase - 1
+            prev_phase_dir = None
+            for d in phases_dir.iterdir():
+                if d.is_dir() and d.name.startswith(f"{prev_phase:02d}"):
+                    prev_phase_dir = d
+                    break
+            if prev_phase_dir:
+                verification_path = prev_phase_dir / "VERIFICATION.md"
+                if not verification_path.exists():
+                    prev_phase_verified = False
+                    verification_warning = f"WARNING: Phase {prev_phase} not verified (missing VERIFICATION.md)"
+
+        # Create EXECUTION_STATE.json with ALL phase files and tracking
         exec_state = {
             "active": True,
             "phase": phase,
             "phase_name": phase_name,
             "allowed_files": all_allowed_files,
             "plans": [p["path"] for p in plans],
-            "started_at": datetime.now().isoformat()
+            "started_at": datetime.now().isoformat(),
+            "state_md_hash": state_md_hash,
+            "prev_phase_verified": prev_phase_verified
         }
 
         state_path = planning / "EXECUTION_STATE.json"
         save_json_file(state_path, exec_state)
+
+        # Add warning if previous phase not verified
+        if verification_warning:
+            click.echo(f"⚠️  {verification_warning}", err=True)
 
         # Build result with instructions for Claude
         result = {
@@ -3473,14 +3661,19 @@ def register(cli):
                     if artifact["path"] not in files_modified:
                         files_modified.append(artifact["path"])
 
-        # Create execution state
+        # Capture STATE.md hash for change detection
+        state_md_path = planning / "STATE.md"
+        state_md_hash = compute_file_hash(state_md_path)
+
+        # Create execution state with tracking
         exec_state = {
             "active": True,
             "phase": phase,
             "plan": plan,
             "plan_file": str(plan_file),
             "allowed_files": files_modified,
-            "started_at": datetime.now().isoformat()
+            "started_at": datetime.now().isoformat(),
+            "state_md_hash": state_md_hash
         }
 
         state_path = planning / "EXECUTION_STATE.json"
@@ -3532,6 +3725,24 @@ def register(cli):
         Load must-haves and verification state.
         """
         result = get_verify_work_context(phase)
+        click.echo(json.dumps(result, indent=2))
+
+    @cli.command("coder-gate")
+    @click.argument("file_path")
+    @click.option("--cwd", default=None, help="Working directory")
+    def coder_gate_cmd(file_path: str, cwd: str):
+        """Check if a file edit is allowed by workflow gate.
+
+        Called by pretooluse hook to enforce coder workflow compliance.
+        Returns JSON with allow/block decision.
+
+        Checks:
+        - EXECUTION_STATE.json exists and is active
+        - File is in allowed_files list
+        - Previous phase verified (if strict_verification enabled)
+        - STATE.md update warnings
+        """
+        result = check_workflow_gate(file_path, cwd)
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-complete-milestone")
@@ -3782,3 +3993,103 @@ def register(cli):
             goal = f" - {p['goal']}" if p["goal"] else ""
             plans = f"({p['completed_plans']}/{p['plans']} plans)"
             click.echo(f"{status} Phase {p['number']}: {p['name']}{goal} {plans}{current}")
+
+    @cli.command("coder-sync-state")
+    @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+    def coder_sync_state_cmd(as_json: bool):
+        """Sync STATE.md with actual phase completion status.
+
+        Scans .planning/phases/ for SUMMARY files and updates STATE.md
+        to reflect true progress. Use when STATE.md is stale.
+
+        Example:
+            eri-rpg coder-sync-state
+        """
+        planning = get_planning_dir()
+        state_path = planning / "STATE.md"
+        phases_dir = planning / "phases"
+        roadmap_path = planning / "ROADMAP.md"
+
+        if not phases_dir.exists():
+            result = {"error": "No phases directory", "synced": False}
+            click.echo(json.dumps(result, indent=2) if as_json else result["error"])
+            return
+
+        # Scan phases for completion
+        import re
+        phases_status = []
+        current_phase = None
+
+        # Get phase names from ROADMAP.md
+        phase_names = {}
+        if roadmap_path.exists():
+            content = roadmap_path.read_text()
+            for match in re.finditer(r'##\s*Phase\s*(\d+)[:\s]+([^\n]+)', content):
+                phase_names[int(match.group(1))] = match.group(2).strip()
+
+        for d in sorted(phases_dir.iterdir()):
+            if not d.is_dir():
+                continue
+            parts = d.name.split("-", 1)
+            if not parts[0].isdigit():
+                continue
+
+            phase_num = int(parts[0])
+            phase_name = phase_names.get(phase_num, parts[1] if len(parts) > 1 else f"Phase {phase_num}")
+
+            plans = list(d.glob("*-PLAN.md"))
+            summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
+
+            has_plans = len(plans) > 0
+            all_executed = len(summaries) >= len(plans) and has_plans
+
+            status = "completed" if all_executed else ("in_progress" if has_plans else "pending")
+            phases_status.append((phase_num, phase_name, status))
+
+            if status == "in_progress" and current_phase is None:
+                current_phase = phase_num
+
+        # Find first non-completed if no in_progress
+        if current_phase is None:
+            for num, name, status in phases_status:
+                if status != "completed":
+                    current_phase = num
+                    break
+
+        # Generate new STATE.md
+        lines = ["# State", ""]
+        lines.append("## Current Phase")
+        if current_phase:
+            name = next((n for num, n, s in phases_status if num == current_phase), f"Phase {current_phase}")
+            lines.append(f"Phase {current_phase}: {name}")
+        else:
+            lines.append("All phases completed")
+        lines.append("")
+
+        lines.append("## Phase Status")
+        lines.append("| Phase | Name | Status |")
+        lines.append("|-------|------|--------|")
+        for num, name, status in phases_status:
+            lines.append(f"| {num} | {name} | {status} |")
+        lines.append("")
+
+        lines.append("## Last Updated")
+        lines.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        lines.append("")
+
+        new_content = "\n".join(lines)
+        state_path.write_text(new_content)
+
+        result = {
+            "synced": True,
+            "state_file": str(state_path),
+            "phases_found": len(phases_status),
+            "current_phase": current_phase,
+            "completed": sum(1 for _, _, s in phases_status if s == "completed")
+        }
+
+        if as_json:
+            click.echo(json.dumps(result, indent=2))
+        else:
+            click.echo(f"STATE.md synced: {result['completed']}/{result['phases_found']} phases completed")
+            click.echo(f"Current phase: {current_phase}")
