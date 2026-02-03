@@ -128,6 +128,9 @@ def update_active_edited_project(project_path: str) -> None:
 
         state["active_edited_project"] = project_name
         state["active_edited_at"] = datetime.now().isoformat()
+        # Also set active_project so /coder:init knows where to resume after /clear
+        state["active_project"] = project_name
+        state["active_project_path"] = project_path
 
         state_path.write_text(json.dumps(state, indent=2))
     except Exception as e:

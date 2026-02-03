@@ -1,58 +1,54 @@
 # EriRPG Development Roadmap
 
-## Milestone: v1 - Core Framework
+## Milestone: v1 - Core Framework ✅ COMPLETE
 
-### Phase 1: Core Infrastructure
+### Phase 1: Core Infrastructure ✅
 - Goals:
-  - [ ] Build project registry (add/remove/list projects)
-  - [ ] Create code indexer (scan files, extract modules)
-  - [ ] Implement dependency graph (track imports)
-  - [ ] Add language parsers (Python, Rust, C)
-- Dependencies: none
-- Status: pending
+  - [x] Build project registry (registry.py - 8KB)
+  - [x] Create code indexer (indexer.py - 14KB)
+  - [x] Implement dependency graph (graph.py - 17KB)
+  - [x] Add language parsers (parsers/ - Python, Rust, C)
+- Status: complete
 
-### Phase 2: Knowledge System
+### Phase 2: Knowledge System ✅
 - Goals:
-  - [ ] Implement memory/learning storage
-  - [ ] Add module recall functionality
-  - [ ] Create pattern storage system
-  - [ ] Build decision logging
-- Dependencies: 1
-- Status: pending
+  - [x] Implement memory/learning storage (memory.py - 73KB)
+  - [x] Add module recall functionality
+  - [x] Create pattern storage system
+  - [x] Build decision logging
+- Status: complete
 
-### Phase 3: Agent Workflow
+### Phase 3: Agent Workflow ✅
 - Goals:
-  - [ ] Create agent API for Claude Code
-  - [ ] Implement run state management
-  - [ ] Add verification system
-  - [ ] Build execution tracking
-- Dependencies: 1, 2
-- Status: pending
+  - [x] Create agent API for Claude Code (agent/)
+  - [x] Implement run state management (runs.py - 13KB)
+  - [x] Add verification system (verification.py - 37KB)
+  - [x] Build execution tracking
+- Status: complete
 
-### Phase 4: Quick Fix Mode
+### Phase 4: Quick Fix Mode ✅
 - Goals:
-  - [ ] Implement snapshot/restore for quick fixes
-  - [ ] Add single-file edit tracking
-  - [ ] Create lightweight workflow bypass
-- Dependencies: 3
-- Status: pending
+  - [x] Implement snapshot/restore for quick fixes (quick.py - 18KB)
+  - [x] Add single-file edit tracking
+  - [x] Create lightweight workflow bypass
+- Status: complete
 
-### Phase 5: Discuss & Roadmap
+### Phase 5: Discuss & Roadmap ✅
 - Goals:
-  - [ ] Build goal clarification flow
-  - [ ] Implement roadmap generation from spec
-  - [ ] Add phase planning helpers
-- Dependencies: 3
-- Status: pending
+  - [x] Build goal clarification flow (discuss.py - 33KB)
+  - [x] Implement roadmap generation from spec (planner.py - 46KB)
+  - [x] Add phase planning helpers
+- Status: complete
 
-### Phase 6: Claude Integration
+### Phase 6: Claude Integration ✅
 - Goals:
-  - [ ] Create CLI commands for Claude Code
-  - [ ] Implement hook-based enforcement
-  - [ ] Add skill file integration
-  - [ ] Build session state management
-- Dependencies: 3, 4, 5
-- Status: pending
+  - [x] Create CLI commands for Claude Code (cli_commands/)
+  - [x] Implement hook-based enforcement (hooks/)
+  - [x] Add skill file integration (skills/)
+  - [x] Build session state management
+- Status: complete
+
+---
 
 ## Future Features (v2.0+)
 
