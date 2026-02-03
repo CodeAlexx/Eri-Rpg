@@ -32,30 +32,49 @@ def log(msg: str):
 def get_active_project_info() -> tuple:
     """Get active project name and path from global state.
 
+    Checks multiple fields in order of priority:
+    1. target_project_path - Set by coder:switch, most recent target
+    2. active_project_path - Legacy field from coder system
+    3. active_project - Project name lookup via registry
+
     Returns:
         (project_name, project_path) or (None, None) if not found
     """
     state_file = Path.home() / ".eri-rpg" / "state.json"
     registry_file = Path.home() / ".eri-rpg" / "registry.json"
 
-    if not state_file.exists() or not registry_file.exists():
+    if not state_file.exists():
         return None, None
 
     try:
         with open(state_file) as f:
             state = json.load(f)
-        with open(registry_file) as f:
-            registry = json.load(f)
 
+        # Priority 1: target_project_path (set by switch command)
+        target_path = state.get("target_project_path")
+        if target_path and os.path.isdir(target_path):
+            project_name = Path(target_path).name
+            log(f"Using target_project_path: {target_path}")
+            return project_name, target_path
+
+        # Priority 2: active_project_path (legacy coder field)
+        active_path = state.get("active_project_path")
+        if active_path and os.path.isdir(active_path):
+            project_name = Path(active_path).name
+            log(f"Using active_project_path: {active_path}")
+            return project_name, active_path
+
+        # Priority 3: active_project (name lookup via registry)
         active_project = state.get("active_project")
-        if not active_project:
-            return None, None
+        if active_project and registry_file.exists():
+            with open(registry_file) as f:
+                registry = json.load(f)
+            project_info = registry.get("projects", {}).get(active_project)
+            if project_info:
+                log(f"Using active_project via registry: {active_project}")
+                return active_project, project_info.get("path")
 
-        project_info = registry.get("projects", {}).get(active_project)
-        if not project_info:
-            return None, None
-
-        return active_project, project_info.get("path")
+        return None, None
     except Exception as e:
         log(f"Error getting active project: {e}")
         return None, None
@@ -360,14 +379,14 @@ def main():
         cwd = input_data.get("cwd", os.getcwd())
 
         # === CHECK ACTIVE PROJECT (advisory only) ===
-        active_project, project_path = get_active_project_info()
-        log(f"Active project: {active_project}, path: {project_path}")
+        active_project, active_project_path = get_active_project_info()
+        log(f"Active project: {active_project}, path: {active_project_path}")
 
         # Track if we're in a different directory than active project
         wrong_directory = False
         target_dir = None
-        if active_project and project_path and os.path.isdir(project_path):
-            target_dir = find_planning_directory(project_path)
+        if active_project and active_project_path and os.path.isdir(active_project_path):
+            target_dir = find_planning_directory(active_project_path)
             log(f"Target dir: {target_dir}, current: {cwd}")
             if os.path.realpath(target_dir) != os.path.realpath(cwd):
                 wrong_directory = True
@@ -480,18 +499,23 @@ def main():
 
             if context_found:
                 final_messages.append("=== SESSION START: CONTEXT RECOVERY ===")
-                final_messages.append(f"Directory: {cwd}")
+
+                # If we have an active project from global state, show it prominently
+                if active_project and active_project_path:
+                    final_messages.append(f"Active Project: {active_project}")
+                    final_messages.append(f"Project Path: {active_project_path}")
+                    if wrong_directory and target_dir:
+                        final_messages.append("")
+                        final_messages.append(f"⚠️  WRONG DIRECTORY - You are in: {cwd}")
+                        final_messages.append(f"   Run: cd {target_dir}")
+                        final_messages.append("")
+                else:
+                    final_messages.append(f"Directory: {cwd}")
+                    if project_roots:
+                        final_messages.append(f"EriRPG project: {get_project_name(project_roots[0])}")
+
                 if planning_state and planning_state.get("active_phase"):
                     final_messages.append(f"Phase: {planning_state['active_phase']}")
-                if project_roots:
-                    final_messages.append(f"EriRPG project: {get_project_name(project_roots[0])}")
-                final_messages.append("")
-
-            # Advisory if in wrong directory
-            if wrong_directory and target_dir:
-                final_messages.append(f"NOTE: Active project '{active_project}' is at {target_dir}")
-                final_messages.append(f"You are currently in: {cwd}")
-                final_messages.append(f"To switch: cd {target_dir}")
                 final_messages.append("")
 
             final_messages.extend(messages)

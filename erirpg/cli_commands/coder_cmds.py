@@ -139,6 +139,154 @@ def save_json_file(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2))
 
 
+def check_phase_verification(phase_dir: Path) -> dict:
+    """Check verification status for a phase.
+
+    Returns:
+        {
+            "has_verification": bool,       # VERIFICATION.md exists
+            "status": str,                  # passed/failed/gaps_found/human_needed/none
+            "score": str,                   # e.g., "5/5 must-haves verified"
+            "gaps": list,                   # List of gap descriptions if any
+            "human_verification": list,     # List of human verification items (BLOCKS progress)
+            "human_verification_pending": bool,  # True if human items exist and not verified
+            "verification_file": str        # Path to VERIFICATION.md if exists
+        }
+    """
+    result = {
+        "has_verification": False,
+        "status": "none",
+        "score": None,
+        "gaps": [],
+        "human_verification": [],
+        "human_verification_pending": False,
+        "verification_file": None
+    }
+
+    # Find VERIFICATION.md files
+    verification_files = list(phase_dir.glob("*VERIFICATION*.md"))
+    if not verification_files:
+        return result
+
+    # Use the most recent one
+    v_file = sorted(verification_files)[-1]
+    result["has_verification"] = True
+    result["verification_file"] = str(v_file)
+
+    try:
+        content = v_file.read_text()
+
+        # Parse frontmatter for status
+        import re
+        # Look for status in frontmatter
+        status_match = re.search(r'^status:\s*["\']?(\w+)["\']?\s*$', content, re.MULTILINE)
+        if status_match:
+            result["status"] = status_match.group(1).lower()
+
+        # Look for score
+        score_match = re.search(r'^score:\s*["\']?([^"\'\n]+)["\']?\s*$', content, re.MULTILINE)
+        if score_match:
+            result["score"] = score_match.group(1)
+
+        # Look for gaps
+        gaps_section = re.search(r'^gaps:\s*\n((?:\s+-.*\n?)+)', content, re.MULTILINE)
+        if gaps_section:
+            gap_lines = gaps_section.group(1).strip().split('\n')
+            for line in gap_lines:
+                line = line.strip()
+                if line.startswith('-'):
+                    result["gaps"].append(line[1:].strip())
+
+        # Look for human_verification items - THESE BLOCK PROGRESS
+        human_section = re.search(r'^human_verification:\s*\n((?:\s+-.*\n?)+)', content, re.MULTILINE)
+        if human_section:
+            human_lines = human_section.group(1).strip().split('\n')
+            for line in human_lines:
+                line = line.strip()
+                if line.startswith('-'):
+                    item = line[1:].strip().strip('"\'')
+                    if item:  # Non-empty item
+                        result["human_verification"].append(item)
+
+        # Also check for empty array format: human_verification: []
+        if not result["human_verification"]:
+            empty_check = re.search(r'^human_verification:\s*\[\s*\]\s*$', content, re.MULTILINE)
+            if empty_check:
+                # Explicitly empty, no items
+                result["human_verification"] = []
+
+        # Determine if human verification is pending (blocks progress)
+        # Status is "passed" BUT there are unverified human items
+        if result["human_verification"]:
+            # Check if items have been marked as verified in the file
+            # Look for checkmarks or "verified" markers
+            verified_count = 0
+            for item in result["human_verification"]:
+                # Check if this item appears with a checkmark or verified marker
+                if re.search(rf'\[x\].*{re.escape(item[:30])}', content, re.IGNORECASE):
+                    verified_count += 1
+                elif re.search(rf'✓.*{re.escape(item[:30])}', content, re.IGNORECASE):
+                    verified_count += 1
+
+            # If not all human items verified, this blocks progress
+            if verified_count < len(result["human_verification"]):
+                result["human_verification_pending"] = True
+                # Override status - human verification ALWAYS blocks
+                if result["status"] == "passed":
+                    result["status"] = "human_needed"
+
+    except Exception:
+        result["status"] = "error"
+
+    return result
+
+
+def check_plan_task_verification(summary_path: Path) -> dict:
+    """Check if a plan's SUMMARY.md indicates all tasks were verified.
+
+    Returns:
+        {
+            "has_summary": bool,
+            "all_tasks_verified": bool,
+            "task_count": int,
+            "verification_summary": str
+        }
+    """
+    result = {
+        "has_summary": False,
+        "all_tasks_verified": False,
+        "task_count": 0,
+        "verification_summary": None
+    }
+
+    if not summary_path.exists():
+        return result
+
+    result["has_summary"] = True
+
+    try:
+        content = summary_path.read_text()
+        import re
+
+        # Check for verification in frontmatter
+        verified_match = re.search(r'^all_tasks_verified:\s*(true|false)', content, re.MULTILINE | re.IGNORECASE)
+        if verified_match:
+            result["all_tasks_verified"] = verified_match.group(1).lower() == 'true'
+
+        task_count_match = re.search(r'^task_count:\s*(\d+)', content, re.MULTILINE)
+        if task_count_match:
+            result["task_count"] = int(task_count_match.group(1))
+
+        summary_match = re.search(r'^verification_summary:\s*["\']?([^"\'\n]+)', content, re.MULTILINE)
+        if summary_match:
+            result["verification_summary"] = summary_match.group(1)
+
+    except Exception:
+        pass
+
+    return result
+
+
 
 def update_state_md(planning: Path, current_phase: int = None, last_action: str = None, next_step: str = None) -> None:
     """Update STATE.md with current workflow state.
@@ -184,10 +332,35 @@ def update_state_md(planning: Path, current_phase: int = None, last_action: str 
             summaries = list(d.glob("SUMMARY-*.md")) + list(d.glob("*-SUMMARY.md"))
             verification = list(d.glob("VERIFICATION*.md"))
 
+            # Check verification status - ONLY allow "completed" if verified AND no human items pending
+            verification_passed = False
+            human_verification_pending = False
+
             if verification:
-                status = "completed (verified)"
-            elif len(summaries) >= len(plans) and plans:
+                # Use the comprehensive check function
+                v_result = check_phase_verification(d)
+                verification_passed = v_result["status"] == "passed"
+                human_verification_pending = v_result["human_verification_pending"]
+
+                # Human verification ALWAYS blocks completion
+                if human_verification_pending:
+                    verification_passed = False
+
+            if verification_passed and not human_verification_pending:
                 status = "completed"
+            elif human_verification_pending:
+                # Human verification required - BLOCKS ALL PROGRESS
+                status = "BLOCKED: human verification required"
+            elif verification:
+                # Verification exists but didn't pass (gaps or failed)
+                v_result = check_phase_verification(d)
+                if v_result["status"] == "gaps_found":
+                    status = "verification: gaps_found"
+                else:
+                    status = "verification failed"
+            elif len(summaries) >= len(plans) and plans:
+                # All plans executed but NOT verified - block "completed" status
+                status = "executed (UNVERIFIED)"
             elif summaries:
                 status = "in progress"
             elif plans:
@@ -3860,10 +4033,12 @@ def register(cli):
         }, indent=2))
 
     @cli.command("coder-end-plan")
-    def coder_end_plan_cmd():
+    @click.option("--force", is_flag=True, help="Force end without verification check")
+    def coder_end_plan_cmd(force: bool):
         """End execution of current plan - locks file edits again.
 
         Removes EXECUTION_STATE.json, re-enabling enforcement.
+        CHECKS: Phase verification must pass before marking complete.
         """
         planning = get_planning_dir()
         state_path = planning / "EXECUTION_STATE.json"
@@ -3879,16 +4054,85 @@ def register(cli):
         except Exception:
             exec_state = {}
 
+        phase = exec_state.get("phase")
+        phases_dir = planning / "phases"
+
+        # Find phase directory and check verification
+        verification_status = None
+        phase_dir = None
+        if phase and phases_dir.exists():
+            for d in phases_dir.iterdir():
+                if d.is_dir() and d.name.startswith(f"{phase:02d}"):
+                    phase_dir = d
+                    break
+
+            if phase_dir:
+                verification_status = check_phase_verification(phase_dir)
+
+        # ENFORCEMENT: Check if verification passed AND human verification complete
+        warnings = []
+        blocks = []
+
+        if verification_status:
+            if not verification_status["has_verification"]:
+                blocks.append(f"Phase {phase} has NO VERIFICATION.md - run /coder:verify-work {phase} first")
+            elif verification_status["status"] == "gaps_found":
+                blocks.append(f"Phase {phase} verification found gaps: {verification_status['score']}")
+                if verification_status["gaps"]:
+                    blocks.append(f"  Gaps: {', '.join(verification_status['gaps'][:3])}")
+            elif verification_status.get("human_verification_pending"):
+                # CRITICAL: Human verification ALWAYS blocks progress
+                blocks.append(f"Phase {phase} requires HUMAN VERIFICATION before proceeding")
+                blocks.append("Human verification items must be manually tested and marked complete:")
+                for item in verification_status.get("human_verification", [])[:5]:
+                    blocks.append(f"  - {item}")
+                blocks.append("Mark items as verified in VERIFICATION.md with [x] or ✓")
+            elif verification_status["status"] not in ("passed",):
+                blocks.append(f"Phase {phase} verification status: {verification_status['status']} (not passed)")
+
+        # Also check if all plans have SUMMARY.md with task verification
+        if phase_dir:
+            plans = list(phase_dir.glob("*-PLAN.md"))
+            for plan_path in plans:
+                summary_path = plan_path.with_name(plan_path.stem.replace("-PLAN", "-SUMMARY") + ".md")
+                task_verify = check_plan_task_verification(summary_path)
+                if not task_verify["has_summary"]:
+                    warnings.append(f"Plan {plan_path.stem} has no SUMMARY.md")
+                elif not task_verify["all_tasks_verified"]:
+                    warnings.append(f"Plan {plan_path.stem} tasks not verified: {task_verify.get('verification_summary', 'unknown')}")
+
+        # Block if verification failed (unless --force)
+        if blocks and not force:
+            click.echo(json.dumps({
+                "error": "VERIFICATION REQUIRED",
+                "phase": phase,
+                "blocks": blocks,
+                "warnings": warnings,
+                "action": f"Run /coder:verify-work {phase} to verify, or use --force to bypass (not recommended)",
+                "message": "Cannot mark phase complete without passing verification."
+            }, indent=2))
+            return
+
         # Remove state file
         state_path.unlink()
 
-        safe_update_state(f"Ended plan execution", "Run verification or continue")
-        click.echo(json.dumps({
+        # Build result message
+        result = {
             "ended": True,
-            "phase": exec_state.get("phase"),
+            "phase": phase,
             "plan": exec_state.get("plan"),
+            "verification": verification_status,
+            "warnings": warnings,
+            "forced": force,
             "message": "Plan execution ended. File edits are now blocked until next /coder:start-plan."
-        }, indent=2))
+        }
+
+        if force and blocks:
+            result["bypassed_blocks"] = blocks
+            result["message"] = "⚠️  Plan ended with verification bypassed. Phase marked incomplete."
+
+        safe_update_state(f"Ended plan execution", "Run verification or continue")
+        click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-verify-work")
     @click.argument("phase", type=int)
@@ -3918,6 +4162,88 @@ def register(cli):
         """
         result = check_workflow_gate(file_path, cwd)
         click.echo(json.dumps(result, indent=2))
+
+    @cli.command("coder-check-verification")
+    @click.argument("phase", type=int, required=False)
+    def coder_check_verification_cmd(phase: int):
+        """Check verification status for a phase or all phases.
+
+        Returns detailed verification status including:
+        - VERIFICATION.md existence and status
+        - Task-level verification in SUMMARY.md files
+        - Blocks preventing "completed" status
+        """
+        planning = get_planning_dir()
+        phases_dir = planning / "phases"
+
+        if not phases_dir.exists():
+            click.echo(json.dumps({"error": "No phases directory"}))
+            return
+
+        results = []
+
+        # Collect phases to check
+        phase_dirs = []
+        for d in sorted(phases_dir.iterdir()):
+            if not d.is_dir():
+                continue
+            parts = d.name.split("-", 1)
+            if not parts[0].isdigit():
+                continue
+            phase_num = int(parts[0])
+            if phase is None or phase_num == phase:
+                phase_dirs.append((phase_num, d))
+
+        for phase_num, phase_dir in phase_dirs:
+            phase_result = {
+                "phase": phase_num,
+                "phase_dir": str(phase_dir),
+                "verification": check_phase_verification(phase_dir),
+                "plans": []
+            }
+
+            # Check each plan's task verification
+            for plan_path in sorted(phase_dir.glob("*-PLAN.md")):
+                summary_path = plan_path.with_name(plan_path.stem.replace("-PLAN", "-SUMMARY") + ".md")
+                task_verify = check_plan_task_verification(summary_path)
+                phase_result["plans"].append({
+                    "plan": plan_path.stem,
+                    "has_summary": task_verify["has_summary"],
+                    "all_tasks_verified": task_verify["all_tasks_verified"],
+                    "task_count": task_verify["task_count"],
+                    "verification_summary": task_verify["verification_summary"]
+                })
+
+            # Determine overall status
+            v_status = phase_result["verification"]["status"]
+            has_v = phase_result["verification"]["has_verification"]
+            all_plans_verified = all(p["all_tasks_verified"] for p in phase_result["plans"]) if phase_result["plans"] else False
+
+            if v_status == "passed" and all_plans_verified:
+                phase_result["overall_status"] = "VERIFIED"
+                phase_result["can_be_completed"] = True
+            elif v_status == "passed":
+                phase_result["overall_status"] = "PHASE_VERIFIED_TASKS_INCOMPLETE"
+                phase_result["can_be_completed"] = False
+            elif has_v:
+                phase_result["overall_status"] = f"VERIFICATION_{v_status.upper()}"
+                phase_result["can_be_completed"] = False
+            else:
+                phase_result["overall_status"] = "NO_VERIFICATION"
+                phase_result["can_be_completed"] = False
+
+            results.append(phase_result)
+
+        if phase is not None and len(results) == 1:
+            click.echo(json.dumps(results[0], indent=2))
+        else:
+            summary = {
+                "total_phases": len(results),
+                "verified": len([r for r in results if r["can_be_completed"]]),
+                "unverified": len([r for r in results if not r["can_be_completed"]]),
+                "phases": results
+            }
+            click.echo(json.dumps(summary, indent=2))
 
     @cli.command("coder-complete-milestone")
     @click.argument("milestone", required=False)

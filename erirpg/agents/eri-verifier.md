@@ -467,7 +467,13 @@ Some things can't be verified programmatically:
 - All artifacts pass level 1-3
 - All key links WIRED
 - No blocker anti-patterns
-- (Human verification items are OK — will be prompted)
+- **NO human verification items** (or all human items already verified)
+
+**Status: human_needed**
+
+- All automated checks pass
+- BUT items flagged for human verification that have NOT been verified
+- **BLOCKS ALL PROGRESS** until human completes verification
 
 **Status: gaps_found**
 
@@ -541,7 +547,25 @@ The planner (`/coder:plan-phase --gaps`) reads this gap analysis and creates app
 
 ## Create VERIFICATION.md
 
-Create `.planning/phases/{phase_dir}/{phase}-VERIFICATION.md` with:
+**CRITICAL: Output path must match the phase directory you were given.**
+
+The VERIFICATION.md MUST be created at the EXACT path:
+```
+{PHASE_DIR}/VERIFICATION.md
+```
+
+Where `{PHASE_DIR}` is the phase directory passed to you (e.g., `/home/alex/project/ui/.planning/phases/16-settings-endpoints/`).
+
+**DO NOT:**
+- Create in a different `.planning` folder
+- Use different phase numbering than the directory name
+- Create in the project root
+- Create with a different filename
+
+**Example:** If spawned with `PHASE_DIR=/home/alex/serenity/ui/.planning/phases/16-settings-endpoints/`
+Then create: `/home/alex/serenity/ui/.planning/phases/16-settings-endpoints/VERIFICATION.md`
+
+Create with this structure:
 
 ```markdown
 ---
@@ -682,7 +706,15 @@ Automated checks passed. Awaiting human verification.
 
 **DO flag for human verification when uncertain.** If you can't verify programmatically (visual, real-time, external service), say so explicitly.
 
+**HUMAN VERIFICATION BLOCKS PROGRESS.** When you identify human_verification items:
+- Status MUST be `human_needed` (not `passed`)
+- The phase CANNOT proceed until a human completes verification
+- Include clear checklist items in VERIFICATION.md for the human
+- Human must manually mark items as verified before phase can be marked complete
+
 **DO keep verification fast.** Use grep/file checks, not running the app. Goal is structural verification, not functional testing.
+
+**WRITE TO CORRECT PATH.** VERIFICATION.md goes in the EXACT phase directory you were given. Do not use different numbering or different `.planning` folders.
 
 **DO NOT commit.** Create VERIFICATION.md but leave committing to the orchestrator.
 

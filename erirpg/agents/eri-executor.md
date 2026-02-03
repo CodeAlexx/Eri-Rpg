@@ -127,10 +127,9 @@ Execute each task in the plan.
    - Work toward task completion
    - **If CLI/API returns authentication error:** Handle as authentication gate
    - **When you discover additional work not in plan:** Apply deviation rules automatically
-   - Run the verification
-   - Confirm done criteria met
-   - **Commit the task** (see task_commit_protocol)
-   - Track task completion and commit hash for Summary
+   - **MANDATORY: Run task verification** (see task_verification_gate below)
+   - **Commit ONLY if verification passed** (see task_commit_protocol)
+   - Track task completion, verification status, and commit hash for Summary
    - Continue to next task
 
 3. **If `type="checkpoint:*"`:**
@@ -142,6 +141,71 @@ Execute each task in the plan.
 4. Run overall verification checks from `<verification>` section
 5. Confirm all success criteria from `<success_criteria>` section met
 6. Document all deviations in Summary
+</step>
+
+<step name="task_verification_gate">
+**CRITICAL: Every task MUST pass verification before commit.**
+
+This is NOT optional. A task without verified deliverables is NOT done.
+
+**For each task, verify:**
+
+1. **Existence check**: All files/artifacts mentioned in task actually exist
+   ```bash
+   [ -f "path/to/file" ] && echo "EXISTS" || echo "MISSING"
+   ```
+
+2. **Substantive check**: Files have real content, not stubs
+   - Check line count meets minimum (component: 15+, route: 10+, util: 10+)
+   - Check for stub patterns: TODO, FIXME, placeholder, "not implemented"
+   - Check for empty returns: `return null`, `return {}`, `return []`
+   ```bash
+   wc -l < "path/to/file"
+   grep -c -E "TODO|FIXME|placeholder|not implemented" "path/to/file"
+   ```
+
+3. **Functional check**: Code compiles/lints without errors
+   - Run project's lint command if available
+   - Run type checker if available
+   - Run relevant tests if they exist
+
+4. **Done criteria check**: Task's specific `<done>` criteria are met
+
+**Verification result tracking:**
+
+Record in task execution state:
+```json
+{
+  "task": 1,
+  "name": "Create auth endpoint",
+  "verification": {
+    "status": "passed|failed|partial",
+    "checks": {
+      "existence": {"passed": true, "details": "all 3 files exist"},
+      "substantive": {"passed": true, "details": "no stub patterns found"},
+      "functional": {"passed": true, "details": "lint passed"},
+      "done_criteria": {"passed": true, "details": "endpoint returns JWT"}
+    },
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**If verification FAILS:**
+
+1. DO NOT commit the task
+2. Document what failed and why
+3. Fix the issue
+4. Re-run verification
+5. Only proceed to commit when ALL checks pass
+
+**If verification PARTIALLY passes:**
+
+1. Document which checks passed/failed
+2. If only non-critical checks fail (e.g., lint warnings), may proceed with warning
+3. If critical checks fail (existence, done_criteria), MUST fix before commit
+
+**Never skip verification.** A "completed" task with failed verification is a lie in the commit history.
 </step>
 
 </execution_flow>
@@ -550,9 +614,18 @@ When executing a task with `tdd="true"` attribute, follow RED-GREEN-REFACTOR cyc
 </tdd_execution>
 
 <task_commit_protocol>
-After each task completes (verification passed, done criteria met), commit immediately.
+**PREREQUISITE: Task verification MUST have passed before reaching this step.**
 
-**1. Identify modified files:**
+If you're here without running task_verification_gate, STOP and go back.
+
+After verification passes, commit immediately.
+
+**1. Verify verification passed:**
+
+Check that task_verification_gate recorded status: "passed" for this task.
+If status is "failed" or "partial" with critical failures, DO NOT PROCEED.
+
+**2. Identify modified files:**
 
 ```bash
 git status --short
@@ -609,7 +682,12 @@ Track for SUMMARY.md generation.
 </task_commit_protocol>
 
 <summary_creation>
-After all tasks complete, create `{phase}-{plan}-SUMMARY.md`.
+**PREREQUISITE: ALL tasks must have verification status: "passed" before creating SUMMARY.**
+
+If any task has verification status "failed", DO NOT create SUMMARY.md.
+Instead, return to fix the failed tasks first.
+
+After all tasks complete AND pass verification, create `{phase}-{plan}-SUMMARY.md`.
 
 **Location:** `.planning/phases/XX-name/{phase}-{plan}-SUMMARY.md`
 
@@ -633,6 +711,10 @@ key-files:
 decisions: [decisions made]
 duration: {minutes}
 completed: {timestamp}
+verification:
+  all_tasks_verified: true
+  task_count: N
+  verification_summary: "All N tasks passed existence, substantive, functional, and done_criteria checks"
 ---
 ```
 
@@ -772,11 +854,14 @@ If you were a continuation agent, include ALL commits (previous + new).
 Plan execution complete when:
 
 - [ ] All tasks executed (or paused at checkpoint with full state returned)
-- [ ] Each task committed individually with proper format
+- [ ] **CRITICAL: Every task passed verification gate (existence, substantive, functional, done_criteria)**
+- [ ] Each task committed individually with proper format (only after verification passed)
 - [ ] All deviations documented
 - [ ] Authentication gates handled and documented
-- [ ] SUMMARY.md created with substantive content
+- [ ] SUMMARY.md created with substantive content AND verification: all_tasks_verified: true
 - [ ] STATE.md updated (position, decisions, issues, session)
 - [ ] Final metadata commit made
 - [ ] Completion format returned to orchestrator
+
+**Plan CANNOT be marked complete if any task has verification: failed.**
 </success_criteria>

@@ -136,15 +136,14 @@ def update_active_edited_project(project_path: str) -> None:
         state["active_edited_project"] = project_name
         state["active_edited_at"] = datetime.now().isoformat()
 
-        # Set target_project ONLY if not already set
-        # (first edit of session establishes target, explicit switch changes it)
-        if "target_project" not in state or not state.get("target_project"):
-            state["target_project"] = project_name
-            state["target_project_path"] = project_path
+        # Always update target_project to the project being edited
+        # This ensures /clear recovery finds the right project
+        state["target_project"] = project_name
+        state["target_project_path"] = project_path
 
-        # Legacy fields for backwards compat (deprecated - use target_project)
-        state["active_project"] = state.get("target_project", project_name)
-        state["active_project_path"] = state.get("target_project_path", project_path)
+        # Legacy fields for backwards compat (same as target now)
+        state["active_project"] = project_name
+        state["active_project_path"] = project_path
 
         state_path.write_text(json.dumps(state, indent=2))
     except Exception as e:
