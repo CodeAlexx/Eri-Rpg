@@ -60,32 +60,15 @@ def get_planning_dir() -> Path:
     """Get the .planning directory for current project.
 
     Search order:
-    1. Check cwd for coder .planning/ (with phases/STATE.md/ROADMAP.md)
-    2. Walk UP from cwd looking for coder .planning/
-    3. Walk DOWN one level from cwd looking for coder .planning/
-    4. Check registered project path from ~/.eri-rpg/state.json
+    1. Check active_project from ~/.eri-rpg/state.json (highest priority - user switched)
+    2. Check cwd for coder .planning/ (with phases/STATE.md/ROADMAP.md)
+    3. Walk UP from cwd looking for coder .planning/
+    4. Walk DOWN one level from cwd looking for coder .planning/
     5. Fallback: any .planning/ in cwd or parents
     """
     cwd = Path.cwd()
 
-    # 1. Check cwd directly for coder workflow
-    if is_coder_planning_dir(cwd / ".planning"):
-        return cwd / ".planning"
-
-    # 2. Walk up looking for coder .planning/
-    check = cwd
-    while check != check.parent:  # Stop at filesystem root
-        if is_coder_planning_dir(check / ".planning"):
-            return check / ".planning"
-        check = check.parent
-
-    # 3. Walk down one level from cwd
-    if cwd.is_dir():
-        for subdir in cwd.iterdir():
-            if subdir.is_dir() and is_coder_planning_dir(subdir / ".planning"):
-                return subdir / ".planning"
-
-    # 4. Check registered project from state
+    # 1. Check active_project from state FIRST (user explicitly switched)
     state_path = Path.home() / ".eri-rpg" / "state.json"
     if state_path.exists():
         try:
@@ -102,12 +85,29 @@ def get_planning_dir() -> Path:
                             # Check project root
                             if is_coder_planning_dir(proj_path / ".planning"):
                                 return proj_path / ".planning"
-                            # Check one level down (e.g., serenity/desktop)
+                            # Check one level down (e.g., serenity/ui)
                             for subdir in proj_path.iterdir():
                                 if subdir.is_dir() and is_coder_planning_dir(subdir / ".planning"):
                                     return subdir / ".planning"
         except (json.JSONDecodeError, KeyError):
-            pass
+            pass  # Fall through to cwd-based detection
+
+    # 2. Check cwd directly for coder workflow
+    if is_coder_planning_dir(cwd / ".planning"):
+        return cwd / ".planning"
+
+    # 3. Walk up looking for coder .planning/
+    check = cwd
+    while check != check.parent:  # Stop at filesystem root
+        if is_coder_planning_dir(check / ".planning"):
+            return check / ".planning"
+        check = check.parent
+
+    # 4. Walk down one level from cwd
+    if cwd.is_dir():
+        for subdir in cwd.iterdir():
+            if subdir.is_dir() and is_coder_planning_dir(subdir / ".planning"):
+                return subdir / ".planning"
 
     # 5. Fallback - any .planning/ in cwd
     if (cwd / ".planning").is_dir():
