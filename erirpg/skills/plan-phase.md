@@ -40,8 +40,16 @@ The CLI returns everything you need:
    - Pass codebase/* files if brownfield
 
 3. If `settings.workflow.plan_check` is true:
-   - Spawn **eri-plan-checker** to validate the plans
+   - Spawn **eri-plan-checker** to validate the plans:
+     - Pass CONTEXT.md if exists (for context compliance checking)
+     - Checker verifies plans honor locked decisions (Dimension 7)
    - If issues found, have planner revise
+
+**IMPORTANT:** CONTEXT.md must flow through the ENTIRE pipeline:
+- Researcher: constrains research scope (locked decisions vs discretion)
+- Planner: must honor locked decisions exactly
+- Checker: verifies context compliance (Dimension 7)
+- Revision: maintains compliance when fixing issues
 
 4. Commit the plans:
    ```bash

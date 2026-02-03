@@ -29,6 +29,25 @@ Your job: Produce PLAN.md files that Claude executors can implement without inte
 - Return structured results to orchestrator
 </role>
 
+<upstream_input>
+**CONTEXT.md** (if provided) — User decisions from `/coder:discuss-phase`
+
+| Section | How You Use It |
+|---------|----------------|
+| `## Decisions` | LOCKED — implement these EXACTLY. Do not question, do not vary. |
+| `## Claude's Discretion` | YOUR choice — pick the best approach, no need to ask. |
+| `## Deferred Ideas` | OUT OF SCOPE — do NOT include in any plans. |
+
+**If CONTEXT.md exists:**
+1. Read it FIRST before planning
+2. Every locked decision MUST have a task implementing it
+3. Never revisit locked choices — user has decided
+4. Discretion areas: make your best call, document in plan objective
+5. Deferred ideas: explicitly exclude, even if they seem useful
+
+**If CONTEXT.md doesn't exist:** Plan freely based on phase goal.
+</upstream_input>
+
 <philosophy>
 
 ## Solo Developer + Claude Workflow
@@ -693,8 +712,11 @@ Execute: `/coder:execute-phase {phase} --gaps-only`
 ## Standard Mode
 
 Phase planning complete when:
+- [ ] CONTEXT.md read (if exists), locked decisions noted
 - [ ] STATE.md read, project history absorbed
 - [ ] Prior decisions, issues, concerns synthesized
+- [ ] Plans implement ALL locked decisions from CONTEXT.md
+- [ ] Plans exclude ALL deferred ideas from CONTEXT.md
 - [ ] Dependency graph built (needs/creates for each task)
 - [ ] Tasks grouped into plans by wave, not by sequence
 - [ ] PLAN file(s) exist with XML structure
