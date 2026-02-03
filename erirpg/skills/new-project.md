@@ -79,6 +79,53 @@ git add .planning/
 git commit -m "docs: initialize project planning"
 ```
 
+<completion>
 ## On Completion
 
-Suggest: `/coder:discuss-phase 1` or `/coder:plan-phase 1`
+### 1. Verify Everything Committed
+
+```bash
+git status --short .planning/
+```
+
+If uncommitted files, commit:
+```bash
+git add .planning/
+git commit -m "docs: initialize {project-name} planning
+
+- PROJECT.md: vision and constraints
+- REQUIREMENTS.md: feature list with REQ-IDs
+- ROADMAP.md: phased implementation plan
+- STATE.md: progress tracker"
+```
+
+### 2. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 3. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PROJECT INITIALIZED: {project-name}                         ║
+╠════════════════════════════════════════════════════════════════╣
+║  Created:                                                      ║
+║  - .planning/PROJECT.md                                        ║
+║  - .planning/REQUIREMENTS.md                                   ║
+║  - .planning/ROADMAP.md ({N} phases)                           ║
+║  - .planning/STATE.md                                          ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Start Phase 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase 1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Optional: Run `/coder:discuss-phase 1` first to clarify approach.
+```
+</completion>

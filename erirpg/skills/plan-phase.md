@@ -77,6 +77,63 @@ If the Task tool returns an error (API 500, timeout, rejection):
 **Why this matters:** Improvising causes context drift and state inconsistencies.
 The workflow is designed for agents - doing it manually breaks the system.
 
+<completion>
 ## On Completion
 
-Suggest: `/coder:execute-phase N`
+### 1. Verify Plans Committed
+
+```bash
+git status --short .planning/phases/
+```
+
+If uncommitted plans, commit them:
+```bash
+git add .planning/phases/
+git commit -m "plan(phase-{N}): create execution plans for {phase-name}"
+```
+
+### 2. Update STATE.md
+
+Update `.planning/STATE.md`:
+
+```markdown
+## Current Phase
+**Phase {N}: {phase-name}** - planned (ready to execute)
+
+## Last Action
+Completed plan-phase {N}
+- Plans created: {count}
+- Research: {yes|no|skipped}
+- Plan check: {passed|skipped}
+
+## Next Step
+Run `/coder:execute-phase {N}` to build the code
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE {N} PLANNED                                           ║
+╠════════════════════════════════════════════════════════════════╣
+║  Plans created: {list}                                         ║
+║  Location: .planning/phases/{NN-name}/                         ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Execute the plans
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:execute-phase {N}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This will spawn executors to build the code for each plan.
+```
+</completion>
