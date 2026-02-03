@@ -139,8 +139,53 @@ git commit -m "milestone({name}): complete and archive"
 </process>
 
 <completion>
-When milestone complete:
-1. Show milestone summary (phases, requirements, duration)
-2. Show git tag created
-3. Suggest next: `/coder:new-milestone` to start next version
+## On Completion
+
+### 1. Update STATE.md
+
+```markdown
+## Project
+**Milestone:** {version} ✅ COMPLETE
+
+## Current Phase
+All phases complete. Milestone archived.
+
+## Last Action
+Completed milestone {version}
+- Phases: {N} completed
+- Tag: {version}
+- Archive: .planning/archive/{version}/
+
+## Next Step
+Start next milestone with `/coder:new-milestone`
+```
+
+### 2. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 3. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ MILESTONE COMPLETE: {version}                               ║
+╠════════════════════════════════════════════════════════════════╣
+║  Phases completed: {N}                                         ║
+║  Requirements met: {X}/{Y}                                     ║
+║  Git tag: {version}                                            ║
+║  Archived to: .planning/archive/{version}/                     ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Start next version (optional)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:new-milestone {next-version}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Or run your app - it's ready to ship!
+```
 </completion>

@@ -130,10 +130,66 @@ tester: user
 </process>
 
 <completion>
-When UAT complete:
-1. Show pass/fail summary
-2. For failures: show root causes found
-3. Suggest next action:
-   - All pass → `/coder:complete-milestone` (if last phase) or next phase
-   - Failures → `/coder:plan-phase {N} --gaps`
+## On Completion
+
+### 1. Update STATE.md
+
+```markdown
+## Current Phase
+**Phase {N}: {phase-name}** - {verified|gaps_found}
+
+## Last Action
+Completed verify-work {N}
+- Tests passed: {X}/{Y}
+- Status: {all_passed|some_failed|cant_test}
+
+## Next Step
+{Based on status - see routing below}
+```
+
+### 2. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 3. Route and Present Next Steps
+
+**If ALL PASSED:**
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE {N} VERIFIED                                          ║
+╠════════════════════════════════════════════════════════════════╣
+║  All tests passed!                                             ║
+║  Phase is complete and ready.                                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: {Next phase OR complete milestone}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {N+1}  OR  /coder:complete-milestone
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**If SOME FAILED:**
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ⚠ PHASE {N} HAS GAPS                                          ║
+╠════════════════════════════════════════════════════════════════╣
+║  Passed: {X}    Failed: {Y}                                    ║
+║  Root causes identified in UAT.md                              ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Fix the gaps
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {N} --gaps
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This creates fix plans for the failed items.
+```
 </completion>

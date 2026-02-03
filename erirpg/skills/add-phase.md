@@ -87,8 +87,39 @@ git commit -m "plan: add phase {N} - {phase-name}"
 </process>
 
 <completion>
-Show:
-1. Phase added successfully
-2. Requirements mapped to phase
-3. Next: `/coder:discuss-phase {N}` or `/coder:plan-phase {N}`
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/
+```
+
+### 2. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 3. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE {N} ADDED: {phase-name}                               ║
+╠════════════════════════════════════════════════════════════════╣
+║  Goal: {goal}                                                  ║
+║  Requirements: {REQ-IDs}                                       ║
+║  Dependencies: {deps or None}                                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Plan or discuss the phase
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {N}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Optional: Run `/coder:discuss-phase {N}` first to clarify approach.
+```
 </completion>
