@@ -393,13 +393,15 @@ def main():
     registry = load_registry()
 
     # Get project name - priority order:
-    # 1. active_edited_project (recently edited, expires in 30min)
-    # 2. active_project (from /eri:switch, persists)
+    # 1. target_project (explicitly switched to, persists across edits)
+    # 2. active_project (legacy, for backwards compat)
     # 3. cwd-based detection
-    project_name = get_active_edited_project(global_state)
+    # Note: active_edited_project is NOT used here - that's just for tracking
+    # what was last edited, not what project user is working ON.
+    project_name = global_state.get("target_project")
 
     if not project_name:
-        # Check active_project from global state (set by /eri:switch)
+        # Check active_project from global state (legacy)
         active_proj = global_state.get("active_project")
         if active_proj:
             project_name = active_proj
