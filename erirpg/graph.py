@@ -8,7 +8,6 @@ and querying indexed project structures.
 from dataclasses import dataclass, field
 from datetime import datetime
 from collections import deque
-from functools import lru_cache
 from typing import Dict, List, Optional, Set, FrozenSet, TYPE_CHECKING
 import json
 from pathlib import Path
@@ -120,6 +119,7 @@ class Graph:
     edges: List[Edge] = field(default_factory=list)
     _dependents_index: Dict[str, Set[str]] = field(default_factory=dict, repr=False)
     _knowledge: Optional["Knowledge"] = field(default=None, repr=False)
+    _transitive_deps_cache: Dict[str, FrozenSet[str]] = field(default_factory=dict, repr=False)
 
     @property
     def knowledge(self) -> "Knowledge":
@@ -227,12 +227,11 @@ class Graph:
 
     def get_transitive_deps(self, path: str) -> Set[str]:
         """Get all transitive dependencies of a module."""
-        # Use cached version, convert frozenset back to set
-        return set(self._get_transitive_deps_cached(path))
-    
-    @lru_cache(maxsize=512)
-    def _get_transitive_deps_cached(self, path: str) -> FrozenSet[str]:
-        """Cached transitive deps computation. Returns frozenset for hashability."""
+        # Check cache first
+        if path in self._transitive_deps_cache:
+            return set(self._transitive_deps_cache[path])
+
+        # Compute transitive deps
         visited = set()
         to_visit = [path]
 
@@ -248,7 +247,10 @@ class Graph:
                     to_visit.append(dep)
 
         visited.discard(path)  # Don't include self
-        return frozenset(visited)
+
+        # Cache result
+        self._transitive_deps_cache[path] = frozenset(visited)
+        return visited
 
     def get_transitive_dependents(self, path: str) -> Set[str]:
         """Get all modules that transitively depend on this module."""
@@ -310,8 +312,8 @@ class Graph:
         return result
 
     def clear_caches(self) -> None:
-        """Clear LRU caches. Call after modifying graph."""
-        self._get_transitive_deps_cached.cache_clear()
+        """Clear caches. Call after modifying graph."""
+        self._transitive_deps_cache.clear()
 
     def stats(self) -> dict:
         """Get graph statistics."""
@@ -321,3 +323,174 @@ class Graph:
             "total_lines": sum(m.lines for m in self.modules.values()),
             "total_interfaces": sum(len(m.interfaces) for m in self.modules.values()),
         }
+
+    def find_modules(self, pattern: str) -> List[Module]:
+        """Find modules matching a name pattern.
+
+        Args:
+            pattern: Pattern to match against module paths (supports wildcards via fnmatch)
+
+        Returns:
+            List of matching modules
+        """
+        import fnmatch
+        results = []
+        pattern_lower = pattern.lower()
+        for path, module in self.modules.items():
+            # Match against path
+            if fnmatch.fnmatch(path.lower(), pattern_lower):
+                results.append(module)
+            # Also match against path segments
+            elif pattern_lower in path.lower():
+                results.append(module)
+        return results
+
+    def find_interface(self, name: str) -> List[tuple]:
+        """Find interfaces by name across all modules.
+
+        Args:
+            name: Interface name to search (case-insensitive partial match)
+
+        Returns:
+            List of (module_path, Interface) tuples
+        """
+        results = []
+        name_lower = name.lower()
+        for module_path, module in self.modules.items():
+            for iface in module.interfaces:
+                if name_lower in iface.name.lower():
+                    results.append((module_path, iface))
+        return results
+
+    def get_dependencies(self, path: str, include_external: bool = False) -> dict:
+        """Get dependencies of a module.
+
+        Args:
+            path: Module path
+            include_external: Include external package dependencies
+
+        Returns:
+            Dict with 'internal' and optionally 'external' dependency lists
+        """
+        module = self.get_module(path)
+        if not module:
+            return {"internal": [], "external": []}
+
+        result = {"internal": module.deps_internal}
+        if include_external:
+            result["external"] = module.deps_external
+        return result
+
+    def impact_analysis(self, path: str, depth: Optional[int] = None) -> dict:
+        """Analyze impact of changing a module.
+
+        Args:
+            path: Module path
+            depth: Maximum dependency depth to analyze (None = unlimited)
+
+        Returns:
+            Dict with module info, dependents, and impact metrics
+        """
+        module = self.get_module(path)
+        if not module:
+            raise ValueError(f"Module not found: {path}")
+
+        direct_dependents = self.get_dependents(path)
+        transitive_dependents = self.get_transitive_dependents(path)
+
+        # Filter by depth if specified
+        if depth is not None:
+            # BFS to get dependents within depth
+            limited_dependents = set()
+            current_level = {path}
+            for _ in range(depth):
+                next_level = set()
+                for p in current_level:
+                    deps = self.get_dependents(p)
+                    for d in deps:
+                        if d not in limited_dependents:
+                            limited_dependents.add(d)
+                            next_level.add(d)
+                current_level = next_level
+                if not current_level:
+                    break
+            transitive_dependents = limited_dependents
+            direct_dependents = [d for d in direct_dependents if d in transitive_dependents]
+
+        # Calculate risk level
+        total_affected = len(transitive_dependents)
+        if total_affected > 10:
+            risk = "HIGH"
+        elif total_affected >= 3:
+            risk = "MEDIUM"
+        else:
+            risk = "LOW"
+
+        return {
+            "module": path,
+            "summary": module.summary,
+            "interfaces": [i.name for i in module.interfaces],
+            "direct_dependents": direct_dependents,
+            "transitive_dependents": list(transitive_dependents - set(direct_dependents)),
+            "total_affected": total_affected,
+            "risk": risk,
+            "lines": module.lines,
+        }
+
+    def find_circular_dependencies(self) -> List[List[str]]:
+        """Find circular dependency chains in the graph.
+
+        Returns:
+            List of cycles, where each cycle is a list of module paths
+        """
+        def dfs_cycle(node: str, visited: Set[str], stack: List[str]) -> Optional[List[str]]:
+            """DFS to find cycles."""
+            if node in stack:
+                # Found cycle - return path from node to node
+                idx = stack.index(node)
+                return stack[idx:] + [node]
+
+            if node in visited:
+                return None
+
+            visited.add(node)
+            stack.append(node)
+
+            # Visit dependencies
+            deps = self.get_deps(node)
+            for dep in deps:
+                if dep in self.modules:  # Only check internal modules
+                    cycle = dfs_cycle(dep, visited, stack[:])
+                    if cycle:
+                        return cycle
+
+            return None
+
+        cycles = []
+        visited = set()
+
+        for module_path in self.modules:
+            if module_path not in visited:
+                cycle = dfs_cycle(module_path, visited, [])
+                if cycle:
+                    # Normalize cycle (start from min element)
+                    min_idx = cycle.index(min(cycle[:-1]))  # Exclude duplicate last element
+                    normalized = cycle[min_idx:-1] + [cycle[min_idx]]
+                    # Check if we've seen this cycle before
+                    if normalized not in cycles:
+                        cycles.append(normalized)
+
+        return cycles
+
+    def orphan_modules(self) -> List[str]:
+        """Find modules with no dependents (dead code candidates).
+
+        Returns:
+            List of module paths that have no dependents
+        """
+        orphans = []
+        for module_path in self.modules:
+            dependents = self.get_dependents(module_path)
+            if not dependents:
+                orphans.append(module_path)
+        return sorted(orphans)
