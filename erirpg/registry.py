@@ -16,42 +16,65 @@ import os
 def detect_project_language(path: str) -> str:
     """Auto-detect project language from files in the project root.
 
-    Checks for common language indicators:
+    Checks for common language indicators (config files checked FIRST):
+    - pubspec.yaml -> dart (Flutter)
+    - package.json -> javascript (or typescript if tsconfig.json exists)
+    - go.mod -> go
     - Cargo.toml -> rust
-    - pyproject.toml / setup.py / *.py -> python
-    - mojoproject.toml / *.mojo -> mojo
-    - *.c, *.h, Makefile, CMakeLists.txt -> c
+    - pyproject.toml / setup.py -> python
+    - mojoproject.toml -> mojo
+    - Fallback: count source files
 
     Returns:
-        Language string: 'python', 'c', 'rust', 'mojo', or 'unknown'
-
-    Note: Only languages with indexer support are returned.
+        Language string or 'unknown'
     """
     path = os.path.abspath(os.path.expanduser(path))
 
-    # Check for language-specific files
+    # Check config files FIRST (before counting source files)
+    # This prevents subdirectories (like linux/ in Flutter) from misleading detection
+
+    # Dart/Flutter - check first because Flutter has linux/windows subdirs with C
+    if os.path.exists(os.path.join(path, "pubspec.yaml")):
+        return "dart"
+
+    # JavaScript/TypeScript
+    if os.path.exists(os.path.join(path, "package.json")):
+        if os.path.exists(os.path.join(path, "tsconfig.json")):
+            return "typescript"
+        return "javascript"
+
+    # Go
+    if os.path.exists(os.path.join(path, "go.mod")):
+        return "go"
+
+    # Rust
     if os.path.exists(os.path.join(path, "Cargo.toml")):
         return "rust"
 
+    # Mojo
     if os.path.exists(os.path.join(path, "mojoproject.toml")):
         return "mojo"
 
+    # Python
     if os.path.exists(os.path.join(path, "pyproject.toml")) or \
        os.path.exists(os.path.join(path, "setup.py")):
         return "python"
 
-    # Count files to determine majority language
+    # Fallback: Count source files to determine majority language
     py_count = 0
     c_count = 0
     rs_count = 0
     mojo_count = 0
+    dart_count = 0
+    js_count = 0
+    go_count = 0
 
     # Fire emoji for .🔥 extension
     fire_emoji = "\U0001F525"
 
     for root, dirs, files in os.walk(path):
         # Skip hidden and build dirs
-        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("target", "build", "node_modules", "__pycache__")]
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("target", "build", "node_modules", "__pycache__", "linux", "windows", "macos", "ios", "android", "web")]
 
         for f in files:
             if f.endswith(".py"):
@@ -62,20 +85,34 @@ def detect_project_language(path: str) -> str:
                 rs_count += 1
             elif f.endswith(".mojo") or f.endswith(fire_emoji):
                 mojo_count += 1
+            elif f.endswith(".dart"):
+                dart_count += 1
+            elif f.endswith((".js", ".jsx", ".ts", ".tsx")):
+                js_count += 1
+            elif f.endswith(".go"):
+                go_count += 1
 
         # Early exit if we've sampled enough
-        if py_count + c_count + rs_count + mojo_count > 10:
+        if py_count + c_count + rs_count + mojo_count + dart_count + js_count + go_count > 10:
             break
 
     # Determine by majority
-    counts = {"c": c_count, "rust": rs_count, "python": py_count, "mojo": mojo_count}
+    counts = {
+        "dart": dart_count,
+        "typescript": js_count,  # Group JS/TS together
+        "go": go_count,
+        "rust": rs_count,
+        "python": py_count,
+        "mojo": mojo_count,
+        "c": c_count,
+    }
     max_count = max(counts.values())
 
     if max_count == 0:
         return "unknown"
 
-    # Return first language with max count (priority: mojo > rust > python > c)
-    for lang in ["mojo", "rust", "python", "c"]:
+    # Return first language with max count (priority order)
+    for lang in ["dart", "typescript", "go", "mojo", "rust", "python", "c"]:
         if counts[lang] == max_count:
             return lang
 
