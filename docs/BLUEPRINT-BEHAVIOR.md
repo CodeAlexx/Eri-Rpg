@@ -34,12 +34,12 @@ The answer: Extract **WHAT** a feature does (behavior), not **HOW** it's coded. 
 ### 1. Document Source Feature
 
 ```
-/coder:blueprint add onetrainer models/sana "Sana model training" --extract-tests
+/coder:blueprint add EriDiffusion models/sana "Sana model training" --extract-tests
 ```
 
 Claude will:
-- Create `.planning/blueprints/onetrainer/models/sana.md` - Implementation blueprint
-- Create `.planning/blueprints/onetrainer/models/sana-BEHAVIOR.md` - Portable behavior spec
+- Create `.planning/blueprints/EriDiffusion/models/sana.md` - Implementation blueprint
+- Create `.planning/blueprints/EriDiffusion/models/sana-BEHAVIOR.md` - Portable behavior spec
 - Analyze the source code and fill in the behavior spec
 
 ### 2. Port Feature to Target
@@ -80,11 +80,11 @@ Manage section-level blueprints of complex programs.
 | Command | What You Type |
 |---------|---------------|
 | List all blueprints | `/coder:blueprint list` |
-| Create new blueprint | `/coder:blueprint add onetrainer models/sana "Sana model"` |
-| Load blueprint | `/coder:blueprint load onetrainer/models/sana` |
-| Check status | `/coder:blueprint status onetrainer` |
-| Update blueprint | `/coder:blueprint update onetrainer/models/sana` |
-| View dependencies | `/coder:blueprint deps onetrainer` |
+| Create new blueprint | `/coder:blueprint add EriDiffusion models/sana "Sana model"` |
+| Load blueprint | `/coder:blueprint load EriDiffusion/models/sana` |
+| Check status | `/coder:blueprint status EriDiffusion ` |
+| Update blueprint | `/coder:blueprint update EriDiffusion/models/sana` |
+| View dependencies | `/coder:blueprint deps EriDiffusion ` |
 
 #### Flags
 
@@ -101,22 +101,22 @@ Manage section-level blueprints of complex programs.
 
 ```
 # Create program overview
-/coder:blueprint add onetrainer overview "High-level architecture"
+/coder:blueprint add EriDiffusion overview "High-level architecture"
 
 # Create section with dependencies
-/coder:blueprint add onetrainer training-pipeline "Core training loop" --depends overview
+/coder:blueprint add EriDiffusion training-pipeline "Core training loop" --depends overview
 
 # Create section with full behavior extraction
-/coder:blueprint add onetrainer models/flux "Flux model" --extract-tests
+/coder:blueprint add EriDiffusion models/flux "Flux model" --extract-tests
 
 # Load behavior only (for porting)
-/coder:blueprint load onetrainer/models/flux --behavior
+/coder:blueprint load EriDiffusion/models/flux --behavior
 
 # Check what's documented
-/coder:blueprint status onetrainer
+/coder:blueprint status EriDiffusion 
 
 # View dependency graph
-/coder:blueprint deps onetrainer
+/coder:blueprint deps EriDiffusion 
 ```
 
 ---
@@ -136,7 +136,7 @@ Claude will run the full feature workflow: discussion → spec → research → 
 #### Reference Mode - Port from Another Program
 
 ```
-/coder:add-feature eritrainer sana "Sana model training" --reference onetrainer/models/sana
+/coder:add-feature eritrainer sana "Sana model training" --reference EriDiffusion/models/sana
 ```
 
 Claude will:
@@ -209,7 +209,7 @@ The complete portable behavior specification format with 12 sections.
 
 ```yaml
 ---
-program: onetrainer
+program: EriDiffusion r
 section: models/sana
 type: behavior-spec
 portable: true
@@ -380,7 +380,7 @@ Prerequisites:
 ```
 .planning/blueprints/
 ├── MANIFEST.md                    # Human-readable index
-├── onetrainer/
+├── EriDiffusion/
 │   ├── _index.json                # Machine-readable metadata
 │   ├── overview.md                # High-level architecture
 │   ├── training-pipeline.md       # Section blueprint
@@ -474,7 +474,7 @@ Your code doesn't match the spec. Either:
 
 ---
 
-## Example: Porting Sana from OneTrainer to EriTrainer
+## Example: Porting Sana from EriDiffusion to EriTrainer
 
 **Goal:** Port Sana model training from Python/PyTorch to Rust/Candle
 
@@ -504,7 +504,7 @@ Claude maps conventions:
 ### Step 3: Port with Reference
 
 ```
-/coder:add-feature eritrainer sana "Sana model" --reference onetrainer/models/sana
+/coder:add-feature eritrainer sana "Sana model" --reference  EriDiffusion/models/sana
 ```
 
 Claude reports:
