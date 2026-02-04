@@ -814,6 +814,31 @@ You describe what you want, Claude handles all the coding. No programming knowle
 
 ---
 
+### /coder:status
+
+**Purpose:** Quick status check - current phase, progress, next action.
+
+**Usage:**
+```
+/coder:status
+```
+
+**Shows:**
+- Current project and status
+- Phase progress (N/total)
+- Visual progress bar
+- Last action
+- Recommended next command
+
+**When to use:**
+- Quick "where am I?" check
+- After returning to a project
+- Before deciding what to do next
+
+**Why needed:** Faster than `/coder:progress --detailed`. Shows just enough to orient and suggest next action.
+
+---
+
 ### /coder:template
 
 **Purpose:** Save project structure as reusable template.
@@ -987,6 +1012,7 @@ Target code is written fresh, following target idioms. Only the BEHAVIOR is pres
 | `rollback` | Undo execution |
 | `settings` | View/change preferences |
 | `split` | Break plan into smaller ones |
+| `status` | Quick status check |
 | `template` | Save as reusable template |
 | `verify-behavior` | Verify code matches behavior spec |
 | `verify-work` | Test completed phase |
