@@ -12,8 +12,11 @@ What can and cannot be committed to this repository.
 | `credentials.json` | Auth tokens |
 | `.eri-rpg/session.json` | Session state |
 | `EXECUTION_STATE.json` | Runtime state |
+| `docs/GSD_AND_WORKFLOW.md` | Private workflow reference - local only, never push |
+| `.planning/` | Private planning artifacts |
+| `.eri-rpg/` | Private state directory |
+| `.claude/` | Private commands directory |
 | Absolute local paths | Exposes user directory structure (use `~/` or placeholders) |
-| GSD local path | `/home/alex/gsd/` is private - reference by URL only |
 
 ## Private References (sanitize before commit)
 
@@ -21,7 +24,6 @@ These should use placeholders or URLs, not absolute paths:
 
 | Private | Public Alternative |
 |---------|-------------------|
-| `/home/alex/gsd/get-shit-done/` | `https://github.com/glittercowboy/get-shit-done` or `~/gsd/` |
 | `/home/alex/eri-rpg/` | Relative paths or `$(pwd)` |
 | `~/.claude/eri-rpg/references/` | Describe location, don't hardcode |
 
@@ -29,12 +31,14 @@ These should use placeholders or URLs, not absolute paths:
 
 ```
 CLAUDE.md
+docs/GSD_AND_WORKFLOW.md
 .env
 *.key
 *.pem
 credentials.json
 .eri-rpg/
-.planning/quick/*/SUMMARY.md
+.planning/
+.claude/
 ```
 
 ## Safe to Commit
@@ -43,9 +47,8 @@ credentials.json
 |------|----------|
 | `erirpg/` | Source code |
 | `erirpg/agents/*.md` | Agent specs (version control copies) |
-| `docs/` | Documentation |
+| `docs/` | Documentation (except GSD_AND_WORKFLOW.md) |
 | `tests/` | Test files |
-| `.planning/phases*/` | Phase planning files |
 | `EMPOWERMENT.md` | Public principles |
 
 ## Why CLAUDE.md is Private
