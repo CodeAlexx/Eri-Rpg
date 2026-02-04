@@ -118,8 +118,56 @@ git commit -m "milestone({name}): initialize new milestone"
 </process>
 
 <completion>
-When new milestone initialized:
-1. Show new phases created
-2. Show requirements mapped
-3. Suggest next: `/coder:discuss-phase {N}` or `/coder:plan-phase {N}`
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Current Position
+Milestone: {milestone-name}
+Phase: 1 of {N} ({first-phase-name})
+Status: Ready to plan
+
+## Last Action
+Completed new-milestone: {milestone-name}
+- Phases created: {count}
+- Requirements mapped: {count}
+
+## Next Step
+Run `/coder:plan-phase 1` to start the first phase
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ MILESTONE INITIALIZED: {milestone-name}                     ║
+╠════════════════════════════════════════════════════════════════╣
+║  Phases created: {count}                                       ║
+║  Requirements mapped: {count}                                  ║
+║  First phase: {first-phase-name}                               ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Start Phase 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase 1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Optional: Run `/coder:discuss-phase 1` first to clarify approach.
+```
 </completion>

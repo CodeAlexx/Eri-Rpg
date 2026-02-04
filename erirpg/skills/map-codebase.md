@@ -249,16 +249,60 @@ For parallel execution with focus=all:
 </agent-instructions>
 
 <completion>
-Show the user:
-1. Files created in .planning/codebase/
-2. Quick summary of findings:
-   - Project type and size
-   - Key technologies
-   - Main concerns found
-3. Next steps:
-   - "To add a feature: `/coder:new-project feature-name 'description'`"
-   - "To view specific area: Read .planning/codebase/{area}.md"
-   - "To recall later: `/eri:recall codebase`"
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/codebase/
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Last Action
+Completed map-codebase
+- Focus: {focus}
+- Files analyzed: {count}
+- Documentation: .planning/codebase/
+
+## Codebase Summary
+- Type: {project_type}
+- Size: {files} files, ~{loc} lines
+- Key concerns: {count}
+
+## Next Step
+Run `/coder:add-feature` to add features that fit existing architecture
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ CODEBASE MAPPED                                             ║
+╠════════════════════════════════════════════════════════════════╣
+║  Type: {project_type}                                          ║
+║  Size: {files} files, ~{loc} lines                             ║
+║  Focus: {focus}                                                ║
+║  Location: .planning/codebase/                                 ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Add features or explore
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:add-feature "<feature-name>" "<description>"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Or view mapping: cat .planning/codebase/SUMMARY.md
+```
 </completion>
 
 <integration>

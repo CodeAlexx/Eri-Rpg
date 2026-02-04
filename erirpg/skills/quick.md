@@ -262,3 +262,56 @@ Continuing execution...
 - Updates: STATE.md (accumulated context)
 - Commits: Atomic with quick task reference
 - Rollback: Standard git revert
+
+<completion>
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short
+```
+
+### 2. Update STATE.md
+
+```markdown
+### Recent Quick Tasks
+- #{NNN}: {description} ({date}) - {commit_hash}
+
+## Last Action
+Completed quick task #{NNN}
+- Files modified: {count}
+- Commit: {hash}
+
+## Next Step
+Continue with current phase work
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ QUICK TASK COMPLETE: #{NNN}                                 ║
+╠════════════════════════════════════════════════════════════════╣
+║  Task: {description}                                           ║
+║  Files: {count} modified                                       ║
+║  Commit: {hash}                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Continue with main work
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  Continue with current phase
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quick task logged at: .planning/quick/{NNN}-{slug}/SUMMARY.md
+```
+</completion>

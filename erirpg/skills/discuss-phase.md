@@ -120,8 +120,53 @@ git commit -m "docs(phase-{N}): capture implementation context"
 </process>
 
 <completion>
-When done:
-1. Show summary of decisions captured
-2. Note what CONTEXT.md contains
-3. Suggest next: `/coder:plan-phase {N}`
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/phases/
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Current Phase
+**Phase {N}: {phase-name}** - discussed (ready to plan)
+
+## Last Action
+Completed discuss-phase {N}
+- Decisions captured: {count}
+- Context file: .planning/phases/{XX-name}/{phase}-CONTEXT.md
+
+## Next Step
+Run `/coder:plan-phase {N}` to create execution plans
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE {N} DISCUSSED                                         ║
+╠════════════════════════════════════════════════════════════════╣
+║  Decisions captured: {count}                                   ║
+║  Context: .planning/phases/{XX-name}/{phase}-CONTEXT.md        ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Plan the phase
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {N}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The planner will read CONTEXT.md and honor your locked decisions.
+```
 </completion>

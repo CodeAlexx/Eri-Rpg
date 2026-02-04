@@ -304,3 +304,63 @@ plan-phase → execute-phase → verify-work
     │
 complete-milestone
 ```
+
+<completion>
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/
+```
+
+If uncommitted, commit:
+```bash
+git add .planning/ROADMAP.md .planning/STATE.md
+git commit -m "plan: add gap phases to close verification failures"
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Gap Phases Added
+- Phase {N}: {gap-phase-name} (from {source} gaps)
+- Phase {N+1}: {gap-phase-name} (from {source} gaps)
+
+## Last Action
+Completed plan-milestone-gaps
+- Gaps addressed: {count}
+- Gap phases created: {count}
+
+## Next Step
+Run `/coder:plan-phase {first-gap-phase}` to plan the fixes
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ GAP PHASES CREATED                                          ║
+╠════════════════════════════════════════════════════════════════╣
+║  Gaps analyzed: {count}                                        ║
+║  Gap phases created: {count}                                   ║
+║  First gap phase: {N} - {name}                                 ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Plan and execute gap phases
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {first-gap-phase}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After all gap phases complete, re-run verification on original failing phases.
+```
+</completion>

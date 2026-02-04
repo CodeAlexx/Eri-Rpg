@@ -84,8 +84,52 @@ Requirements: {disposition}"
 </process>
 
 <completion>
-Show:
-1. Phase removed
-2. Requirements disposition
-3. Updated phase count
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Current Position
+Phase count: {new_total} phases
+
+## Last Action
+Completed remove-phase {N}
+- Removed: Phase {N} - {phase-name}
+- Requirements: {disposition}
+- Renumbered: {count} subsequent phases
+
+## Next Step
+Continue with current phase or plan next
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE REMOVED: {N} - {phase-name}                           ║
+╠════════════════════════════════════════════════════════════════╣
+║  Requirements: {disposition}                                   ║
+║  Updated count: {new_total} phases                             ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Continue workflow
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {current}  (continue current work)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 </completion>

@@ -478,32 +478,52 @@ python3 -m erirpg.commands.clone_behavior progress --json
 </agent-instructions>
 
 <completion>
+## On Completion
 
-When clone completes successfully, show:
+### 1. Verify Committed
 
-```
-✅ Clone Complete
-
-Source: {source_path} ({source_language})
-Target: {target_name} ({target_language})
-
-Modules Cloned: {count}
-Behaviors Verified: {count}/{count}
-
-Files Created:
-- .planning/blueprints/{source_name}/*-BEHAVIOR.md ({count} files)
-- .planning/ROADMAP.md
-- .planning/REQUIREMENTS.md
-- .planning/CLONE-VERIFICATION.md
-- src/* (implementation)
-- tests/* (from test contracts)
-
-Result: Different code, same functionality.
-
-Next steps:
-- Run the application: {run_command}
-- Run tests: {test_command}
-- Compare outputs with source (manual validation)
+```bash
+git status --short
 ```
 
+### 2. Update STATE.md
+
+```markdown
+## Last Action
+Completed clone-behavior: {source_name} → {target_name}
+- Modules cloned: {count}
+- Behaviors verified: {count}/{count}
+
+## Next Step
+Run application and compare with source
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ CLONE COMPLETE: {source_name} → {target_name}               ║
+╠════════════════════════════════════════════════════════════════╣
+║  Source: {source_path} ({source_language})                     ║
+║  Target: {target_name} ({target_language})                     ║
+║  Modules: {count} cloned, {count} verified                     ║
+║  Result: Different code, same functionality                    ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Validate the clone
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Run tests: {test_command}
+2. Run app: {run_command}
+3. Compare outputs with source (manual)
+4. Type:  /clear
+5. Then:  /coder:init
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 </completion>

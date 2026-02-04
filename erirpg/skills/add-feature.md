@@ -279,16 +279,61 @@ Model selection:
 </agent-instructions>
 
 <completion>
-Show:
-1. Feature implementation summary
-2. Files created/modified
-3. Tests added/updated
-4. Any concerns or follow-up needed
+## On Completion
 
-Next steps:
-- "Run tests: `{test command from STACK.md}`"
-- "To add another feature: `/coder:add-feature <name>`"
-- "To commit: `git commit -m 'feat: add {feature-name}'`"
+### 1. Verify Committed
+
+```bash
+git status --short .planning/features/
+```
+
+If uncommitted, commit:
+```bash
+git add .planning/features/ src/
+git commit -m "feat: add {feature-name}
+
+- Feature spec and plans in .planning/features/{feature-name}/
+- Implementation complete with tests"
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Last Action
+Completed add-feature: {feature-name}
+- Files created: {count}
+- Tests added: {count}
+
+## Next Step
+Run tests or add another feature
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ FEATURE COMPLETE: {feature-name}                            ║
+╠════════════════════════════════════════════════════════════════╣
+║  Files created/modified: {count}                               ║
+║  Tests added: {count}                                          ║
+║  Location: .planning/features/{feature-name}/                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Verify and continue
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Run tests: {test_command}
+2. Type:  /clear
+3. Then:  /coder:init
+4. Then:  /coder:add-feature <next-feature>  (if more features)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 </completion>
 
 <integration>

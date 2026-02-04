@@ -110,8 +110,51 @@ If changes are incomplete, don't commit code - only commit handoff.
 </process>
 
 <completion>
-Show:
-1. Handoff created at .planning/.continue-here.md
-2. Current position saved
-3. Resume with `/coder:resume`
+## On Completion
+
+### 1. Verify Handoff Created
+
+```bash
+ls -la .planning/.continue-here.md
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Session Continuity
+Last session: {timestamp}
+Stopped at: {current phase/plan}
+Reason: {reason}
+Resume file: .planning/.continue-here.md
+
+## Next Step
+Resume with `/coder:resume`
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ WORK PAUSED                                                 ║
+╠════════════════════════════════════════════════════════════════╣
+║  Position: Phase {N}, Plan {M}                                 ║
+║  Reason: {reason}                                              ║
+║  Handoff: .planning/.continue-here.md                          ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ TO RESUME LATER
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:resume
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The resume command will read .continue-here.md and pick up where you left off.
+```
 </completion>

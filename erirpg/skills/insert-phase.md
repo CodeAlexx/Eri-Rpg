@@ -82,8 +82,53 @@ Subsequent phases renumbered."
 </process>
 
 <completion>
-Show:
-1. Phase inserted at position {N}
-2. Phases {N+1}+ renumbered
-3. Next: `/coder:discuss-phase {N}` for the new phase
+## On Completion
+
+### 1. Verify Committed
+
+```bash
+git status --short .planning/
+```
+
+### 2. Update STATE.md
+
+```markdown
+## Current Phase
+Phase count updated: {new_total} phases
+
+## Last Action
+Completed insert-phase {N}
+- Inserted: Phase {N} - {phase-name}
+- Renumbered: Phases {N+1}+ shifted
+
+## Next Step
+Run `/coder:discuss-phase {N}` or `/coder:plan-phase {N}`
+```
+
+### 3. Update Global State
+
+```bash
+python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
+```
+
+### 4. Present Next Steps
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ✓ PHASE INSERTED: {N} - {phase-name}                          ║
+╠════════════════════════════════════════════════════════════════╣
+║  Position: After phase {N-1}                                   ║
+║  Renumbered: {count} subsequent phases                         ║
+║  Rationale: {urgency reason}                                   ║
+╚════════════════════════════════════════════════════════════════╝
+
+## ▶ NEXT: Discuss or plan the new phase
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:discuss-phase {N}  (to clarify approach)
+   OR:    /coder:plan-phase {N}     (if approach is clear)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 </completion>
