@@ -5,7 +5,7 @@
 **GSD (Get Shit Done)** is the original framework that eri-coder was forked from.
 
 - **Repository:** https://github.com/glittercowboy/get-shit-done
-- **Local copy:** `/home/alex/gsd/get-shit-done/`
+- **Local copy:** `~/gsd/get-shit-done/`
 - **Philosophy:** AI-driven structured development with verification
 
 GSD pioneered the concept of:
@@ -130,9 +130,9 @@ Checks all state-changing skills for:
 
 | File | Purpose | Location |
 |------|---------|----------|
-| `execute-phase.md` | Wave orchestration | `/home/alex/gsd/get-shit-done/workflows/` |
-| `verify-phase.md` | Goal-backward verification | `/home/alex/gsd/get-shit-done/workflows/` |
-| `execute-plan.md` | Plan execution | `/home/alex/gsd/get-shit-done/workflows/` |
+| `execute-phase.md` | Wave orchestration | `~/gsd/get-shit-done/workflows/` |
+| `verify-phase.md` | Goal-backward verification | `~/gsd/get-shit-done/workflows/` |
+| `execute-plan.md` | Plan execution | `~/gsd/get-shit-done/workflows/` |
 
 ## State Flow
 
@@ -274,6 +274,6 @@ Checks all state-changing skills for:
 
 ### When comparing to GSD
 
-1. GSD workflows are at `/home/alex/gsd/get-shit-done/workflows/`
+1. GSD workflows are at `~/gsd/get-shit-done/workflows/`
 2. GSD has similar logic but baked into workflow steps
 3. Coder separates it into `<completion>` sections

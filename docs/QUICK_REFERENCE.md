@@ -7,7 +7,7 @@
 | Understand coder workflow | `docs/GSD_AND_WORKFLOW.md` |
 | Find the completion pattern spec | `~/.claude/eri-rpg/references/command-patterns.md` |
 | Check skill compliance | `python3 -m erirpg.scripts.lint_skills` |
-| See GSD original | `/home/alex/gsd/get-shit-done/` |
+| See GSD original | `~/gsd/get-shit-done/` |
 | Find a skill file | `erirpg/skills/*.md` |
 | Find an agent spec | `erirpg/agents/*.md` |
 | Understand CLI commands | `erirpg/cli_commands/` |
@@ -178,7 +178,7 @@ User sees: "Type /clear, then /coder:init, then /coder:execute-phase 3"
 
 GSD is the original framework we forked from.
 
-**Location:** `/home/alex/gsd/get-shit-done/`
+**Location:** `~/gsd/get-shit-done/`
 
 **Key files:**
 - `workflows/execute-phase.md` - 672 lines, wave orchestration

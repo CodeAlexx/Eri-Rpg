@@ -12,6 +12,18 @@ What can and cannot be committed to this repository.
 | `credentials.json` | Auth tokens |
 | `.eri-rpg/session.json` | Session state |
 | `EXECUTION_STATE.json` | Runtime state |
+| Absolute local paths | Exposes user directory structure (use `~/` or placeholders) |
+| GSD local path | `/home/alex/gsd/` is private - reference by URL only |
+
+## Private References (sanitize before commit)
+
+These should use placeholders or URLs, not absolute paths:
+
+| Private | Public Alternative |
+|---------|-------------------|
+| `/home/alex/gsd/get-shit-done/` | `https://github.com/glittercowboy/get-shit-done` or `~/gsd/` |
+| `/home/alex/eri-rpg/` | Relative paths or `$(pwd)` |
+| `~/.claude/eri-rpg/references/` | Describe location, don't hardcode |
 
 ## Always Gitignore
 
