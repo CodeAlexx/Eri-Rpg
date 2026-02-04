@@ -151,9 +151,26 @@ Every task has four required fields:
 - Good: "Create POST endpoint accepting {email, password}, validates using bcrypt against User table, returns JWT in httpOnly cookie with 15-min expiry. Use jose library (not jsonwebtoken - CommonJS issues with Edge runtime)."
 - Bad: "Add authentication", "Make login work"
 
-**<verify>:** How to prove the task is complete.
-- Good: `npm test` passes, `curl -X POST /api/auth/login` returns 200 with Set-Cookie header
+**<verify>:** How to prove the task is complete. MUST include runtime verification.
+
+**Static checks are NOT sufficient.** Static checks (py_compile, grep, file exists) only prove code was written, not that it works.
+
+| Task Type | Static (INSUFFICIENT alone) | Runtime (REQUIRED) |
+|-----------|----------------------------|-------------------|
+| API endpoint | grep for route | `curl` returns expected response |
+| ML training | file exists | `python run.py config.yaml` completes |
+| Database | schema has model | `prisma db push` succeeds |
+| Component | file imports | app renders without error |
+| Library | exports exist | `import X; X.method()` works |
+
+**Examples:**
+- Good: `npm test` passes, `curl -X POST /api/auth/login` returns 200
+- Good: `python run.py test_config.yaml` completes without error
+- Bad: `grep "def train"` (only proves code exists)
+- Bad: `python -m py_compile file.py` (only proves syntax)
 - Bad: "It works", "Looks good"
+
+**The rule:** If the task creates code that DOES something, verify must RUN that something.
 
 **<done>:** Acceptance criteria - measurable state of completion.
 - Good: "Valid credentials return 200 + JWT cookie, invalid credentials return 401"
@@ -724,6 +741,7 @@ Phase planning complete when:
 - [ ] Each plan: Objective, context, tasks, verification, success criteria, output
 - [ ] Each plan: 2-3 tasks (~50% context)
 - [ ] Each task: Type, Files (if auto), Action, Verify, Done
+- [ ] Each verify: Includes RUNTIME test if task produces executable code (not just static checks)
 - [ ] Wave structure maximizes parallelism
 - [ ] User knows next steps and wave structure
 
