@@ -6,6 +6,62 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ## February 3, 2026
 
+### /coder:doctor - Workflow Health Diagnostics
+
+New diagnostic command to identify and repair workflow issues. Created after Phase 5 failure audit revealed gaps in research, verification, and state updates.
+
+**New Command:** `/coder:doctor [--fix] [--fix-research] [--fix-verification] [--reinstall-hooks] [--rebuild-state]`
+
+**8 Health Checks:**
+| Check | What It Detects |
+|-------|-----------------|
+| Global State | Stale target_project_path, invalid JSON |
+| Project State | Missing .planning/, STATE.md, ROADMAP.md |
+| Execution State | Stale EXECUTION_STATE.json blocking edits |
+| Phase Health | Plans without summaries, incomplete execution |
+| Research Gaps | Level 2-3 phases missing RESEARCH.md |
+| Verification Status | Phases with gaps_found or no verification |
+| Hooks Status | Missing/outdated hooks in ~/.claude/hooks/ |
+| Skills Status | Missing skill files |
+
+**Repair Capabilities:**
+| Flag | Action |
+|------|--------|
+| `--fix` | Basic repairs (stale state, global state sync) |
+| `--fix-research` | Spawn eri-phase-researcher for missing RESEARCH.md |
+| `--fix-verification` | Spawn eri-verifier for incomplete phases |
+| `--reinstall-hooks` | Reinstall hooks from package |
+| `--rebuild-state` | Full STATE.md reconstruction from artifacts |
+
+**File:** `erirpg/skills/doctor.md` (716 lines)
+
+See `CODER-DOCTOR.md` for full documentation.
+
+### Workflow Audit Fixes (GSD Gap Analysis)
+
+Major fixes to plan-phase and execute-phase based on audit comparing GSD workflow to coder workflow.
+
+**Root Cause of Phase 5 Failures:**
+1. Research was optional (setting-based) - now mandatory for Level 2-3
+2. Verification was documented but not enforced - now blocks on gaps_found
+3. STATE.md only updated at completion - now updates after each wave
+
+**Files Changed:**
+| File | Change | Lines |
+|------|--------|-------|
+| `erirpg/skills/execute-phase.md` | 8 explicit steps, verification enforcement | 150→430 |
+| `erirpg/skills/plan-phase.md` | Research depth detection, confidence gates | 140→434 |
+| `erirpg/agents/eri-phase-researcher.md` | Depth levels, source hierarchy, confidence | 127→394 |
+
+**Key Additions:**
+- Research depth detection (Level 0-3) based on phase goal keywords
+- Confidence gates that STOP on LOW confidence
+- Source hierarchy: Codebase → Official docs → WebSearch (last resort)
+- Mid-execution STATE.md updates after each wave
+- Verification routing that blocks progress on gaps_found
+
+**Audit Document:** `docs/AUDIT_GSD_VS_CODER.md`
+
 ### Skill Completion Linter
 
 New linting script to enforce completion patterns on state-changing skills.

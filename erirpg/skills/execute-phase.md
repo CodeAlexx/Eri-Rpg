@@ -1,135 +1,390 @@
 ---
 name: coder:execute-phase
 description: Execute all plans for a phase with wave-based parallelization
-argument-hint: "<phase-number>"
+argument-hint: "<phase-number> [--gaps-only]"
 allowed-tools:
   - Read
+  - Write
   - Bash
   - Task
 ---
 
 # Execute Phase
 
-**Run the CLI command. Follow its output exactly.**
+Execute all plans in a phase using wave-based parallel execution. This skill orchestrates the full execution flow - do not skip steps.
+
+<process>
+
+<step name="1_call_cli" priority="first">
+## Step 1: Get Phase Context from CLI
 
 ```bash
 python3 -m erirpg.cli coder-execute-phase $ARGUMENTS
 ```
 
-The CLI returns everything you need:
-- Plans to execute (with paths and wave assignments)
-- Wave groupings for parallel execution
-- Current completion state
-- Settings (parallelization, verifier enabled, etc.)
+The CLI returns JSON with:
+- `phase_dir`: Path to phase directory
+- `phase_number`: Phase number
+- `phase_name`: Phase name
+- `goal`: Phase goal from ROADMAP.md
+- `plans`: List of plans with paths, waves, completion status
+- `waves`: Grouped wave structure
+- `settings`: Execution settings
+- `instructions`: High-level guidance
 
-**It also creates EXECUTION_STATE.json automatically** - hooks will allow file edits.
+**It also creates EXECUTION_STATE.json** - hooks will allow file edits.
 
-## After CLI Returns
+Parse and store these values for use in subsequent steps.
+</step>
 
-Follow the `instructions` field in the JSON output exactly:
+<step name="2_load_state">
+## Step 2: Load Project State
 
-1. For each wave in order, spawn **eri-executor** for each plan in that wave
-2. Pass the full plan content to each executor (read the plan file first)
-3. Wait for wave completion (all executors done, SUMMARY.md files exist)
-4. **MANDATORY: Spawn eri-verifier** after all waves complete
+Read and internalize project state:
 
-## Verification is MANDATORY
+```bash
+cat .planning/STATE.md 2>/dev/null
+```
 
-After all plans execute, you MUST spawn **eri-verifier** to:
-- Check must_haves against actual codebase (not SUMMARY claims)
-- Create VERIFICATION.md with status: passed/gaps_found/human_needed
-- Block completion if verification fails
+Parse:
+- Current position (phase, plan, status)
+- Accumulated decisions (constraints on execution)
+- Blockers/concerns (things to watch for)
 
-**The phase CANNOT be marked complete without VERIFICATION.md having `status: passed`.**
+**If STATE.md missing:** Warn user but continue - will create at completion.
+</step>
 
-If verification finds gaps:
-1. Do NOT call coder-end-plan
-2. Report gaps to user
-3. Offer `/coder:plan-phase {N} --gaps` to create fix plans
-4. Re-execute and re-verify until passed
+<step name="3_validate_phase">
+## Step 3: Validate Phase Ready
 
-## If Agent Spawn Fails
+Confirm phase exists and has plans:
 
-If the Task tool returns an error (API 500, timeout, rejection):
+```bash
+PHASE_DIR=$(ls -d .planning/phases/${PHASE_NUM}-* 2>/dev/null | head -1)
+PLAN_COUNT=$(ls -1 "$PHASE_DIR"/*-PLAN.md 2>/dev/null | wc -l)
+```
 
-1. **Retry once** - transient errors are common
-2. **If still fails, STOP and report:**
-   ```
-   Agent spawn failed for {plan}: {error}
+**If no plans found:** Error - run `/coder:plan-phase {N}` first.
 
-   Options:
-   - Retry: I can try spawning the agent again
-   - Skip plan: Mark as failed and continue (creates gap)
-   - Abort: Stop execution, preserve state for later
-   ```
-3. **DO NOT execute the plan yourself** - That's what agents are for
-4. **Wait for user decision** - Don't proceed until user responds
+Report: "Found {N} plans in {phase_dir}"
+</step>
 
-**Why this matters:** Manual execution causes context exhaustion and quality degradation.
-Agents have isolated context - that's by design.
+<step name="4_discover_plans">
+## Step 4: Discover Plans and Wave Structure
 
-<completion>
-## On Completion
+List all plans and their status:
 
-Only after verification passes:
+```bash
+# All plans
+ls -1 "$PHASE_DIR"/*-PLAN.md 2>/dev/null | sort
+
+# Completed plans (have SUMMARY.md)
+ls -1 "$PHASE_DIR"/*-SUMMARY.md 2>/dev/null | sort
+```
+
+For each plan, read frontmatter to extract:
+- `wave: N` - Execution wave
+- `autonomous: true/false` - Has checkpoints?
+- `gap_closure: true/false` - Closing verification gaps?
+
+**Build plan inventory:**
+
+| Plan | Wave | Status | Autonomous |
+|------|------|--------|------------|
+| 01 | 1 | pending | yes |
+| 02 | 1 | pending | yes |
+| 03 | 2 | pending | no |
+
+**Filtering:**
+- Skip completed plans (have SUMMARY.md)
+- If `--gaps-only`: Also skip plans where `gap_closure` is not `true`
+
+**If all plans filtered out:** Report "All plans already complete" and skip to verification.
+</step>
+
+<step name="5_report_wave_structure">
+## Step 5: Report Execution Plan
+
+Before executing, show what will happen:
+
+```markdown
+## Execution Plan
+
+**Phase {X}: {Name}** — {total_plans} plans across {wave_count} waves
+
+| Wave | Plans | What it builds |
+|------|-------|----------------|
+| 1 | 01, 02 | {from plan objectives} |
+| 2 | 03 | {from plan objectives} |
+```
+
+The "What it builds" column comes from reading each plan's `<objective>` section.
+</step>
+
+<step name="6_execute_waves">
+## Step 6: Execute Waves
+
+Execute each wave in sequence. Plans within a wave run in parallel.
+
+**For each wave:**
+
+### 6a. Describe What's Being Built
+
+Read each plan's `<objective>` section. Output:
+
+```markdown
+---
+
+## Wave {N}
+
+**Plan {ID}: {Name}**
+{2-3 sentences: what this builds, key approach, why it matters}
+
+Spawning {count} executor(s)...
+
+---
+```
+
+### 6b. Read Plan Files
+
+Before spawning, read each plan file content. The @ syntax doesn't work across Task() boundaries.
+
+```bash
+PLAN_CONTENT=$(cat "{plan_path}")
+STATE_CONTENT=$(cat .planning/STATE.md 2>/dev/null)
+```
+
+### 6c. Spawn Executors
+
+For each plan in the wave, spawn **eri-executor**:
+
+```
+Task(
+  subagent_type="eri-executor",
+  prompt="Execute plan {plan_number} of phase {phase_number}-{phase_name}.
+
+<plan>
+{plan_content}
+</plan>
+
+<project_state>
+{state_content}
+</project_state>
+
+Execute all tasks, commit each atomically, create SUMMARY.md, update STATE.md.
+Report completion with: plan ID, tasks completed, SUMMARY path, commit hashes."
+)
+```
+
+**Spawn all plans in wave simultaneously** (parallel execution).
+
+### 6d. Wait and Verify
+
+Wait for all executors in wave to complete. For each:
+
+1. Verify SUMMARY.md exists at expected path
+2. Read SUMMARY.md to extract what was built
+3. Note any issues or deviations
+
+### 6e. Report Wave Completion
+
+```markdown
+---
+
+## Wave {N} Complete
+
+**Plan {ID}: {Name}**
+{What was built — from SUMMARY.md deliverables}
+{Notable deviations, if any}
+
+{If more waves: "Enables Wave {N+1}: {brief}"}
+
+---
+```
+
+### 6f. Update STATE.md (Mid-Execution)
+
+**CRITICAL: Update STATE.md after each wave, not just at completion.**
+
+```markdown
+## Current Phase
+**Phase {N}: {phase-name}** - executing (wave {X}/{Y} complete)
+
+## Last Action
+Completed wave {X}
+- Plans executed: {list}
+- Total progress: {completed}/{total} plans
+```
+
+### 6g. Handle Failures
+
+If any executor in wave fails:
+
+```
+Executor failed for plan {ID}: {error}
+
+Options:
+1. Retry - Spawn executor again
+2. Skip - Mark as failed, continue to next wave
+3. Abort - Stop execution, preserve state
+```
+
+**Wait for user decision.** Do NOT proceed automatically.
+
+### 6h. Proceed to Next Wave
+
+Continue until all waves complete.
+</step>
+
+<step name="7_verification" priority="critical">
+## Step 7: Verification (MANDATORY - BLOCKS PROGRESS)
+
+After all waves complete, you **MUST** spawn **eri-verifier**.
+
+**This step is NOT optional. Do NOT skip to completion.**
+
+```bash
+# Get phase goal from ROADMAP
+PHASE_GOAL=$(grep -A 5 "Phase $PHASE_NUM" .planning/ROADMAP.md | head -6)
+```
+
+Spawn verifier:
+
+```
+Task(
+  subagent_type="eri-verifier",
+  prompt="Verify phase {phase_number} goal achievement.
+
+Phase directory: {phase_dir}
+Phase goal: {phase_goal}
+
+Check must_haves against actual codebase (not SUMMARY claims).
+Create VERIFICATION.md with status: passed/gaps_found/human_needed.
+Return status and gap summary if any."
+)
+```
+
+**Wait for verifier to complete.**
+
+### 7a. Check Verification Result
+
+```bash
+VERIFICATION_STATUS=$(grep "^status:" "$PHASE_DIR"/VERIFICATION.md | cut -d: -f2 | tr -d ' ')
+```
+
+### 7b. Route by Status
+
+| Status | Action |
+|--------|--------|
+| `passed` | Proceed to completion |
+| `human_needed` | Present items to user, wait for approval |
+| `gaps_found` | **BLOCK** - Present gaps, offer fix command |
+
+**If `gaps_found`:**
+
+```markdown
+## ⚠ Verification Found Gaps
+
+**Score:** {N}/{M} must-haves verified
+**Report:** {phase_dir}/VERIFICATION.md
+
+### What's Missing
+
+{Extract gap summaries from VERIFICATION.md}
+
+---
+
+## ▶ Fix the Gaps
+
+`/coder:plan-phase {N} --gaps`
+
+Then re-execute: `/coder:execute-phase {N} --gaps-only`
+
+<sub>`/clear` first → fresh context</sub>
+```
+
+**Do NOT proceed to completion. Do NOT call coder-end-plan.**
+
+**If `human_needed`:**
+
+```markdown
+## ✓ Automated Checks Passed — Human Verification Required
+
+{N} items need human testing:
+
+### Human Verification Checklist
+
+{Extract from VERIFICATION.md human_verification section}
+
+---
+
+After testing, respond:
+- "approved" → I'll complete the phase
+- Describe issues → I'll route to gap closure
+```
+
+**Wait for user response.**
+
+**If `passed`:**
+
+Proceed to completion.
+</step>
+
+<step name="8_completion">
+## Step 8: Complete Phase
+
+**Only reach this step if verification status is `passed`.**
+
+### 8a. Call CLI to End Plan
 
 ```bash
 python3 -m erirpg.cli coder-end-plan
 ```
 
-This checks verification status and:
-- If passed: Removes EXECUTION_STATE.json, marks phase complete
-- If failed: **BLOCKS** completion, returns error with instructions
+This removes EXECUTION_STATE.json and marks phase complete.
 
-**Never bypass verification.** Use `--force` only in emergencies (will mark phase as incomplete).
-
-### 1. Verify Git Status Clean
-
-Before presenting completion, check no uncommitted changes:
+### 8b. Verify Git Status Clean
 
 ```bash
 git status --short
 ```
 
-If uncommitted files related to this phase exist, commit them:
+If uncommitted files exist, commit them:
 ```bash
-git add <files>
-git commit -m "chore(phase-{N}): complete execution artifacts"
+git add .planning/phases/{phase_dir}/
+git commit -m "chore(phase-{N}): complete execution and verification"
 ```
 
-### 2. Update STATE.md
-
-Update `.planning/STATE.md` with full context:
+### 8c. Update STATE.md
 
 ```markdown
 ## Current Phase
-**Phase {N}: {phase-name}** - executed (pending user verification)
+**Phase {N}: {phase-name}** - complete (verified)
 
 ## Last Action
 Completed execute-phase {N}
 - Plans executed: {X}/{Y}
-- Verification: {passed|gaps_found}
+- Verification: passed
 
 ## Next Step
 Run `/coder:verify-work {N}` for user acceptance testing
+Or proceed to next phase: `/coder:plan-phase {N+1}`
 ```
 
-### 3. Update Global State
+### 8d. Update Global State
 
 ```bash
 python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 ```
 
-### 4. Present Next Steps
-
-**You MUST show this box - do not say "ready when you are":**
+### 8e. Present Next Steps
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║  ✓ PHASE {N} EXECUTED                                          ║
+║  ✓ PHASE {N} EXECUTED AND VERIFIED                             ║
 ╠════════════════════════════════════════════════════════════════╣
 ║  Plans completed: {X}/{Y}                                      ║
-║  Verification: {status}                                        ║
+║  Verification: passed                                          ║
 ║  Commits: {commit hashes}                                      ║
 ╚════════════════════════════════════════════════════════════════╝
 
@@ -140,10 +395,36 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 2. Then:  /coder:init
 3. Then:  /coder:verify-work {N}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-This runs user acceptance testing to confirm the phase works as expected.
 ```
+</step>
 
-**Why this matters:** Without this box, users don't know what to do next.
-The /clear → /coder:init → next-command flow ensures context recovery works.
-</completion>
+</process>
+
+<agent_failure_handling>
+## If Agent Spawn Fails
+
+If the Task tool returns an error (API 500, timeout, rejection):
+
+1. **Retry once** - transient errors are common
+2. **If still fails, STOP and report:**
+   ```
+   Agent spawn failed for {context}: {error}
+
+   Options:
+   - Retry: I can try spawning the agent again
+   - Skip: Mark as failed and continue (creates gap)
+   - Abort: Stop execution, preserve state for later
+   ```
+3. **DO NOT execute the work yourself** - That defeats isolated context
+4. **Wait for user decision** - Don't proceed until user responds
+</agent_failure_handling>
+
+<critical_rules>
+## Critical Rules
+
+1. **Never skip verification** - Step 7 MUST run before completion
+2. **Never proceed on gaps_found** - Must fix gaps first
+3. **Update STATE.md after each wave** - Not just at completion
+4. **Wait for user on failures** - Don't auto-proceed
+5. **Show the completion box** - Never say "ready when you are"
+</critical_rules>
