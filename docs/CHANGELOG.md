@@ -1,5 +1,54 @@
 # Changelog
 
+## v0.58.0-alpha (2026-02-03)
+
+Skill linting, enhanced discuss-phase, and new session commands.
+
+### New Features
+
+**Skill Completion Linter** - Enforce completion patterns on state-changing skills
+- `python3 -m erirpg.scripts.lint_skills` - Validates all 16 state-changing skills
+- Checks for: completion section, STATE.md update, switch command, /clear box
+- Prevents "ready when you are" instead of proper next steps
+
+**Enhanced Discuss-Phase** - Full feature set for capturing implementation decisions
+- Philosophy section (user=visionary, Claude=builder)
+- Scope guardrail (prevents creep, captures deferred ideas)
+- Gray area identification (phase-specific, not generic)
+- User selection via multiSelect
+- 4-question batches with check-ins
+- Claude's Discretion capture
+- Deferred Ideas preservation
+
+**New Commands**
+- `/coder:init` - Session context recovery after /clear
+- `/coder:projects` - List all registered projects with status
+- `/coder:meta-edit` - Safe self-modification with snapshots and verification
+
+**Agent Improvements**
+- CONTEXT.md flows through entire planning pipeline
+- All agent specs tracked in `erirpg/agents/`
+- `install-agents` command for agent spec symlinks
+
+### Bug Fixes
+- Check `active_project` FIRST in `get_planning_dir()`
+- Auto-register projects when switching by path
+- Statusline project detection
+- Non-blocking workflow model
+
+### New Language Support
+- Dart
+- JavaScript/TypeScript
+- Go
+
+### Test Coverage
+- Comprehensive tests for graph operations
+- Comprehensive tests for code indexer
+- Comprehensive tests for parser modules
+- Comprehensive tests for project registry
+
+---
+
 ## v0.57.0-alpha (2026-01-29)
 
 Adversarial plan verification with model escalation.
