@@ -69,4 +69,3 @@ erirpg/commands/clone_behavior.py
 # Planning artifacts from clone-behavior workflow
 .planning/
 CLAUDE.md
-docs/GSD_AND_WORKFLOW.md
