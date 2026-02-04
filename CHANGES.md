@@ -4,6 +4,131 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ---
 
+## February 3, 2026
+
+### Skill Completion Linter
+
+New linting script to enforce completion patterns on state-changing skills.
+
+**New Script:**
+- `erirpg/scripts/lint_skills.py` - Validates all state-changing skills
+
+**Checks For:**
+- `<completion>` section exists
+- STATE.md update present
+- `switch` command for global state
+- `/clear` box with next command
+
+**State-Changing Skills (16):**
+```
+execute-phase, plan-phase, new-project, verify-work,
+complete-milestone, add-phase, add-feature, new-milestone,
+insert-phase, remove-phase, quick, pause,
+clone-behavior, discuss-phase, map-codebase, plan-milestone-gaps
+```
+
+**Usage:**
+```bash
+python3 -m erirpg.scripts.lint_skills
+python3 -m erirpg.scripts.lint_skills --verbose
+```
+
+### Discuss-Phase Improvements
+
+Expanded `/coder:discuss-phase` with full feature set for capturing implementation decisions.
+
+**New Features:**
+| Feature | Description |
+|---------|-------------|
+| Philosophy section | User=visionary, Claude=builder model |
+| Downstream awareness | Documents what CONTEXT.md feeds into |
+| Scope guardrail | Prevents scope creep, captures deferred ideas |
+| Gray area identification | Phase-specific, not generic categories |
+| User selection | multiSelect for which areas to discuss |
+| 4-question batches | Natural conversation flow with check-ins |
+| Claude's Discretion | Captures "you decide" responses |
+| Deferred Ideas | Don't lose scope creep suggestions |
+| Domain examples | UI, CLI, organization-specific examples |
+
+**File:** `erirpg/skills/discuss-phase.md` (173 → 408 lines)
+
+### Documentation Updates
+
+**New Files:**
+- `docs/QUICK_REFERENCE.md` - Fast lookup for file locations, commands, troubleshooting
+
+**Updated Files:**
+- `docs/REPO_RULES.md` - Added private files list, gitignore rules
+
+### Repository Cleanup
+
+Removed private directories from GitHub (were committed before gitignore):
+- `.planning/` - Private planning artifacts
+- `.eri-rpg/` - Private state directory
+- `.claude/` - Private commands directory
+
+All remain local, now properly gitignored.
+
+---
+
+## February 2, 2026
+
+### Agent System Improvements
+
+**CONTEXT.md Pipeline:**
+- CONTEXT.md now flows through entire planning pipeline
+- Planner reads and honors user decisions from discuss phase
+
+**New Commands:**
+| Command | Description |
+|---------|-------------|
+| `install-agents` | Install agent spec symlinks to ~/.eri-rpg/agents/ |
+| `/coder:projects` | List all registered projects with status |
+| `/coder:meta-edit` | Safe self-modification of coder commands |
+| `coder-init` | CLI for session context recovery |
+
+**Agent Specs Added:**
+All ERI agent specifications now tracked in `erirpg/agents/`:
+- eri-planner, eri-executor, eri-verifier
+- eri-phase-researcher, eri-roadmapper
+- eri-codebase-mapper, eri-debugger
+- behavior-extractor
+
+### Coder Workflow Fixes
+
+**Critical Fixes:**
+- Check `active_project` FIRST in `get_planning_dir()`
+- Auto-register projects when switching by path
+- Statusline project detection fixed
+- Non-blocking workflow model adopted
+
+**Hook Improvements:**
+- Unforgeable enforcement with correct project detection
+- Removed ~/.claude/ exception (was security hole)
+
+### Language Detection
+
+Added language detection for:
+- Dart
+- JavaScript/TypeScript
+- Go
+
+### Test Coverage
+
+Comprehensive tests added for:
+- Graph operations (01-03)
+- Code indexer (01-02)
+- Parser modules (01-core)
+- Project registry (01-01)
+
+### Graph Query System
+
+**New Methods:**
+- Graph query and analysis methods
+- Enhanced CLI commands for graph queries
+
+---
+
 ## February 1, 2026
 
 ### Clone Behavior Command
