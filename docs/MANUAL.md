@@ -1,6 +1,6 @@
 # EriRPG Complete Manual
 
-**Alpha v0.56** | Making Claude better at complex code changes
+**Alpha v0.58** | Making Claude better at complex code changes
 
 ---
 
@@ -467,6 +467,15 @@ summary = agent.generate_summary("Added caching")
 ---
 
 ## Version History
+
+**v0.58-alpha** (February 2026)
+- Skill completion linter for state-changing commands
+- Enhanced discuss-phase with scope guardrails and deferred ideas
+- New commands: `/coder:projects`, `/coder:meta-edit`, `/coder:init`
+- Agent specs added to repo (`erirpg/agents/`)
+- CONTEXT.md flows through planning pipeline
+- Comprehensive test coverage for core modules
+- Language detection for Dart, JS/TS, Go
 
 **v0.57-alpha** (January 2026)
 - SQLite session context persistence

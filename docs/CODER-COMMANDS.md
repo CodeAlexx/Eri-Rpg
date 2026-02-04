@@ -259,12 +259,28 @@ You describe what you want, Claude handles all the coding. No programming knowle
 /coder:discuss-phase 2
 ```
 
+**Philosophy:** User = visionary, Claude = builder. You know how it should look/feel. Claude handles technical implementation.
+
+**Features:**
+- **Scope guardrail** - Prevents scope creep, captures deferred ideas for later
+- **Gray area identification** - Phase-specific decisions, not generic questions
+- **User selection** - Pick which areas to discuss (multiSelect)
+- **4-question batches** - Natural conversation with check-ins
+- **Claude's Discretion** - Captures "you decide" responses
+- **Deferred Ideas** - Scope creep suggestions saved for future phases
+
 **When to use:**
 - Before `/coder:plan-phase`
 - When phase has ambiguous requirements
 - To capture constraints and preferences
 
-**Why needed:** Surfaces decisions (database choice, auth method, etc.) before planning. Prevents mid-execution surprises. Decisions stored in `.planning/phases/XX/DECISIONS.md`.
+**Output:** Creates `.planning/phases/XX/CONTEXT.md` with:
+- Phase boundary (scope anchor)
+- Implementation decisions
+- Claude's discretion areas
+- Deferred ideas
+
+**Why needed:** Surfaces decisions before planning. CONTEXT.md feeds into planner and researcher agents so they honor your locked decisions.
 
 ---
 
@@ -307,6 +323,81 @@ You describe what you want, Claude handles all the coding. No programming knowle
 - Onboarding team members
 
 **Why needed:** Creates `HANDOFF.md` (human-readable) and `HANDOFF-AI.md` (structured for AI). Includes architecture, decisions, current state, and resume instructions.
+
+---
+
+### /coder:init
+
+**Purpose:** Session context recovery after /clear or at session start.
+
+**Usage:**
+```
+/coder:init
+```
+
+**What it does:**
+1. Checks global state (`~/.eri-rpg/state.json`) for active project
+2. Reads `.planning/STATE.md` for current position
+3. Detects incomplete work (paused, interrupted execution)
+4. Shows project status with progress bar
+5. Suggests next command
+
+**When to use:**
+- After `/clear` command
+- At session start
+- After context compaction
+- When resuming work
+
+**Why needed:** Claude loses context after /clear. This recovers project state and shows where you left off.
+
+---
+
+### /coder:meta-edit
+
+**Purpose:** Safe self-modification of coder commands with snapshots and verification.
+
+**Usage:**
+```
+/coder:meta-edit <command>
+/coder:meta-edit execute-phase
+/coder:meta-edit status init
+/coder:meta-edit rollback plan-phase
+```
+
+**Phases:**
+1. **Analyze** - Understand what command does, create snapshot
+2. **Plan** - State intent, list risks, get approval
+3. **Execute** - Make approved changes
+4. **Verify** - Validate file structure, auto-rollback on failure
+
+**When to use:**
+- Modifying coder skill files
+- Fixing broken commands
+- Adding features to existing commands
+
+**Why needed:** Prevents breaking commands with ad-hoc edits. Creates snapshots, requires approval, auto-rollbacks on verification failure.
+
+---
+
+### /coder:projects
+
+**Purpose:** List all registered projects with status.
+
+**Usage:**
+```
+/coder:projects
+```
+
+**Shows:**
+- Project name and path
+- Current phase and status
+- Last activity
+- Active project indicator
+
+**When to use:**
+- See all your projects
+- Find project to switch to
+- Check what's active
 
 ---
 
@@ -874,11 +965,13 @@ Target code is written fresh, following target idioms. Only the BEHAVIOR is pres
 | `handoff` | Generate context for handoff |
 | `help` | Command reference |
 | `history` | Execution timeline |
+| `init` | Session context recovery |
 | `insert-phase` | Insert urgent phase |
 | `learn` | Extract reusable patterns |
 | `list-phase-assumptions` | See Claude's assumptions |
 | `map-codebase` | Analyze existing code |
 | `merge` | Combine multiple plans |
+| `meta-edit` | Safe self-modification of commands |
 | `metrics` | Track project metrics |
 | `new-milestone` | Start new version |
 | `new-project` | Initialize new project (main entry) |
@@ -886,6 +979,7 @@ Target code is written fresh, following target idioms. Only the BEHAVIOR is pres
 | `plan-milestone-gaps` | Create phases for failures |
 | `plan-phase` | Create executable plans |
 | `progress` | Show current position |
+| `projects` | List all registered projects |
 | `quick` | Ad-hoc task outside phases |
 | `remove-phase` | Remove future phase |
 | `replay` | Re-run with changes |
