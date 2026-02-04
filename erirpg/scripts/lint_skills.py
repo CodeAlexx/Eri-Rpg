@@ -12,11 +12,12 @@ Required patterns for state-changing skills:
 4. Contains /clear box pattern (━━━ or ═══ border)
 
 Usage:
-    python -m erirpg.scripts.lint_skills [--fix] [--verbose]
+    python -m erirpg.scripts.lint_skills [--verbose] [--json]
 """
 
-import sys
+import json
 import re
+import sys
 from pathlib import Path
 from typing import NamedTuple
 
@@ -67,6 +68,7 @@ READ_ONLY_SKILLS = {
     "meta-edit.md",
     "resume.md",
     "merge.md",
+    "linter.md",
 }
 
 
@@ -98,6 +100,88 @@ class LintResult(NamedTuple):
         if not self.has_clear_box:
             issues.append("/clear box")
         return issues
+
+
+def _resolve_skills_dir(skills_dir: Path | None = None) -> Path:
+    """Resolve the skills directory path."""
+    return skills_dir or (Path(__file__).parent.parent / "skills")
+
+
+def collect_lint_results(skills_dir: Path | None = None) -> dict:
+    """Collect lint results in a structured format."""
+    resolved_skills_dir = _resolve_skills_dir(skills_dir)
+    if not resolved_skills_dir.exists():
+        raise FileNotFoundError(f"Skills directory not found: {resolved_skills_dir}")
+
+    results: list[LintResult] = []
+    skipped: list[str] = []
+
+    for skill_file in sorted(resolved_skills_dir.glob("*.md")):
+        if skill_file.name not in STATE_CHANGING_SKILLS:
+            skipped.append(skill_file.name)
+            continue
+        results.append(lint_skill(skill_file))
+
+    passed = [r for r in results if r.passed]
+    failed = [r for r in results if not r.passed]
+
+    return {
+        "ok": len(failed) == 0,
+        "skills_dir": str(resolved_skills_dir),
+        "total": len(results),
+        "passed": len(passed),
+        "failed": len(failed),
+        "state_changing_skills": sorted(STATE_CHANGING_SKILLS),
+        "failed_skills": [
+            {"skill": r.skill, "missing": r.missing}
+            for r in failed
+        ],
+        "passed_skills": [r.skill for r in passed],
+        "checked_skills": [
+            {
+                "skill": r.skill,
+                "passed": r.passed,
+                "missing": r.missing,
+            }
+            for r in results
+        ],
+        "skipped_skills": skipped,
+    }
+
+
+def print_human_report(report: dict, verbose: bool = False) -> None:
+    """Print a human-friendly report to stdout."""
+    if verbose:
+        for skill in sorted(report["skipped_skills"]):
+            print(f"SKIP: {skill} (not state-changing)")
+
+    print(f"\n{'='*60}")
+    print("SKILL COMPLETION LINTER")
+    print(f"{'='*60}\n")
+
+    if report["failed_skills"]:
+        print(f"FAILED ({report['failed']} skills):\n")
+        for item in report["failed_skills"]:
+            print(f"  ✗ {item['skill']}")
+            for issue in item["missing"]:
+                print(f"      Missing: {issue}")
+            print()
+
+    if report["passed"] and verbose:
+        print(f"PASSED ({report['passed']} skills):\n")
+        for skill in report["passed_skills"]:
+            print(f"  ✓ {skill}")
+        print()
+
+    print(f"{'='*60}")
+    print(f"Total: {report['total']} | Passed: {report['passed']} | Failed: {report['failed']}")
+    print(f"{'='*60}\n")
+
+    if report["failed"]:
+        print("Run with --verbose to see all results")
+        print("See ~/.claude/eri-rpg/references/command-patterns.md for requirements\n")
+    else:
+        print("All state-changing skills have proper completion sections!\n")
 
 
 def lint_skill(path: Path) -> LintResult:
@@ -144,59 +228,20 @@ def lint_skill(path: Path) -> LintResult:
 
 def main():
     verbose = "--verbose" in sys.argv or "-v" in sys.argv
+    as_json = "--json" in sys.argv
 
-    # Find skills directory
-    skills_dir = Path(__file__).parent.parent / "skills"
-    if not skills_dir.exists():
-        print(f"ERROR: Skills directory not found: {skills_dir}")
+    try:
+        report = collect_lint_results()
+    except FileNotFoundError as exc:
+        print(f"ERROR: {exc}")
         sys.exit(1)
 
-    # Lint all state-changing skills
-    results: list[LintResult] = []
-    for skill_file in sorted(skills_dir.glob("*.md")):
-        if skill_file.name not in STATE_CHANGING_SKILLS:
-            if verbose:
-                print(f"SKIP: {skill_file.name} (not state-changing)")
-            continue
-
-        result = lint_skill(skill_file)
-        results.append(result)
-
-    # Report results
-    passed = [r for r in results if r.passed]
-    failed = [r for r in results if not r.passed]
-
-    print(f"\n{'='*60}")
-    print(f"SKILL COMPLETION LINTER")
-    print(f"{'='*60}\n")
-
-    if failed:
-        print(f"FAILED ({len(failed)} skills):\n")
-        for r in failed:
-            print(f"  ✗ {r.skill}")
-            for issue in r.missing:
-                print(f"      Missing: {issue}")
-            print()
-
-    if passed and verbose:
-        print(f"PASSED ({len(passed)} skills):\n")
-        for r in passed:
-            print(f"  ✓ {r.skill}")
-        print()
-
-    # Summary
-    total = len(results)
-    print(f"{'='*60}")
-    print(f"Total: {total} | Passed: {len(passed)} | Failed: {len(failed)}")
-    print(f"{'='*60}\n")
-
-    if failed:
-        print("Run with --verbose to see all results")
-        print("See ~/.claude/eri-rpg/references/command-patterns.md for requirements\n")
-        sys.exit(1)
+    if as_json:
+        print(json.dumps(report, indent=2))
     else:
-        print("All state-changing skills have proper completion sections!\n")
-        sys.exit(0)
+        print_human_report(report, verbose=verbose)
+
+    sys.exit(0 if report["ok"] else 1)
 
 
 if __name__ == "__main__":

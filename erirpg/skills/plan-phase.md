@@ -339,6 +339,7 @@ git commit -m "plan(phase-${phase_number}): create execution plans for ${phase_n
 ```
 </step>
 
+<completion>
 <step name="8_completion">
 ## Step 8: Update State and Present Next Steps
 
@@ -386,6 +387,7 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 This will spawn executors to build the code for each plan.
 ```
 </step>
+</completion>
 
 </process>
 

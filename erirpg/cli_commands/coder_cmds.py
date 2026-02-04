@@ -507,6 +507,29 @@ def count_files_in_dir(directory: Path, pattern: str = "*") -> int:
     return len(list(directory.glob(pattern)))
 
 
+def run_coder_linter(verbose: bool = False) -> dict:
+    """Run the coder skill linter and return a structured report."""
+    try:
+        from erirpg.scripts.lint_skills import collect_lint_results
+
+        report = collect_lint_results()
+        if not verbose:
+            report.pop("checked_skills", None)
+            report.pop("skipped_skills", None)
+            report.pop("state_changing_skills", None)
+        report["verbose"] = verbose
+        report["command"] = "python3 -m erirpg.scripts.lint_skills --json"
+        return report
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": f"Failed to run coder linter: {e}",
+            "failed": None,
+            "passed": None,
+            "total": None,
+        }
+
+
 # ============================================================================
 # Command: coder-resume
 # ============================================================================
@@ -4317,6 +4340,7 @@ def register(cli):
                 {"name": "history", "description": "Execution history"},
                 {"name": "learn", "description": "Extract patterns"},
                 {"name": "handoff", "description": "Generate docs"},
+                {"name": "linter", "description": "Run workflow lint checks"},
             ]
         }
 
@@ -4334,6 +4358,14 @@ def register(cli):
                     break
 
         safe_update_state("Viewed help")
+        click.echo(json.dumps(result, indent=2))
+
+    @cli.command("coder-linter")
+    @click.option("--verbose", "-v", is_flag=True, help="Include detailed checked/skip lists")
+    def coder_linter_cmd(verbose: bool):
+        """Run workflow lint checks for /coder:linter and /coder:doctor."""
+        result = run_coder_linter(verbose=verbose)
+        safe_update_state("Ran coder workflow linter")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-phase-tasks")

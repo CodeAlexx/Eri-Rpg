@@ -27,6 +27,32 @@ Diagnose the health of your coder workflow setup. Identifies issues that cause f
 ```
 </step>
 
+<step name="1_linter">
+## Check 0: Workflow Contract Lint
+
+Run linter first to catch skill/command contract drift:
+
+```bash
+python3 -m erirpg.cli coder-linter --verbose
+```
+
+Display this result block **before all other checks**:
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  CONTRACT LINT: {PASS | FAIL}                                  ║
+╠════════════════════════════════════════════════════════════════╣
+║  Skills checked: {N}                                            ║
+║  Passed: {N} | Failed: {N}                                      ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+**If linter fails:**
+- Show failing skills and missing requirements
+- Mark diagnosis as **WARN** even if other checks pass
+- Recommend fixing linter failures before deeper repairs
+</step>
+
 <step name="2_global_state">
 ## Check 1: Global State
 
@@ -280,6 +306,7 @@ Skills Status: {OK | WARN | ERROR}
 ╔════════════════════════════════════════════════════════════════╗
 ║  DIAGNOSIS COMPLETE                                             ║
 ╠════════════════════════════════════════════════════════════════╣
+║  Contract Lint:    {PASS|FAIL}                                  ║
 ║  Global State:     {OK|WARN|ERROR}                              ║
 ║  Project State:    {OK|WARN|ERROR}                              ║
 ║  Execution State:  {ACTIVE|IDLE}                                ║

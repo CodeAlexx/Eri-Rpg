@@ -330,6 +330,7 @@ After testing, respond:
 Proceed to completion.
 </step>
 
+<completion>
 <step name="8_completion">
 ## Step 8: Complete Phase
 
@@ -397,6 +398,7 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 </step>
+</completion>
 
 </process>
 
