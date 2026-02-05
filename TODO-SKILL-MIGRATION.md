@@ -8,6 +8,7 @@ Migrate large skills to new Claude Code SKILL.md format with supporting files.
 - [x] `plan-phase.md` (436→166 lines) — 2026-02-05
 - [x] `doctor.md` (743→141 lines) — 2026-02-05
 - [x] `clone-behavior.md` (529→120 lines) — 2026-02-05
+- [x] `add-feature.md` (510→115 lines) — 2026-02-05
 
 **Status:** Needs testing before continuing
 
@@ -17,7 +18,6 @@ Migrate large skills to new Claude Code SKILL.md format with supporting files.
 
 | Skill | Lines | Benefit | Notes |
 |-------|-------|---------|-------|
-| `add-feature.md` | 510 | Brownfield workflow, spawns agents | |
 | `discuss-phase.md` | 407 | User interaction, question batches | |
 
 ## Maybe
