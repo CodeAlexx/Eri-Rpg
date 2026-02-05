@@ -60,19 +60,31 @@ What happens:
 
 **Creates:** `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`
 
-### Step 2: Plan the first phase
+### Step 2: Discuss the phase (optional but recommended)
+
+```
+/coder:discuss-phase 1
+```
+
+Before planning, Claude asks you about implementation details. Layout preferences? Error handling style? API conventions? This is where you lock in decisions so Claude doesn't have to guess later.
+
+You pick which areas to discuss. Skip the obvious ones. Dig into the ones that matter.
+
+**Creates:** `.planning/phases/01-xxx/CONTEXT.md`
+
+### Step 3: Plan the phase
 
 ```
 /coder:plan-phase 1
 ```
 
-Claude reads your roadmap, researches what's needed, and writes a plan. Not vague ideas — actual tasks with verification criteria.
+Claude reads your roadmap (and CONTEXT.md if you discussed), researches what's needed, and writes a plan. Not vague ideas — actual tasks with verification criteria.
 
 If it's something complex (auth, external APIs, databases), it spawns a researcher first. You don't have to ask.
 
 **Creates:** `.planning/phases/01-xxx/PLAN.md`
 
-### Step 3: Build it
+### Step 5: Build it
 
 ```
 /coder:execute-phase 1
@@ -84,9 +96,10 @@ When it's done, it verifies the code actually does what the plan said.
 
 **Creates:** Actual code. Plus `.planning/phases/01-xxx/SUMMARY.md`
 
-### Step 4: Repeat
+### Step 6: Repeat
 
 ```
+/coder:discuss-phase 2  # optional
 /coder:plan-phase 2
 /coder:execute-phase 2
 ```
@@ -107,11 +120,12 @@ Claude reads your project state and picks up where you left off. No re-explainin
 
 ---
 
-## The Commands
+## The Core Commands
 
 | Command | What it does |
 |---------|--------------|
 | `/coder:new-project` | Start fresh. Questions → research → roadmap. |
+| `/coder:discuss-phase N` | Lock in decisions before planning. |
 | `/coder:plan-phase N` | Plan phase N. Research if needed, then tasks. |
 | `/coder:execute-phase N` | Build phase N. Code, commit, verify. |
 | `/coder:init` | Recover context after `/clear` or new session. |
@@ -195,12 +209,78 @@ Claude doesn't hold all this in context. It reads the files, does the work, writ
 ## That's It
 
 ```
-/coder:new-project     # start
-/coder:plan-phase 1    # plan
-/coder:execute-phase 1 # build
-/coder:init            # resume
+/coder:new-project      # start
+/coder:discuss-phase 1  # discuss (optional)
+/coder:plan-phase 1     # plan
+/coder:execute-phase 1  # build
+/coder:init             # resume
 ```
 
-Four commands. The rest is Claude following the plan and you reviewing the output.
+Five commands. The rest is Claude following the plan and you reviewing the output.
 
 Go build something.
+
+---
+
+## All Commands Reference
+
+### Starting & Sessions
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:new-project` | Start a brand new project from scratch |
+| `/coder:init` | Recover context after `/clear` or new session |
+| `/coder:status` | Quick check — current phase, progress, next action |
+| `/coder:switch-project` | Jump to a different project mid-session |
+| `/coder:pause` | Save state when stopping work mid-task |
+| `/coder:resume` | Pick up where you paused |
+
+### Planning & Building
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:discuss-phase N` | Capture decisions before planning a phase |
+| `/coder:plan-phase N` | Create executable plans for phase N |
+| `/coder:execute-phase N` | Execute all plans in phase N |
+| `/coder:verify-work N` | Manual acceptance testing after phase completes |
+
+### Roadmap Management
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:add-phase` | Append a new phase to the roadmap |
+| `/coder:insert-phase` | Insert an urgent phase between existing ones |
+| `/coder:remove-phase` | Remove a future phase from the roadmap |
+| `/coder:new-milestone` | Start a new version (v2, v3, etc.) |
+| `/coder:complete-milestone` | Archive milestone and tag release |
+
+### Working with Existing Code
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:add-feature` | Add a feature to an existing codebase |
+| `/coder:map-codebase` | Analyze codebase structure and patterns |
+| `/coder:clone-behavior` | Clone a program by extracting behavior specs |
+
+### Troubleshooting
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:doctor` | Run health checks, find and fix issues |
+| `/coder:debug` | Systematic debugging with triage |
+| `/coder:rollback` | Undo execution if something went wrong |
+
+### Quick Tasks
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:quick "description"` | One-off task with atomic commit |
+
+### Info & History
+
+| Command | What it does |
+|---------|--------------|
+| `/coder:progress` | Show detailed progress on current phase |
+| `/coder:projects` | List all registered projects |
+| `/coder:history` | View execution history |
+| `/coder:help` | Command reference and examples |
