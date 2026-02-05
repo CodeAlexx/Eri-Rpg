@@ -1,0 +1,15 @@
+{
+  "name": "eri-rpg",
+  "version": "0.55.0-alpha",
+  "description": "Spec-driven development framework with verification for Claude Code",
+  "author": "Alex",
+  "repository": "https://github.com/CodeAlexx/Eri-Rpg",
+  "hooks": {
+    "PreToolUse": "hooks/pretooluse",
+    "PreCompact": "hooks/precompact",
+    "SessionStart": "hooks/sessionstart",
+    "PostToolUse": "hooks/posttooluse"
+  },
+  "python_package": "erirpg",
+  "requires_python": ">=3.10"
+}

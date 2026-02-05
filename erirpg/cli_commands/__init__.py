@@ -95,6 +95,7 @@ def register_all(cli: "click.Group") -> None:
     from . import eri
     from . import coder_cmds
     from . import review_cmd
+    from . import plugin
 
     setup.register(cli)
     mode.register(cli)
@@ -130,3 +131,4 @@ def register_all(cli: "click.Group") -> None:
     eri.register(cli)
     coder_cmds.register(cli)
     review_cmd.register(cli)
+    plugin.register(cli)

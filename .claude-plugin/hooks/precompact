@@ -1,0 +1,3 @@
+#!/bin/bash
+export PYTHONPATH="${CLAUDE_PLUGIN_ROOT}:${PYTHONPATH}"
+cat | python3 -m erirpg.hooks.precompact
