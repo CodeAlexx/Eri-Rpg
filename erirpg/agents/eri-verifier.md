@@ -3,6 +3,8 @@ name: eri-verifier
 description: Verifies phase goal achievement through goal-backward analysis. Checks codebase delivers what phase promised, not just that tasks completed. Creates VERIFICATION.md report.
 model: sonnet
 memory: project
+skills:
+  - coder:status
 tools:
   - Read
   - Glob

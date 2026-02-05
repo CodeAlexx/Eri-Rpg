@@ -404,19 +404,24 @@ def main():
                 print(output_str)
                 sys.exit(0)
             else:
-                # Wrong file for quick fix
+                # Wrong file for quick fix - BLOCK with rich context
                 log(f"BLOCKING: {rel_path} not quick fix target {target_file}")
                 output = {
                     "decision": "block",
-                    "reason": (
-                        f"ERI-RPG ENFORCEMENT: Quick fix is for a different file.\n"
-                        f"Requested: {rel_path}\n"
-                        f"Quick fix target: {target_file}\n\n"
-                        f"Complete current quick fix first:\n"
-                        f"  eri-rpg quick-done <project>\n\n"
-                        f"Or start a new quick fix:\n"
-                        f"  eri-rpg quick <project> {rel_path} \"description\""
-                    )
+                    "reason": f"ERI-RPG: Quick fix is for {target_file}, not {rel_path}",
+                    "hookSpecificOutput": {
+                        "Edit": {"additionalContext": f"Complete quick fix on {target_file} first, or start new quick fix"},
+                        "Write": {"additionalContext": f"Complete quick fix on {target_file} first, or start new quick fix"},
+                        "MultiEdit": {"additionalContext": f"Complete quick fix on {target_file} first, or start new quick fix"}
+                    },
+                    "suggestedActions": [
+                        "eri-rpg quick-done <project>",
+                        f"eri-rpg quick <project> {rel_path} \"description\""
+                    ],
+                    "context": {
+                        "requestedFile": rel_path,
+                        "quickFixTarget": target_file
+                    }
                 }
                 output_str = json.dumps(output)
                 log(f"OUTPUT: {output_str}")
@@ -428,20 +433,22 @@ def main():
         run_state = get_active_run_state(project_path)
         log(f"Run state: {run_state.get('id') if run_state else None}")
         if not run_state:
-            # No active run - BLOCK
+            # No active run - BLOCK with rich context
             log(f"BLOCKING: No active run")
+            rel_file = os.path.relpath(file_path, project_path)
             output = {
                 "decision": "block",
-                "reason": (
-                    f"ERI-RPG ENFORCEMENT: No active run.\n"
-                    f"File: {os.path.basename(file_path)}\n\n"
-                    f"Start an EriRPG run first:\n"
-                    f"  from erirpg.agent import Agent\n"
-                    f"  agent = Agent.from_goal('task', project_path='{project_path}')\n"
-                    f"  agent.preflight(['{os.path.relpath(file_path, project_path)}'], 'modify')\n\n"
-                    f"Or use quick fix for single-file edits:\n"
-                    f"  eri-rpg quick <project> {os.path.relpath(file_path, project_path)} \"description\""
-                )
+                "reason": f"ERI-RPG: No active run. File: {os.path.basename(file_path)}",
+                "hookSpecificOutput": {
+                    "Edit": {"additionalContext": f"Run `/coder:execute-phase` or `/coder:quick` first"},
+                    "Write": {"additionalContext": f"Run `/coder:execute-phase` or `/coder:quick` first"},
+                    "MultiEdit": {"additionalContext": f"Run `/coder:execute-phase` or `/coder:quick` first"}
+                },
+                "suggestedActions": [
+                    f"/coder:quick \"{rel_file}\"",
+                    "/coder:execute-phase N",
+                    f"eri-rpg quick <project> {rel_file} \"description\""
+                ]
             }
             output_str = json.dumps(output)
             log(f"OUTPUT: {output_str}")
@@ -453,16 +460,20 @@ def main():
         preflight = get_preflight_state(project_path)
         log(f"Preflight: ready={preflight.get('ready') if preflight else None}, targets={preflight.get('target_files') if preflight else None}")
         if not preflight or not preflight.get("ready"):
-            # No preflight - BLOCK
+            # No preflight - BLOCK with rich context
             log(f"BLOCKING: No preflight or not ready")
+            rel_file = os.path.relpath(file_path, project_path)
             output = {
                 "decision": "block",
-                "reason": (
-                    f"ERI-RPG ENFORCEMENT: Preflight required.\n"
-                    f"File: {os.path.basename(file_path)}\n\n"
-                    f"Run preflight first:\n"
-                    f"  agent.preflight(['{os.path.relpath(file_path, project_path)}'], 'modify')"
-                )
+                "reason": f"ERI-RPG: Preflight required for {os.path.basename(file_path)}",
+                "hookSpecificOutput": {
+                    "Edit": {"additionalContext": "File not preflighted. Use /coder:quick or run preflight."},
+                    "Write": {"additionalContext": "File not preflighted. Use /coder:quick or run preflight."},
+                    "MultiEdit": {"additionalContext": "File not preflighted. Use /coder:quick or run preflight."}
+                },
+                "suggestedActions": [
+                    f"agent.preflight(['{rel_file}'], 'modify')"
+                ]
             }
             output_str = json.dumps(output)
             log(f"OUTPUT: {output_str}")
@@ -479,16 +490,22 @@ def main():
 
         if rel_path not in normalized_allowed and file_path not in allowed_files:
             log(f"BLOCKING: {rel_path} not in {allowed_files}")
-            # File not in preflight - BLOCK
+            # File not in preflight - BLOCK with rich context
             output = {
                 "decision": "block",
-                "reason": (
-                    f"ERI-RPG ENFORCEMENT: File not in preflight.\n"
-                    f"File: {rel_path}\n"
-                    f"Allowed: {allowed_files}\n\n"
-                    f"Re-run preflight with this file:\n"
-                    f"  agent.preflight(['{rel_path}'], 'modify')"
-                )
+                "reason": f"ERI-RPG: {rel_path} not in preflight (allowed: {', '.join(allowed_files[:3])}{'...' if len(allowed_files) > 3 else ''})",
+                "hookSpecificOutput": {
+                    "Edit": {"additionalContext": f"Re-run preflight to include {rel_path}"},
+                    "Write": {"additionalContext": f"Re-run preflight to include {rel_path}"},
+                    "MultiEdit": {"additionalContext": f"Re-run preflight to include {rel_path}"}
+                },
+                "suggestedActions": [
+                    f"agent.preflight(['{rel_path}'], 'modify')"
+                ],
+                "context": {
+                    "requestedFile": rel_path,
+                    "allowedFiles": allowed_files
+                }
             }
             output_str = json.dumps(output)
             log(f"OUTPUT: {output_str}")
