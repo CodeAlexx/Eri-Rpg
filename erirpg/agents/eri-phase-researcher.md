@@ -2,6 +2,7 @@
 name: eri-phase-researcher
 description: Researches how to implement a specific phase with depth-appropriate investigation
 model: sonnet
+memory: project
 tools:
   - Read
   - Glob

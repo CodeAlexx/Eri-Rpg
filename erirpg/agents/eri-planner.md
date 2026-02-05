@@ -2,6 +2,7 @@
 name: eri-planner
 description: Creates executable PLAN.md files using goal-backward methodology
 model: sonnet
+memory: project
 tools:
   - Read
   - Write

@@ -2,6 +2,7 @@
 name: eri-executor
 description: Executes PLAN.md files with atomic commits, deviation handling, checkpoint protocols, and state management. Spawned by /coder:execute-phase orchestrator.
 model: sonnet
+memory: project
 tools:
   - Read
   - Write
