@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.59.0-alpha (2026-02-05)
+
+SKILL.md migrations, Claude Code audit improvements, and agent enhancements.
+
+### New Features
+
+**SKILL.md Format Migration** - 6 skills migrated to new format (75% token reduction)
+- `execute-phase`, `plan-phase`, `doctor` - Core workflow skills
+- `clone-behavior`, `add-feature`, `discuss-phase` - Feature skills
+- New structure: SKILL.md + reference.md + templates/ + scripts/
+- Dynamic context injection with `!`command`` syntax
+
+**Agent Persistent Memory** - Cross-session learning
+- `memory: project` field added to key agents
+- eri-executor, eri-planner, eri-verifier, eri-phase-researcher
+- Agents build project-specific knowledge over time
+
+**Skills Preloading in Agents** - Domain skills auto-loaded
+- `skills:` field in agent frontmatter
+- eri-executor gets `coder:quick`, `coder:status`
+- Enables agents to invoke skills autonomously
+
+**Enhanced Hook JSON Output** - Richer block responses
+- `hookSpecificOutput` for tool-specific guidance
+- `additionalContext` with actionable instructions
+- `suggestedActions` array with commands to run
+- `context` object with structured debugging data
+
+### Bug Fixes
+
+- STATE.md now correctly shows all phases as complete
+- Added retroactive SUMMARY for 01-01-registry-PLAN.md
+
+### Documentation
+
+- Created CLAUDE-CODE-AUDIT.md with improvement priorities
+- Updated CHANGES.md with February 5 changes
+
+---
+
 ## v0.58.0-alpha (2026-02-03)
 
 Skill linting, enhanced discuss-phase, and new session commands.

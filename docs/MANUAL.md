@@ -1,6 +1,6 @@
 # EriRPG Complete Manual
 
-**Alpha v0.58** | Making Claude better at complex code changes
+**Alpha v0.59** | Making Claude better at complex code changes
 
 ---
 
@@ -259,6 +259,24 @@ A run tracks execution of a spec:
 - Duration
 
 Enables resume after interruption.
+
+### Agent Memory (v0.59+)
+
+Agents now have persistent memory across sessions:
+- `memory: project` - Learns project-specific patterns
+- Knowledge builds up over time
+- No re-learning the same codebase
+
+Agents with memory: eri-executor, eri-planner, eri-verifier, eri-phase-researcher
+
+### Skills Preloading (v0.59+)
+
+Agents can have domain skills pre-loaded:
+- eri-executor: `coder:quick`, `coder:status`
+- eri-planner: `coder:status`
+- eri-verifier: `coder:status`
+
+This enables agents to invoke skills autonomously during execution.
 
 ## Workflows
 

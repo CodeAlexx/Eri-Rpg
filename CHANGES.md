@@ -4,6 +4,116 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ---
 
+## February 5, 2026
+
+### SKILL.md Format Migration
+
+Migrated 6 large skills to the new Claude Code SKILL.md format with supporting files. This reduces token usage by ~75% while improving maintainability.
+
+**Migrated Skills:**
+| Skill | Before | After | Reduction |
+|-------|--------|-------|-----------|
+| `execute-phase` | 432 lines | 141 lines | 67% |
+| `plan-phase` | 436 lines | 166 lines | 62% |
+| `doctor` | 743 lines | 141 lines | 81% |
+| `clone-behavior` | 529 lines | 120 lines | 77% |
+| `add-feature` | 510 lines | 115 lines | 77% |
+| `discuss-phase` | 407 lines | 95 lines | 77% |
+
+**New Structure:**
+```
+erirpg/skills/coder-{skill}/
+├── SKILL.md           # Main skill (thin orchestration)
+├── reference.md       # Detailed step documentation
+├── templates/         # Output templates
+└── scripts/           # Helper scripts
+```
+
+**Key Features:**
+- Dynamic context injection with `!`command`` syntax
+- Supporting files loaded on demand
+- Templates for consistent output formatting
+- Scripts for common operations
+
+### Claude Code Docs Audit & Improvements
+
+Audited Claude Code documentation and implemented 3 improvements.
+
+**Improvement 1: Agent Persistent Memory**
+- Added `memory: project` to key agents
+- Agents: eri-executor, eri-planner, eri-verifier, eri-phase-researcher
+- Enables cross-session learning within each project
+- Commit: d83d811
+
+**Improvement 2: Skills Preloading in Agents**
+- Added `skills:` field to agent frontmatter
+- eri-executor: preloads `coder:quick`, `coder:status`
+- eri-planner: preloads `coder:status`
+- eri-verifier: preloads `coder:status`
+- Agents can now invoke skills without human triggering
+
+**Improvement 3: Hook JSON Output Enhancement**
+- Enhanced pretooluse.py with richer block responses
+- New fields: `hookSpecificOutput`, `additionalContext`, `suggestedActions`, `context`
+- Tool-specific guidance in block messages
+- Structured data for debugging
+
+**Example Enhanced Block Response:**
+```json
+{
+  "decision": "block",
+  "reason": "ERI-RPG: No active run. File: test.py",
+  "hookSpecificOutput": {
+    "Edit": {"additionalContext": "Run /coder:execute-phase or /coder:quick first"}
+  },
+  "suggestedActions": ["/coder:quick \"test.py\"", "/coder:execute-phase N"]
+}
+```
+
+**Audit Document:** `.planning/research/CLAUDE-CODE-AUDIT.md`
+
+### Doctor Skill Tested
+
+Tested the migrated doctor skill successfully. Identified and fixed:
+- STATE.md drift (showed phases pending when complete)
+- Missing 01-01-registry-SUMMARY.md (created retroactively)
+
+---
+
+## February 4, 2026
+
+### Behavior Extractor Agent
+
+New agent for extracting portable behavior specs from existing programs.
+
+**Agent:** `eri-behavior-extractor`
+- Extracts behaviors from source code into portable specs
+- Used by `/coder:clone-behavior` for program cloning
+- Outputs structured behavior documentation
+
+**File:** `erirpg/agents/eri-behavior-extractor.md`
+
+### Blueprint Command Updates
+
+Updated blueprint commands for cross-language portability.
+- Improved X-to-Y language translation
+- Better handling of language-specific idioms
+
+### Strict Linter Workflow
+
+Added contract checking to linter workflow.
+- Enforces completion patterns on state-changing skills
+- Validates STATE.md updates
+- Checks for proper next-step guidance
+
+### Documentation Cleanup
+
+Removed outdated documentation files:
+- REPO_RULES.md, NOTES.md, CODER_WORKFLOW_AUDIT, CLAUDE_CODE.md
+- Consolidated into active documentation
+
+---
+
 ## February 3, 2026
 
 ### /coder:doctor - Workflow Health Diagnostics
