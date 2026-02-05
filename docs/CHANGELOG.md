@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.60.0-alpha (2026-02-05)
+
+Phase 7 complete: Claude Code plugin system.
+
+### New Features
+
+**Claude Code Plugin System** - Distributable plugin package
+- Created `.claude-plugin/` directory with full plugin structure
+- `plugin.json` manifest with version sync to pyproject.toml
+- 4 hook wrappers (bash → python3 -m pattern)
+- 6 skills bundled in SKILL.md format
+- 10 agent specs bundled (without eri- prefix)
+- New CLI: `eri-rpg plugin build`, `eri-rpg plugin info`
+- INSTALL.md with installation and troubleshooting guide
+
+**Plugin Usage:**
+```bash
+claude --plugin-dir /path/to/eri-rpg/.claude-plugin
+```
+
+### Documentation
+
+- Updated CODER-QUICKSTART.md with `/coder:discuss-phase` workflow
+- Added full command reference organized by category
+
+---
+
 ## v0.59.0-alpha (2026-02-05)
 
 SKILL.md migrations, Claude Code audit improvements, and agent enhancements.

@@ -6,6 +6,60 @@ All changes since January 26, 2026 (v2.0 development sprint).
 
 ## February 5, 2026
 
+### Phase 7: Plugin System Complete
+
+Packaged eri-rpg as a distributable Claude Code plugin.
+
+**Created `.claude-plugin/` Directory:**
+```
+.claude-plugin/
+├── plugin.json           # Manifest (version synced with pyproject.toml)
+├── README.md             # Plugin overview
+├── INSTALL.md            # Installation guide
+├── hooks/                # Bash wrappers → Python modules
+│   ├── pretooluse
+│   ├── posttooluse
+│   ├── sessionstart
+│   └── precompact
+├── skills/               # 6 coder skills in SKILL.md format
+│   ├── coder-plan-phase/
+│   ├── coder-execute-phase/
+│   ├── coder-discuss-phase/
+│   ├── coder-add-feature/
+│   ├── coder-clone-behavior/
+│   └── coder-doctor/
+└── agents/               # 10 agent specs (without eri- prefix)
+    ├── planner.md
+    ├── executor.md
+    ├── verifier.md
+    └── ... (7 more)
+```
+
+**New CLI Commands:**
+- `eri-rpg plugin build` - Validate plugin structure
+- `eri-rpg plugin build --check` - Quick validation
+- `eri-rpg plugin info` - Show plugin details
+
+**Hook Wrapper Pattern:**
+```bash
+#!/bin/bash
+export PYTHONPATH="${CLAUDE_PLUGIN_ROOT}:${PYTHONPATH}"
+cat | python3 -m erirpg.hooks.pretooluse
+```
+
+**Usage:**
+```bash
+# Test locally
+claude --plugin-dir /path/to/eri-rpg/.claude-plugin
+
+# Permanent installation (add to ~/.claude/settings.json)
+{ "pluginDirs": ["/path/to/eri-rpg/.claude-plugin"] }
+```
+
+**Verification:** PASSED (6/6 must-haves)
+
+---
+
 ### SKILL.md Format Migration
 
 Migrated 6 large skills to the new Claude Code SKILL.md format with supporting files. This reduces token usage by ~75% while improving maintainability.
