@@ -63,7 +63,7 @@ Claude: [Internally runs eri-rpg commands to:]
 
 You describe what you want. Claude handles the workflow.
 
-### Typical Workflow
+### Typical workflow
 
 ```
 /eri:start myproject           # 1. Start session
@@ -92,7 +92,7 @@ See [docs/TYPICAL_WORKFLOW.md](docs/TYPICAL_WORKFLOW.md) for details.
 
 Default is `lite`. Upgrade with: `eri-rpg mode myproject --standard`
 
-## Project Management
+## Project management
 
 These are the only CLI commands you need to run directly:
 
@@ -106,7 +106,7 @@ eri-rpg install-status       # Check installation
 
 Everything else? Claude handles it.
 
-## Status Line
+## Status line
 
 EriRPG adds a status line to Claude Code showing current context:
 
@@ -136,7 +136,7 @@ EriRPG auto-detects what Claude is doing and sets a persona:
 
 Set manually with `/eri:persona backend` or let it auto-detect.
 
-## How It Works
+## How it works
 
 ```
 ┌─────────┐     slash commands      ┌─────────┐
@@ -166,7 +166,7 @@ EriRPG stores:
 
 This persists across sessions. Claude resumes where it left off.
 
-## Language Support
+## Language support
 
 | Language | Support |
 |----------|---------|
@@ -183,7 +183,7 @@ This persists across sessions. Claude resumes where it left off.
 
 ## Documentation
 
-### Command References
+### Command references
 - [docs/ERI-COMMANDS.md](docs/ERI-COMMANDS.md) - All 44 `/eri:*` commands (existing codebases)
 - [docs/CODER-COMMANDS.md](docs/CODER-COMMANDS.md) - All 34 `/coder:*` commands (new projects)
 
@@ -197,36 +197,25 @@ This persists across sessions. Claude resumes where it left off.
 - [DESIGN.md](DESIGN.md) - Technical architecture
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System design
 
-## Empowerment Directive
+## Empowerment directive
 
-EriRPG includes [EMPOWERMENT.md](EMPOWERMENT.md) - a mandatory behavior directive based on research showing AI assistants can inadvertently undermine user autonomy and skill development.
-
-**The core principle:** Make the developer better, not unnecessary.
-
-This means Claude will:
-- **Challenge before compliance** - Push back on bad ideas before implementing
-- **Require intent** - Ask "why" before blindly executing "what"
-- **Flag autonomy transfers** - Enumerate significant decisions before making them
-- **Preserve skills** - Explain reasoning so you can do it yourself next time
-- **No sycophancy** - Honest feedback over empty validation
+EriRPG includes [EMPOWERMENT.md](EMPOWERMENT.md). It tells Claude to push back on bad ideas, ask "why" before executing "what", and explain reasoning so you learn — not just get code dumped on you.
 
 Based on: [Who's in Charge? Disempowerment Patterns in Real-World LLM Usage](https://arxiv.org/abs/2601.19062) (Sharma et al., 2026)
 
-> "Interactions with greater disempowerment potential receive higher user approval ratings, possibly suggesting a tension between short-term user preferences and long-term human empowerment."
+The short version: users rate sycophantic AI responses higher but are worse off for receiving them. EriRPG optimizes for your growth, not your approval.
 
-EriRPG optimizes for your growth, not your approval.
+## Blueprint & behavior: cross-language feature porting
 
-## Blueprint & Behavior: Cross-Language Feature Porting
+EriRPG can document programs as behavior specs and port features across languages.
 
-EriRPG includes a **blueprint system** for documenting complex programs and a **behavior extraction** system for porting features across languages.
+### The problem
 
-### The Problem
+You have a Python ML training feature. You want to port it to Rust. Copy-pasting doesn't work — different idioms, different memory models.
 
-You have a Python ML training feature. You want to port it to Rust. Copy-pasting doesn't work - different idioms, different patterns, different memory models.
+### The solution
 
-### The Solution
-
-Extract **WHAT** it does (behavior), not **HOW** it's coded. Then implement the behavior in the target's style.
+Extract what it does (behavior), not how it's coded. Then implement the behavior in the target's style.
 
 ```bash
 # 1. Create behavior spec from source
@@ -239,7 +228,7 @@ Extract **WHAT** it does (behavior), not **HOW** it's coded. Then implement the 
 /coder:verify-behavior eritrainer/sana
 ```
 
-### What Gets Extracted
+### What gets extracted
 
 | Section | Purpose |
 |---------|---------|
@@ -250,7 +239,7 @@ Extract **WHAT** it does (behavior), not **HOW** it's coded. Then implement the 
 | **State Machine** | States, transitions, valid actions |
 | **Test Contracts** | Given/When/Then from source tests |
 
-### What Gets Checked
+### What gets checked
 
 When you run `add-feature --reference`:
 - ✅ Scans target for interface requirements (traits, wrappers)
@@ -259,7 +248,7 @@ When you run `add-feature --reference`:
 - ❌ Reports violations you must fix
 - ⚠️ Flags items needing manual review
 
-### Verification Table
+### Verification table
 
 After implementation, `verify-behavior` generates:
 
@@ -277,9 +266,9 @@ After implementation, `verify-behavior` generates:
 
 ---
 
-## Eri-Coder: Vibe Code New Projects
+## Eri-Coder: vibe code new projects
 
-EriRPG includes **eri-coder** - a workflow for building new projects from scratch without writing code yourself.
+Eri-coder builds new projects from scratch. You describe what you want, it does the rest.
 
 ```bash
 /coder:new-project my-app "A task management app"
@@ -302,7 +291,7 @@ Then execute phase by phase:
 /coder:verify-work 1
 ```
 
-**Real Example:** We built a complete Rust chat application (995 lines, egui UI, SQLite, streaming API) in one session using this workflow. See: [rust-llm-chat-interface](https://github.com/CodeAlexx/rust-llm-chat-interface)
+We built a Rust chat app (995 lines, egui UI, SQLite, streaming API) in one session with this: [rust-llm-chat-interface](https://github.com/CodeAlexx/rust-llm-chat-interface)
 
 ![Parallel Research Agents](https://raw.githubusercontent.com/CodeAlexx/rust-llm-chat-interface/main/docs/screenshot-agents.png)
 
@@ -315,21 +304,19 @@ Then execute phase by phase:
 Alpha v0.57 - usable but evolving.
 
 ### Working
-- ✅ Knowledge storage and recall
-- ✅ Cross-project search (<1ms queries)
-- ✅ Quick fix mode
-- ✅ Discussion mode
-- ✅ Run tracking with decisions
-- ✅ Claude Code hooks
-- ✅ Session context persistence (SQLite)
-- ✅ Automatic git branch tracking
-- ✅ **Eri-Coder vibe coding workflow**
-- ✅ **Blueprint system** (program documentation)
-- ✅ **Behavior extraction** (cross-language porting)
-- ✅ **Behavior verification** (implementation validation)
+- Knowledge storage and recall
+- Cross-project search (<1ms queries)
+- Quick fix mode, discussion mode
+- Run tracking with decisions
+- Claude Code hooks
+- Session context persistence (SQLite)
+- Automatic git branch tracking
+- Eri-Coder vibe coding workflow
+- Blueprint system (program documentation)
+- Behavior extraction and verification (cross-language porting)
 
-### In Progress
-- ⚠️ Multi-agent parallel execution
+### In progress
+- Multi-agent parallel execution
 
 ## License
 

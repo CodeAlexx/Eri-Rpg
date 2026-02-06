@@ -60,9 +60,9 @@ claude --plugin-dir /path/to/eri-rpg/.claude-plugin
 
 ---
 
-### SKILL.md Format Migration
+### SKILL.md format migration
 
-Migrated 6 large skills to the new Claude Code SKILL.md format with supporting files. This reduces token usage by ~75% while improving maintainability.
+Migrated 6 large skills to the new Claude Code SKILL.md format with supporting files. Token usage dropped ~75%.
 
 **Migrated Skills:**
 | Skill | Before | After | Reduction |
@@ -83,36 +83,32 @@ erirpg/skills/coder-{skill}/
 └── scripts/           # Helper scripts
 ```
 
-**Key Features:**
+**How it works:**
 - Dynamic context injection with `!`command`` syntax
 - Supporting files loaded on demand
 - Templates for consistent output formatting
 - Scripts for common operations
 
-### Claude Code Docs Audit & Improvements
+### Claude Code docs audit
 
-Audited Claude Code documentation and implemented 3 improvements.
+Audited Claude Code documentation and made 3 changes.
 
-**Improvement 1: Agent Persistent Memory**
-- Added `memory: project` to key agents
-- Agents: eri-executor, eri-planner, eri-verifier, eri-phase-researcher
-- Enables cross-session learning within each project
+**Agent persistent memory:**
+- Added `memory: project` to eri-executor, eri-planner, eri-verifier, eri-phase-researcher
+- Agents now remember things across sessions within a project
 - Commit: d83d811
 
-**Improvement 2: Skills Preloading in Agents**
+**Skills preloading in agents:**
 - Added `skills:` field to agent frontmatter
-- eri-executor: preloads `coder:quick`, `coder:status`
-- eri-planner: preloads `coder:status`
-- eri-verifier: preloads `coder:status`
+- eri-executor preloads `coder:quick`, `coder:status`; planner and verifier preload `coder:status`
 - Agents can now invoke skills without human triggering
 
-**Improvement 3: Hook JSON Output Enhancement**
-- Enhanced pretooluse.py with richer block responses
+**Hook JSON output:**
+- pretooluse.py now returns richer block responses
 - New fields: `hookSpecificOutput`, `additionalContext`, `suggestedActions`, `context`
 - Tool-specific guidance in block messages
-- Structured data for debugging
 
-**Example Enhanced Block Response:**
+**Example block response:**
 ```json
 {
   "decision": "block",
@@ -126,9 +122,9 @@ Audited Claude Code documentation and implemented 3 improvements.
 
 **Audit Document:** `.planning/research/CLAUDE-CODE-AUDIT.md`
 
-### Doctor Skill Tested
+### Doctor skill tested
 
-Tested the migrated doctor skill successfully. Identified and fixed:
+Tested the migrated doctor skill. Found and fixed:
 - STATE.md drift (showed phases pending when complete)
 - Missing 01-01-registry-SUMMARY.md (created retroactively)
 
@@ -136,9 +132,9 @@ Tested the migrated doctor skill successfully. Identified and fixed:
 
 ## February 4, 2026
 
-### Behavior Extractor Agent
+### Behavior extractor agent
 
-New agent for extracting portable behavior specs from existing programs.
+New agent that extracts portable behavior specs from existing programs.
 
 **Agent:** `eri-behavior-extractor`
 - Extracts behaviors from source code into portable specs
@@ -147,37 +143,37 @@ New agent for extracting portable behavior specs from existing programs.
 
 **File:** `erirpg/agents/eri-behavior-extractor.md`
 
-### Blueprint Command Updates
+### Blueprint command updates
 
 Updated blueprint commands for cross-language portability.
-- Improved X-to-Y language translation
+- Better X-to-Y language translation
 - Better handling of language-specific idioms
 
-### Strict Linter Workflow
+### Strict linter workflow
 
 Added contract checking to linter workflow.
 - Enforces completion patterns on state-changing skills
 - Validates STATE.md updates
-- Checks for proper next-step guidance
+- Checks for next-step guidance
 
-### Documentation Cleanup
+### Documentation cleanup
 
-Removed outdated documentation files:
+Removed outdated docs:
 - REPO_RULES.md, NOTES.md, CODER_WORKFLOW_AUDIT, CLAUDE_CODE.md
-- Consolidated into active documentation
+- Folded into active documentation
 
 ---
 
 ## February 3, 2026
 
-### /coder:doctor - Workflow Health Diagnostics
+### /coder:doctor
 
-New diagnostic command to identify and repair workflow issues. Created after Phase 5 failure audit revealed gaps in research, verification, and state updates.
+Diagnostic command that finds and fixes workflow issues. Built after Phase 5 failures showed gaps in research, verification, and state updates.
 
 **New Command:** `/coder:doctor [--fix] [--fix-research] [--fix-verification] [--reinstall-hooks] [--rebuild-state]`
 
 **8 Health Checks:**
-| Check | What It Detects |
+| Check | What it detects |
 |-------|-----------------|
 | Global State | Stale target_project_path, invalid JSON |
 | Project State | Missing .planning/, STATE.md, ROADMAP.md |
@@ -188,7 +184,7 @@ New diagnostic command to identify and repair workflow issues. Created after Pha
 | Hooks Status | Missing/outdated hooks in ~/.claude/hooks/ |
 | Skills Status | Missing skill files |
 
-**Repair Capabilities:**
+**Repair flags:**
 | Flag | Action |
 |------|--------|
 | `--fix` | Basic repairs (stale state, global state sync) |
@@ -201,11 +197,11 @@ New diagnostic command to identify and repair workflow issues. Created after Pha
 
 See `CODER-DOCTOR.md` for full documentation.
 
-### Workflow Audit Fixes
+### Workflow audit fixes
 
-Major fixes to plan-phase and execute-phase based on workflow audit.
+Fixed plan-phase and execute-phase based on workflow audit.
 
-**Root Cause of Phase 5 Failures:**
+**Why Phase 5 failed:**
 1. Research was optional (setting-based) - now mandatory for Level 2-3
 2. Verification was documented but not enforced - now blocks on gaps_found
 3. STATE.md only updated at completion - now updates after each wave
@@ -217,18 +213,18 @@ Major fixes to plan-phase and execute-phase based on workflow audit.
 | `erirpg/skills/plan-phase.md` | Research depth detection, confidence gates | 140→434 |
 | `erirpg/agents/eri-phase-researcher.md` | Depth levels, source hierarchy, confidence | 127→394 |
 
-**Key Additions:**
+**What changed:**
 - Research depth detection (Level 0-3) based on phase goal keywords
 - Confidence gates that STOP on LOW confidence
 - Source hierarchy: Codebase → Official docs → WebSearch (last resort)
 - Mid-execution STATE.md updates after each wave
-- Verification routing that blocks progress on gaps_found
+- Verification now blocks progress on gaps_found
 
 **Audit Document:** `docs/WORKFLOW_AUDIT.md`
 
-### Skill Completion Linter
+### Skill completion linter
 
-New linting script to enforce completion patterns on state-changing skills.
+Linting script that checks state-changing skills have proper completion sections.
 
 **New Script:**
 - `erirpg/scripts/lint_skills.py` - Validates all state-changing skills
@@ -253,11 +249,11 @@ python3 -m erirpg.scripts.lint_skills
 python3 -m erirpg.scripts.lint_skills --verbose
 ```
 
-### Discuss-Phase Improvements
+### Discuss-phase improvements
 
-Expanded `/coder:discuss-phase` with full feature set for capturing implementation decisions.
+Expanded `/coder:discuss-phase` for capturing implementation decisions.
 
-**New Features:**
+**Added:**
 | Feature | Description |
 |---------|-------------|
 | Philosophy section | User=visionary, Claude=builder model |
@@ -272,15 +268,15 @@ Expanded `/coder:discuss-phase` with full feature set for capturing implementati
 
 **File:** `erirpg/skills/discuss-phase.md` (173 → 408 lines)
 
-### Documentation Updates
+### Documentation updates
 
-**New Files:**
+**New files:**
 - `docs/QUICK_REFERENCE.md` - Fast lookup for file locations, commands, troubleshooting
 
-**Updated Files:**
+**Updated files:**
 - `docs/REPO_RULES.md` - Added private files list, gitignore rules
 
-### Repository Cleanup
+### Repository cleanup
 
 Removed private directories from GitHub (were committed before gitignore):
 - `.planning/` - Private planning artifacts
@@ -293,7 +289,7 @@ All remain local, now properly gitignored.
 
 ## February 2, 2026
 
-### Agent System Improvements
+### Agent system changes
 
 **CONTEXT.md Pipeline:**
 - CONTEXT.md now flows through entire planning pipeline
@@ -314,46 +310,45 @@ All ERI agent specifications now tracked in `erirpg/agents/`:
 - eri-codebase-mapper, eri-debugger
 - behavior-extractor
 
-### Coder Workflow Fixes
+### Coder workflow fixes
 
-**Critical Fixes:**
+**Fixes:**
 - Check `active_project` FIRST in `get_planning_dir()`
 - Auto-register projects when switching by path
 - Statusline project detection fixed
 - Non-blocking workflow model adopted
 
-**Hook Improvements:**
+**Hooks:**
 - Unforgeable enforcement with correct project detection
-- Removed ~/.claude/ exception (was security hole)
+- Removed ~/.claude/ exception (was a security hole)
 
-### Language Detection
+### Language detection
 
 Added language detection for:
 - Dart
 - JavaScript/TypeScript
 - Go
 
-### Test Coverage
+### Test coverage
 
-Comprehensive tests added for:
+Tests added for:
 - Graph operations (01-03)
 - Code indexer (01-02)
 - Parser modules (01-core)
 - Project registry (01-01)
 
-### Graph Query System
+### Graph query system
 
-**New Methods:**
 - Graph query and analysis methods
-- Enhanced CLI commands for graph queries
+- New CLI commands for graph queries
 
 ---
 
 ## February 1, 2026
 
-### Clone Behavior Command
+### Clone behavior command
 
-Full program cloning by extracting WHAT code does (behavior), then reimplementing from scratch.
+Clone programs by extracting what code does (behavior), then reimplementing from scratch.
 
 **New Slash Command:**
 - `/coder:clone-behavior` - Clone a program via behavior extraction
@@ -378,7 +373,7 @@ Full program cloning by extracting WHAT code does (behavior), then reimplementin
 | `lib/file_parity.py` | Compare source/target file coverage |
 | `lib/behavior_verifier.py` | Verify implementation matches behavior spec |
 
-**Verification Checks:**
+**Checks:**
 - Class inheritance matching
 - Method signature matching
 - Critical import detection
@@ -391,9 +386,9 @@ Full program cloning by extracting WHAT code does (behavior), then reimplementin
 
 Creates behavior-compatible clone: different code, same functionality.
 
-### Coder Command Improvements
+### Coder command fixes
 
-**Python Project Detection:**
+**Python project detection:**
 - Added `requirements.txt` as Python project indicator
 - Fixed venv pattern matching (catches both `.venv` and `venv`)
 - Filter `__pycache__` directories from file counts
@@ -402,9 +397,9 @@ Creates behavior-compatible clone: different code, same functionality.
 
 ## January 29, 2026
 
-### Personal Todo List
+### Personal todo list
 
-Quick task tracking that persists across sessions and projects.
+Task tracking that persists across sessions and projects.
 
 **New CLI Commands:**
 | Command | Description |
@@ -420,22 +415,17 @@ Quick task tracking that persists across sessions and projects.
 - `-t, --tag <tag>` - Add tags (repeatable)
 - `--all` - Show completed too
 
-**Priority Icons:**
-- 🔴 urgent - Do now
-- 🟠 high - Do today
-- ⚪ normal - Default
-- 🔵 low - Whenever
+**Priorities:** urgent, high, normal, low
 
-**Session Integration:**
-- Pending todos shown at session start
+Pending todos show at session start.
 - Storage: `~/.eri-rpg/todos.json`
 
 **New Slash Command:**
 - `/eri:todo` - Personal task tracking
 
-### Per-Project Environment Configuration
+### Per-project environment config
 
-Store environment settings per project to avoid wasting tokens guessing how to run tests, lint, etc.
+Store environment settings per project so Claude stops guessing how to run tests.
 
 **New EnvironmentConfig dataclass:**
 | Field | Description | Example |
@@ -461,7 +451,7 @@ Store environment settings per project to avoid wasting tokens guessing how to r
 | `env <project> --set NAME VALUE` | Set a command/path |
 | `env <project> --var KEY VALUE` | Set environment variable |
 
-**Auto-Detection Supports:**
+**Auto-detects:**
 - pyproject.toml (uv/poetry detection via `[tool.uv]` or `[tool.poetry]`)
 - requirements.txt (pip)
 - package.json (npm/pnpm/yarn via lock files)
@@ -471,16 +461,16 @@ Store environment settings per project to avoid wasting tokens guessing how to r
 **New Slash Command:**
 - `/eri:env` - Show project environment
 
-### Spec-Driven Session File Generation
+### Spec-driven session files
 
 Session files now reflect actual spec execution steps for modification tasks:
 
-**New Helper Functions:**
+**Helper functions:**
 - `_is_modification_task(spec)` - Detect modification vs greenfield specs
 - `_phases_from_spec(spec)` - Extract phases from spec steps
 - `_build_phase(name, steps)` - Build phase dict from spec steps
 
-**Phase Mapping:**
+**Phase mapping:**
 | Spec Action | Phase Name |
 |-------------|------------|
 | learn | Understand |
@@ -490,16 +480,16 @@ Session files now reflect actual spec execution steps for modification tasks:
 | delete | Cleanup |
 | verify | Verify |
 
-**Enhanced Session Files:**
-- **STATE.md** - Now includes Spec Steps table with step ID, action, status icon, targets
-- **ROADMAP.md** - Shows Steps section with verification criteria per phase
-- **TASKS.md** - Derives active/backlog from spec steps (first pending = active)
+**Session files now include:**
+- STATE.md - Spec Steps table with step ID, action, status icon, targets
+- ROADMAP.md - Steps section with verification criteria per phase
+- TASKS.md - Derives active/backlog from spec steps (first pending = active)
 
-**Backward Compatible:**
+**Backward compatible:**
 - Greenfield projects continue using research-based phase detection
 - Modification detection: specs with learn/modify/refactor/delete/verify actions
 
-### Session Status Auto-Update
+### Session status auto-update
 
 **New Command:**
 | Command | Description |
@@ -515,11 +505,9 @@ Session files now reflect actual spec execution steps for modification tasks:
 **New Slash Command:**
 - `/eri:update` - Update session status files
 
-### Caller Control Tool
+### Caller control tool
 
-**New Tool:** `tools/caller-control/`
-
-Web app to control Claude Code from phone:
+`tools/caller-control/` — web app to control Claude Code from your phone:
 - PTY wrapper spawns real Claude Code CLI
 - WebSocket streams terminal I/O in real-time
 - Mobile-optimized xterm.js UI with touch controls
@@ -531,14 +519,14 @@ Web app to control Claude Code from phone:
 - `requirements.txt` - Python dependencies
 - `README.md` - Usage documentation
 
-### Decisions Module Cleanup
+### Decisions module cleanup
 
-Renamed internal module for clarity:
+Renamed internal module:
 - Consolidated decisions tracking into `cli_commands/decisions.py`
 - Updated imports and registrations
 - Cleaned up docs and comments
 
-### New Slash Commands
+### New slash commands
 
 | Command | Description |
 |---------|-------------|
@@ -546,11 +534,9 @@ Renamed internal module for clarity:
 | `/eri:update` | Update session status files |
 | `/eri:settings` | Configure EriRPG features and UI |
 
-### Status Line Script
+### Status line script
 
-**New Module:** `statusline.py`
-
-Script for Claude Code status line integration:
+`statusline.py` — Claude Code status line integration:
 - Reads STATE.md for phase progress
 - Shows: Phase X/Y, context %, task name
 - Configurable via `~/.eri-rpg/settings.json`
@@ -559,9 +545,9 @@ Script for Claude Code status line integration:
 
 ## January 27, 2026
 
-### Enhanced Learning and Implementation System (latest)
+### Pattern-aware implementation
 
-Major feature addition for pattern-aware implementation:
+Added modules for detecting project patterns and planning implementations:
 
 **New Module (analyze.py):**
 - `ProjectPatterns` dataclass - Stores detected project patterns
@@ -582,7 +568,7 @@ Major feature addition for pattern-aware implementation:
 - `describe_feature()` - Extract feature description from source
 - `plan_to_spec()` - Convert plan to EriRPG spec
 
-**Enhanced StoredLearning (memory.py):**
+**StoredLearning additions (memory.py):**
 - `implements` - What base class it extends
 - `registered_in` - Where it's registered
 - `hooks_into` - What hooks it uses
@@ -599,9 +585,9 @@ Major feature addition for pattern-aware implementation:
 **New Storage:**
 - `.eri-rpg/patterns.json` - Project-level patterns (from analyze)
 
-### Decision Tracking Features (commit `269b019`)
+### Decision tracking (commit `269b019`)
 
-Major feature addition for decision tracking and session management:
+Decision tracking and session management:
 
 **New Classes (memory.py):**
 - `Decision` - Track choices with context, rationale, alternatives, source
@@ -637,7 +623,7 @@ Major feature addition for decision tracking and session management:
 - Added `deferred_ideas` field
 - Added CRUD methods for new data types
 
-### Hook Fix (commit `9ce5ee4`)
+### Hook fix (commit `9ce5ee4`)
 
 Fixed nested `.eri-rpg` directory detection in pretooluse hook:
 - Stops searching at home directory (not a valid project root)
@@ -645,7 +631,7 @@ Fixed nested `.eri-rpg` directory detection in pretooluse hook:
 - Prefers paths with `quick_fix_state.json` for active quick fixes
 - Falls back to outermost `.eri-rpg` (closest to home = project root)
 
-### Performance Optimization (commit `4989feb`)
+### Performance fix (commit `4989feb`)
 
 Graph algorithms optimized from O(n^2) to O(n):
 - `topo_sort()`: Use `deque.popleft()` instead of `list.pop(0)`
@@ -655,12 +641,12 @@ Graph algorithms optimized from O(n^2) to O(n):
 
 Expected speedup: 5-10x for projects with 100+ modules.
 
-### Silent Exception Fix (commit `b9e22a7`)
+### Silent exception fix (commit `b9e22a7`)
 
 Fixed 46 silent exception handlers across 19 files:
 - Changed `except Exception:` to `except Exception as e:`
 - All failures now print `[EriRPG] <error>` to stderr
-- Critical for debugging daily driver usage
+- Without this, bugs just silently disappeared
 
 Files fixed: memory.py, hooks/pretooluse.py, hooks/sessionstart.py, hooks/precompact.py, cli.py, quick.py, agent/__init__.py, agent/learner.py, agent/run.py, modes/work.py, modes/take.py, install.py, specs.py, ops.py, context.py, parsers/python.py, verification.py, preflight.py, write_guard.py
 
@@ -668,7 +654,7 @@ Files fixed: memory.py, hooks/pretooluse.py, hooks/sessionstart.py, hooks/precom
 
 ## January 26, 2026
 
-### Multi-Agent Configuration (commits `4288328`, `304cefa`, `348a67d`)
+### Multi-agent configuration (commits `4288328`, `304cefa`, `348a67d`)
 
 **New Module (config.py):**
 - `MultiAgentConfig` dataclass - Control parallel execution
@@ -681,26 +667,26 @@ Files fixed: memory.py, hooks/pretooluse.py, hooks/sessionstart.py, hooks/precom
 | `config <project> --multi-agent on\|off` | Toggle multi-agent mode |
 | `config <project> --concurrency N` | Set concurrency level |
 
-**Agent Integration:**
+**Agent integration:**
 - Wired config into Agent class
 - Added `parallelizable` and `depends_on` fields to Step
 - Hook now allows `~/.claude/` paths
 
-### Bash Command Detection (commits `34e3b25`, `682fac9`, `5d126cc`)
+### Bash command detection (commits `34e3b25`, `682fac9`, `5d126cc`)
 
 Closed the Bash write loophole in pretooluse hook:
 - Detects file-writing Bash commands (cat >, echo >, tee, etc.)
 - Treats detected writes like Edit/Write tool calls
 - Updated hook matcher to include Bash
 
-### Dart Parser (commit `2edbf2d`)
+### Dart parser (commit `2edbf2d`)
 
 **New Module (parsers/dart.py):**
 - Extracts: imports, classes, mixins, extensions, enums, typedefs, functions
 - Handles: package imports, dart SDK imports, relative imports
 - Supports: Dart 3 modifiers (base, final, interface, sealed)
 
-### Run Summaries & Decisions (commits `bbfd2f5`, `7b176e8`)
+### Run summaries and decisions (commits `bbfd2f5`, `7b176e8`)
 
 **New Classes (agent/run.py):**
 - `Decision` - Track decisions during runs
@@ -710,18 +696,18 @@ Closed the Bash write loophole in pretooluse hook:
 - `agent.add_decision(decision, rationale)` - Record a decision
 - `agent.generate_summary(one_liner)` - Generate run summary
 
-### Must-Haves Verification (commit `d81b15f`)
+### Must-haves verification (commit `d81b15f`)
 
 **New Classes (spec.py):**
 - `Artifact` - Expected file with exports
 - `KeyLink` - Required import between files
 - `MustHaves` - Container for truths, artifacts, key_links
 
-**Spec Updates:**
+**Spec changes:**
 - Added `must_haves` field to Spec
 - Added `verify_must_haves()` method
 
-### Roadmap Support (commit `5c665d5`)
+### Roadmap support (commit `5c665d5`)
 
 **New Classes (memory.py):**
 - `Milestone` - A phase in the roadmap
@@ -735,7 +721,7 @@ Closed the Bash write loophole in pretooluse hook:
 | `roadmap-next <project>` | Advance to next phase |
 | `roadmap-edit <project> <index> <name> <desc>` | Edit milestone |
 
-### Discuss Mode (commit `1d05d8b`)
+### Discuss mode (commit `1d05d8b`)
 
 **New Module (discuss.py):**
 - `generate_questions()` - Auto-generate clarifying questions
@@ -751,9 +737,9 @@ Closed the Bash write loophole in pretooluse hook:
 | `discuss-resolve <project>` | Mark discussion complete |
 | `discuss-clear <project>` | Clear discussion |
 
-### Project Metadata (commits `253edb8`, `0c3384c`)
+### Project metadata (commits `253edb8`, `0c3384c`)
 
-**New Registry Fields:**
+**New registry fields:**
 - `description` - Project description
 - `todos` - Project TODO list
 - `notes` - Free-form notes
@@ -768,16 +754,14 @@ Closed the Bash write loophole in pretooluse hook:
 | `decisions <project>` | List decisions |
 | `patterns <project>` | List patterns |
 
-### Smart Test Selection (commit `692f1c3`)
-
-New verification feature:
+### Smart test selection (commit `692f1c3`)
 - Find tests that import changed files
 - Prioritize relevant tests for faster feedback
 - Added to `verification.py`
 
-### Documentation & Cleanup (commits `cf0ef6c`, `729c139`, `13762a9`, `c062a8f`)
+### Documentation and cleanup (commits `cf0ef6c`, `729c139`, `13762a9`, `c062a8f`)
 
-**New Documentation:**
+**New docs:**
 - `docs/ARCHITECTURE.md` - System architecture
 - `docs/CHANGELOG.md` - Version history
 - `docs/CLAUDE_CODE.md` - Integration guide
@@ -791,32 +775,32 @@ New verification feature:
 - Planning scratch files
 - Research source directories
 
-### Installer & Hooks (commit `8307b5c`)
+### Installer and hooks (commit `8307b5c`)
 
 **New Module (install.py):**
 - `eri-rpg install` - Install Claude Code integration
 - `eri-rpg uninstall` - Clean removal
 - `eri-rpg install-status` - Check installation
 
-**New Hooks:**
+**Hooks:**
 - `hooks/precompact.py` - Save state before context compaction
 - `hooks/sessionstart.py` - Remind about incomplete runs
 
-### Core Fixes (commits `39f33f7`, `76415f1`)
+### Core fixes (commits `39f33f7`, `76415f1`)
 
-**Unified Specs:**
+**Unified specs:**
 - `erirpg/spec.py` is now canonical
 - `erirpg/agent/spec.py` re-exports from canonical
 
-**Mandatory Verification:**
+**Mandatory verification:**
 - `complete_step()` returns False if verification fails
 - Stores stdout/stderr in run log
 
-**Path Normalization:**
+**Path normalization:**
 - Fixed in preflight.py and hooks
 - Uses `Path(__file__).parent` for portability
 
-### Planning Directory (commit `2a15c88`)
+### Planning directory (commit `2a15c88`)
 
 Added `.planning/` directory for session persistence:
 - `PROJECT.md` - Project vision
@@ -825,7 +809,7 @@ Added `.planning/` directory for session persistence:
 
 Each phase includes: SUMMARY.md, FEATURES.md, PITFALLS.md, ARCHITECTURE.md
 
-### Hooks.py Shadowing Fix (commit `cee64bd`)
+### hooks.py shadowing fix (commit `cee64bd`)
 
 Renamed `erirpg/hooks.py` to `erirpg/write_guard.py`:
 - Resolves Python module shadowing issue
@@ -833,12 +817,9 @@ Renamed `erirpg/hooks.py` to `erirpg/write_guard.py`:
 
 ---
 
-## Summary Statistics
+## Totals
 
-- **Commits:** 34+
-- **New files:** 45+
-- **New CLI commands:** 27+
-- **Lines added:** ~12,000+
-- **Major features:** Clone-behavior workflow, behavior extraction, automated verification
-- **Performance improvements:** O(n^2) -> O(n) for graph operations
-- **Bug fixes:** 46 silent exceptions, nested .eri-rpg detection, hooks.py shadowing, Python detection
+- 34+ commits, 45+ new files, 27+ new CLI commands, ~12,000 lines added
+- Clone-behavior workflow, behavior extraction, automated verification
+- Graph operations: O(n^2) -> O(n)
+- 46 silent exceptions fixed, nested .eri-rpg detection, hooks.py shadowing, Python detection
