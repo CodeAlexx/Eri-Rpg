@@ -674,6 +674,393 @@ for each plan in plan_order:
 
 </plan_format>
 
+<anti_patterns>
+
+## Plans That Fail
+
+These patterns cause executor failures. Avoid them.
+
+### Anti-Pattern 1: The Vague Task
+
+```xml
+<!-- BAD -->
+<task type="auto">
+  <name>Set up authentication</name>
+  <files>src/auth/</files>
+  <action>Implement authentication for the application</action>
+  <verify>Auth works</verify>
+  <done>Users can log in</done>
+</task>
+```
+
+**Why it fails:** Executor has no specifics. What auth strategy? What library? What endpoints? What token format? Executor will make different assumptions than you intended.
+
+```xml
+<!-- GOOD -->
+<task type="auto">
+  <name>Task 1: Create JWT auth endpoint</name>
+  <files>src/app/api/auth/login/route.ts, src/lib/auth.ts</files>
+  <action>
+    Create POST /api/auth/login accepting {email, password} JSON body.
+    Use jose library (not jsonwebtoken — CommonJS issues with Edge runtime).
+    Hash comparison with bcrypt.compareSync against User.passwordHash.
+    On success: return JWT in httpOnly cookie, 15-min expiry, HS256 signing.
+    On failure: return 401 {error: "Invalid credentials"}.
+    Create src/lib/auth.ts with signToken() and verifyToken() helpers.
+  </action>
+  <verify>
+    curl -X POST http://localhost:3000/api/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"email":"test@test.com","password":"password123"}' \
+      -v 2>&1 | grep "Set-Cookie.*token"
+  </verify>
+  <done>Valid credentials return 200 + JWT cookie. Invalid return 401.</done>
+</task>
+```
+
+### Anti-Pattern 2: The Mega-Plan
+
+A plan with 5+ tasks that spans multiple subsystems:
+
+```yaml
+# BAD: One plan doing too much
+plan: 01
+tasks:
+  - Create User model
+  - Create Product model
+  - Create User API routes
+  - Create Product API routes
+  - Create Dashboard UI
+  - Add styling
+  - Write tests
+```
+
+**Why it fails:** Hits 70%+ context. Last 3 tasks get rushed. Dashboard probably references stale patterns from early context.
+
+**Fix:** Split into 3 plans with explicit dependencies:
+```yaml
+Plan 01 (Wave 1): User vertical — model + API + tests
+Plan 02 (Wave 1): Product vertical — model + API + tests
+Plan 03 (Wave 2): Dashboard — UI consuming both APIs (depends on 01, 02)
+```
+
+### Anti-Pattern 3: Static-Only Verification
+
+```xml
+<!-- BAD -->
+<verify>python -m py_compile src/auth.py</verify>
+<verify>grep "def login" src/auth.py</verify>
+<verify>ls src/auth.py</verify>
+```
+
+**Why it fails:** Proves code EXISTS, not that it WORKS. Executor writes syntactically valid code that doesn't function at runtime.
+
+**Fix:** Always include a runtime check:
+```xml
+<verify>
+  python -m pytest tests/test_auth.py -v
+  # OR if no tests yet:
+  python -c "from src.auth import login; print(login('test@test.com', 'pass'))"
+</verify>
+```
+
+### Anti-Pattern 4: Horizontal Layer Splitting
+
+```yaml
+Plan 01: All models (User, Product, Order)
+Plan 02: All APIs (users, products, orders)
+Plan 03: All UI (user page, product page, order page)
+```
+
+**Why it fails:** Plan 02 can't start until Plan 01 is done. Plan 03 can't start until Plan 02 is done. Fully sequential. Zero parallelism.
+
+**Fix:** Vertical slices (see dependency_graph section).
+
+### Anti-Pattern 5: Discovery Inside Implementation
+
+```xml
+<task type="auto">
+  <name>Research and implement caching</name>
+  <action>
+    Research Redis vs Memcached vs in-memory caching.
+    Choose the best option.
+    Implement it.
+  </action>
+</task>
+```
+
+**Why it fails:** Research happens during execution context, eating tokens. If the choice is wrong, the implementation work is wasted. Research and implementation should be separate phases.
+
+**Fix:** Research happens in RESEARCH.md (before planning). Plan references the decision:
+```xml
+<action>
+  Implement Redis caching per RESEARCH.md recommendation.
+  Use ioredis library (already in package.json).
+  Cache user sessions with 15-min TTL.
+</action>
+```
+
+### Anti-Pattern 6: Missing Wiring Tasks
+
+Plans create artifacts but never connect them:
+
+```yaml
+Plan 01: Create User model
+Plan 02: Create User API
+Plan 03: Create User form
+```
+
+**What's missing:** No task wires the form to the API, or the API to the model. Each artifact exists in isolation.
+
+**Fix:** Every plan that creates something another plan consumes must either:
+1. Include a wiring task, OR
+2. Depend on a separate wiring plan
+
+```yaml
+Plan 03: Create User form
+  Task 1: Build form component
+  Task 2: Wire form → POST /api/users → show success/error
+  Task 3: Verify: Fill form, submit, check database has new row
+```
+
+</anti_patterns>
+
+<must_haves_walkthrough>
+
+## Deriving Must-Haves: A Walkthrough
+
+### Example: Phase goal = "Working search with filters"
+
+**Step 1: State the outcome**
+"Users can search content and filter results by category, date range, and status."
+
+**Step 2: Observable truths (user perspective)**
+
+Ask: "What must be TRUE for a user to say 'search works'?"
+
+1. User can type a query and see results
+2. Results are relevant to the query (not random)
+3. User can filter by category
+4. User can filter by date range
+5. User can combine multiple filters
+6. Empty query shows all items (or helpful empty state)
+7. No results shows appropriate message
+
+**Step 3: Required artifacts**
+
+For truth #1 ("type query, see results"):
+- `src/components/SearchBar.tsx` — input field with submit
+- `src/app/api/search/route.ts` — GET endpoint accepting `?q=`
+- `src/lib/search.ts` — search logic (query → results)
+
+For truth #3 ("filter by category"):
+- `src/components/FilterPanel.tsx` — filter UI
+- API must accept `?category=` parameter
+- Categories must come from database or constants
+
+**Step 4: Required wiring**
+
+SearchBar.tsx wiring:
+- onSubmit → calls /api/search?q={input}
+- Response → updates results state
+- NOT: hardcoded results, console.log, or stub data
+
+FilterPanel.tsx wiring:
+- onChange → appends &category= to search URL
+- Combines with existing query (not replaces)
+- Active filters visible to user
+
+**Step 5: Key links (where it breaks)**
+
+| From | To | Via | If Missing |
+|------|----|-----|------------|
+| SearchBar | /api/search | fetch on submit | Search UI exists but doesn't search |
+| /api/search | search.ts | function call | API exists but returns empty |
+| FilterPanel | URL params | state management | Filters visible but don't filter |
+| search.ts | database | query builder | Logic exists but no real data |
+
+**Final must_haves:**
+
+```yaml
+must_haves:
+  truths:
+    - "User types query and sees relevant results"
+    - "Category filter narrows results"
+    - "Date range filter narrows results"
+    - "Multiple filters combine correctly"
+    - "Empty/no results show appropriate state"
+  artifacts:
+    - path: "src/components/SearchBar.tsx"
+      provides: "Search input with submit"
+      min_lines: 25
+    - path: "src/app/api/search/route.ts"
+      provides: "Search API endpoint"
+      exports: ["GET"]
+    - path: "src/lib/search.ts"
+      provides: "Search logic with filter support"
+      exports: ["search", "buildQuery"]
+    - path: "src/components/FilterPanel.tsx"
+      provides: "Filter UI for category, date, status"
+      min_lines: 40
+  key_links:
+    - from: "SearchBar.tsx"
+      to: "/api/search"
+      via: "fetch on form submit"
+      pattern: "fetch.*api/search"
+    - from: "/api/search"
+      to: "search.ts"
+      via: "function import"
+      pattern: "import.*search.*from"
+    - from: "FilterPanel.tsx"
+      to: "URL search params"
+      via: "state update"
+      pattern: "searchParams|URLSearchParams"
+```
+
+### Common must_haves Mistakes
+
+| Mistake | Why Wrong | Fix |
+|---------|-----------|-----|
+| Truths are tasks | "Create search component" | "User can search and see results" |
+| Artifacts are vague | "the search files" | "src/components/SearchBar.tsx" |
+| Key links missing | Only list files, not connections | Add from/to/via for every data flow |
+| Too many truths | 15 truths for simple phase | 3-7 is the sweet spot |
+| Truths aren't testable | "Code is clean" | "npm test passes with >80% coverage" |
+
+</must_haves_walkthrough>
+
+<wave_assignment_detail>
+
+## Wave Assignment: Detailed Logic
+
+### The Algorithm
+
+```
+Input: Set of plans with depends_on arrays
+Output: Wave number for each plan
+
+1. For each plan with no dependencies → Wave 1
+2. For each remaining plan:
+   wave = max(wave[dep] for dep in plan.depends_on) + 1
+3. Validate: no circular dependencies
+4. Validate: wave numbers are contiguous (1, 2, 3... not 1, 3, 5)
+```
+
+### Wave Assignment Examples
+
+**Example 1: Independent plans**
+```
+Plan 01: Create User model (depends_on: [])
+Plan 02: Create Product model (depends_on: [])
+Plan 03: Create Settings page (depends_on: [])
+
+Result:
+  Wave 1: Plan 01, Plan 02, Plan 03 (all parallel)
+```
+
+**Example 2: Linear chain**
+```
+Plan 01: Create database schema (depends_on: [])
+Plan 02: Create API layer (depends_on: [01])
+Plan 03: Create UI (depends_on: [02])
+
+Result:
+  Wave 1: Plan 01
+  Wave 2: Plan 02
+  Wave 3: Plan 03
+```
+
+**Example 3: Diamond dependency**
+```
+Plan 01: Create auth module (depends_on: [])
+Plan 02: Create user service (depends_on: [01])
+Plan 03: Create admin service (depends_on: [01])
+Plan 04: Create dashboard (depends_on: [02, 03])
+
+Result:
+  Wave 1: Plan 01
+  Wave 2: Plan 02, Plan 03 (parallel — both depend only on Wave 1)
+  Wave 3: Plan 04
+```
+
+**Example 4: Mixed with checkpoints**
+```
+Plan 01: Backend setup (depends_on: [], autonomous: true)
+Plan 02: Frontend setup (depends_on: [], autonomous: true)
+Plan 03: Integration (depends_on: [01, 02], autonomous: true)
+Plan 04: Visual review (depends_on: [03], autonomous: false, checkpoint: human-verify)
+
+Result:
+  Wave 1: Plan 01, Plan 02
+  Wave 2: Plan 03
+  Wave 3: Plan 04 (checkpoint — executor pauses for user)
+```
+
+### Maximizing Parallelism
+
+**Goal:** Minimize total waves. More plans in Wave 1 = faster overall execution.
+
+**Techniques:**
+1. **Vertical slices** — independent features in Wave 1
+2. **Shared foundation in dedicated plan** — one small Plan 01 (schema, types), then everything else in Wave 2
+3. **File ownership audit** — if two plans DON'T share files, they CAN be parallel even if conceptually related
+4. **Split large plans** — a 4-task plan that could be 2 independent 2-task plans doubles parallelism
+
+**When sequential is necessary:**
+- Plan B reads files that Plan A creates
+- Plan B imports types/functions that Plan A defines
+- Plan B modifies files that Plan A also modifies
+- Plan B needs Plan A's runtime output (database seed, API response)
+
+</wave_assignment_detail>
+
+<context_budget_calculator>
+
+## Context Budget Estimation
+
+Before finalizing plans, estimate total context consumption.
+
+### Per-Task Estimates
+
+| Task Complexity | Context % | Characteristics |
+|-----------------|-----------|-----------------|
+| Trivial | 5-10% | Config change, add import, rename |
+| Simple | 10-15% | CRUD endpoint, basic component, add test |
+| Medium | 15-25% | Feature with logic, API with validation, component with state |
+| Complex | 25-35% | Auth flow, payment integration, data pipeline |
+| Very Complex | 35-50% | System redesign, multi-service orchestration |
+
+### Per-Plan Calculation
+
+```
+Plan context = sum(task_estimates) + overhead(10-15%)
+
+Rule: Plan total MUST be < 50%
+
+Example:
+  Task 1: Create model + migration (Simple: 12%)
+  Task 2: Create API with validation (Medium: 20%)
+  Task 3: Wire to frontend (Medium: 15%)
+  Overhead: 12%
+  Total: 59% — TOO HIGH
+
+  Fix: Split Task 3 into its own Plan
+  Plan A: Tasks 1+2 = 44% ✓
+  Plan B: Task 3 = 27% ✓
+```
+
+### Red Flags
+
+| Signal | Problem | Action |
+|--------|---------|--------|
+| 4+ tasks in plan | Will exceed 50% | Split into 2 plans |
+| Any task >30% | Single task too complex | Decompose further |
+| Plan touches >5 files | Scope creep | Check if tasks belong together |
+| Multiple subsystems | Horizontal layer | Convert to vertical slices |
+| Verify sections > 5 lines | Over-complex testing | Simplify or add test plan |
+
+</context_budget_calculator>
+
 <structured_returns>
 
 ## Planning Complete

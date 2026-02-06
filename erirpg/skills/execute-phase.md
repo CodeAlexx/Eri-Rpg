@@ -29,12 +29,46 @@ The CLI returns JSON with:
 - `goal`: Phase goal from ROADMAP.md
 - `plans`: List of plans with paths, waves, completion status
 - `waves`: Grouped wave structure
-- `settings`: Execution settings
+- `settings`: Execution settings (includes `model_profile`)
 - `instructions`: High-level guidance
 
 **It also creates EXECUTION_STATE.json** - hooks will allow file edits.
 
 Parse and store these values for use in subsequent steps.
+
+### Resolve Model Profile
+
+Extract the model profile from settings and resolve models for executor and verifier:
+
+```bash
+MODEL_PROFILE=$(cat .planning/config.json 2>/dev/null | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(data.get('model_profile', 'balanced'))
+except: print('balanced')
+" 2>/dev/null || echo "balanced")
+```
+
+**Model lookup table:**
+
+| Profile | Executor | Verifier |
+|---------|----------|----------|
+| quality | opus | sonnet |
+| balanced | sonnet | sonnet |
+| budget | sonnet | haiku |
+
+Resolve:
+
+```bash
+case "$MODEL_PROFILE" in
+  quality)  EXECUTOR_MODEL="opus";  VERIFIER_MODEL="sonnet" ;;
+  budget)   EXECUTOR_MODEL="sonnet"; VERIFIER_MODEL="haiku" ;;
+  *)        EXECUTOR_MODEL="sonnet"; VERIFIER_MODEL="sonnet" ;;
+esac
+```
+
+Report: `Model profile: {MODEL_PROFILE} (executor={EXECUTOR_MODEL}, verifier={VERIFIER_MODEL})`
 </step>
 
 <step name="2_load_state">
@@ -156,11 +190,12 @@ STATE_CONTENT=$(cat .planning/STATE.md 2>/dev/null)
 
 ### 6c. Spawn Executors
 
-For each plan in the wave, spawn **eri-executor**:
+For each plan in the wave, spawn **eri-executor** with resolved model:
 
 ```
 Task(
   subagent_type="eri-executor",
+  model="{EXECUTOR_MODEL}",
   prompt="Execute plan {plan_number} of phase {phase_number}-{phase_name}.
 
 <plan>
@@ -248,11 +283,12 @@ After all waves complete, you **MUST** spawn **eri-verifier**.
 PHASE_GOAL=$(grep -A 5 "Phase $PHASE_NUM" .planning/ROADMAP.md | head -6)
 ```
 
-Spawn verifier:
+Spawn verifier with resolved model:
 
 ```
 Task(
   subagent_type="eri-verifier",
+  model="{VERIFIER_MODEL}",
   prompt="Verify phase {phase_number} goal achievement.
 
 Phase directory: {phase_dir}
@@ -282,26 +318,36 @@ VERIFICATION_STATUS=$(grep "^status:" "$PHASE_DIR"/VERIFICATION.md | cut -d: -f2
 
 **If `gaps_found`:**
 
-```markdown
-## ⚠ Verification Found Gaps
+<offer_next>
 
-**Score:** {N}/{M} must-haves verified
-**Report:** {phase_dir}/VERIFICATION.md
+```markdown
+╔════════════════════════════════════════════════════════════════╗
+║  ⚠ VERIFICATION FOUND GAPS                                     ║
+╠════════════════════════════════════════════════════════════════╣
+║  Score: {N}/{M} must-haves verified                            ║
+║  Report: {phase_dir}/VERIFICATION.md                           ║
+╚════════════════════════════════════════════════════════════════╝
 
 ### What's Missing
 
 {Extract gap summaries from VERIFICATION.md}
 
----
+## ▶ NEXT: Fix the gaps
 
-## ▶ Fix the Gaps
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Type:  /clear
+2. Then:  /coder:init
+3. Then:  /coder:plan-phase {N} --gaps
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-`/coder:plan-phase {N} --gaps`
+After gap plans are created:  /coder:execute-phase {N} --gaps-only
 
-Then re-execute: `/coder:execute-phase {N} --gaps-only`
-
-<sub>`/clear` first → fresh context</sub>
+## Alternatives
+- View full report:  Read {phase_dir}/VERIFICATION.md
+- Skip gaps:         /coder:verify-work {N} (user acceptance)
 ```
+
+</offer_next>
 
 **Do NOT proceed to completion. Do NOT call coder-end-plan.**
 
@@ -330,7 +376,6 @@ After testing, respond:
 Proceed to completion.
 </step>
 
-<completion>
 <step name="8_completion">
 ## Step 8: Complete Phase
 
@@ -380,12 +425,16 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 
 ### 8e. Present Next Steps
 
+<offer_next>
+
+**Primary route (UAT):**
 ```
 ╔════════════════════════════════════════════════════════════════╗
 ║  ✓ PHASE {N} EXECUTED AND VERIFIED                             ║
 ╠════════════════════════════════════════════════════════════════╣
 ║  Plans completed: {X}/{Y}                                      ║
 ║  Verification: passed                                          ║
+║  Model profile: {MODEL_PROFILE}                                ║
 ║  Commits: {commit hashes}                                      ║
 ╚════════════════════════════════════════════════════════════════╝
 
@@ -396,9 +445,15 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 2. Then:  /coder:init
 3. Then:  /coder:verify-work {N}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## Alternatives
+- Skip UAT, plan next:   /coder:plan-phase {N+1}
+- View what was built:   /coder:progress
+- Check verification:    Read .planning/phases/{NN-name}/VERIFICATION.md
 ```
+
+</offer_next>
 </step>
-</completion>
 
 </process>
 

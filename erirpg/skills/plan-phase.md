@@ -35,10 +35,44 @@ The CLI returns JSON with:
 - `has_context`: Whether CONTEXT.md exists
 - `has_research`: Whether RESEARCH.md exists
 - `is_brownfield`: Whether codebase docs exist
-- `settings`: Workflow settings
+- `settings`: Workflow settings (includes `model_profile`)
 - `paths`: Paths to PROJECT.md, ROADMAP.md, STATE.md, etc.
 
 Parse and store these values for subsequent steps.
+
+### Resolve Model Profile
+
+Extract the model profile from settings and resolve models for each agent type:
+
+```bash
+MODEL_PROFILE=$(cat .planning/config.json 2>/dev/null | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(data.get('model_profile', 'balanced'))
+except: print('balanced')
+" 2>/dev/null || echo "balanced")
+```
+
+**Model lookup table:**
+
+| Profile | Researcher | Planner | Plan-Checker |
+|---------|-----------|---------|--------------|
+| quality | opus | opus | sonnet |
+| balanced | haiku | sonnet | sonnet |
+| budget | haiku | sonnet | haiku |
+
+Resolve the specific models you'll use in this command:
+
+```bash
+case "$MODEL_PROFILE" in
+  quality)  RESEARCHER_MODEL="opus";  PLANNER_MODEL="opus";  CHECKER_MODEL="sonnet" ;;
+  budget)   RESEARCHER_MODEL="haiku"; PLANNER_MODEL="sonnet"; CHECKER_MODEL="haiku" ;;
+  *)        RESEARCHER_MODEL="haiku"; PLANNER_MODEL="sonnet"; CHECKER_MODEL="sonnet" ;;
+esac
+```
+
+Report: `Model profile: {MODEL_PROFILE} (researcher={RESEARCHER_MODEL}, planner={PLANNER_MODEL}, checker={CHECKER_MODEL})`
 </step>
 
 <step name="2_load_state">
@@ -144,11 +178,12 @@ Confirm syntax/version is current. Document any concerns.
 
 ### Level 2-3: Spawn Researcher
 
-Spawn **eri-phase-researcher** with depth parameter:
+Spawn **eri-phase-researcher** with depth parameter and resolved model:
 
 ```
 Task(
   subagent_type="eri-phase-researcher",
+  model="{RESEARCHER_MODEL}",
   prompt="Research implementation for phase {phase_number}: {phase_name}
 
 <depth>{RESEARCH_DEPTH}</depth>
@@ -196,7 +231,7 @@ CONFIDENCE=$(grep "^confidence:" "${phase_dir}/RESEARCH.md" | cut -d: -f2 | tr -
 <step name="5_planning">
 ## Step 5: Create Plans
 
-Spawn **eri-planner** with full context:
+Spawn **eri-planner** with full context and resolved model:
 
 ```bash
 # Read all context files
@@ -210,6 +245,7 @@ RESEARCH=$(cat "${phase_dir}/RESEARCH.md" 2>/dev/null)
 ```
 Task(
   subagent_type="eri-planner",
+  model="{PLANNER_MODEL}",
   prompt="Create execution plans for phase {phase_number}: {phase_name}
 
 <project>
@@ -258,11 +294,12 @@ PLAN_CHECK=$(cat .planning/config.json 2>/dev/null | grep -o '"plan_check"[[:spa
 
 **If plan_check is true:**
 
-Spawn **eri-plan-checker**:
+Spawn **eri-plan-checker** with resolved model:
 
 ```
 Task(
   subagent_type="eri-plan-checker",
+  model="{CHECKER_MODEL}",
   prompt="Validate plans for phase {phase_number}: {phase_name}
 
 <phase_dir>{phase_dir}</phase_dir>
@@ -296,11 +333,12 @@ Plan validation found {N} issues:
 Spawning planner in revision mode...
 ```
 
-Spawn **eri-planner** again with revision context:
+Spawn **eri-planner** again with revision context and resolved model:
 
 ```
 Task(
   subagent_type="eri-planner",
+  model="{PLANNER_MODEL}",
   prompt="Revise plans for phase {phase_number} based on checker feedback.
 
 <issues>
@@ -339,7 +377,6 @@ git commit -m "plan(phase-${phase_number}): create execution plans for ${phase_n
 ```
 </step>
 
-<completion>
 <step name="8_completion">
 ## Step 8: Update State and Present Next Steps
 
@@ -367,12 +404,16 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 
 ### Present Next Steps
 
+<offer_next>
+
+**Primary route (execute):**
 ```
 ╔════════════════════════════════════════════════════════════════╗
 ║  ✓ PHASE {N} PLANNED                                           ║
 ╠════════════════════════════════════════════════════════════════╣
 ║  Plans created: {list}                                         ║
 ║  Research: Level {depth} ({confidence})                        ║
+║  Model profile: {MODEL_PROFILE}                                ║
 ║  Location: .planning/phases/{NN-name}/                         ║
 ╚════════════════════════════════════════════════════════════════╝
 
@@ -385,9 +426,15 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 This will spawn executors to build the code for each plan.
+
+## Alternatives
+- Review plans first:  Read .planning/phases/{NN-name}/*-PLAN.md
+- Adjust settings:     /coder:settings
+- View progress:       /coder:progress
 ```
+
+</offer_next>
 </step>
-</completion>
 
 </process>
 
