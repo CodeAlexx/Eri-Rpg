@@ -66,8 +66,39 @@ Spawn 4 parallel researchers → .planning/research/
 Then synthesizer → SUMMARY.md
 
 **Phase 6: REQUIREMENTS**
-Present features, user selects v1 scope.
-Create .planning/REQUIREMENTS.md with REQ-IDs.
+Present features grouped by category, user selects v1 scope.
+Create .planning/REQUIREMENTS.md using this format:
+
+```markdown
+# Requirements
+
+## v1 Requirements
+
+### Authentication (AUTH)
+- [ ] **AUTH-01**: User can sign up with email/password
+- [ ] **AUTH-02**: User can log in with existing credentials
+
+### Profile (PROF)
+- [ ] **PROF-01**: User can view their profile
+- [ ] **PROF-02**: User can edit profile details
+
+### {Category} ({PREFIX})
+- [ ] **PREFIX-01**: {User-facing behavior}
+
+## v2 Requirements (Deferred)
+
+### {Category}
+- {Feature description} — deferred to v2
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| {feature} | {why excluded} |
+```
+
+Categories are derived from feature groupings (AUTH, PROF, CONT, etc.).
+Each category prefix becomes the REQ-ID prefix: CATEGORY-NN.
 
 **Phase 7: ROADMAP**
 Spawn eri-roadmapper → .planning/ROADMAP.md

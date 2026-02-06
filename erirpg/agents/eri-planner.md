@@ -612,6 +612,7 @@ wave: N                     # Execution wave (1, 2, 3...)
 depends_on: []              # Plan IDs this plan requires
 files_modified: []          # Files this plan touches
 autonomous: true            # false if plan has checkpoints
+requirements: []            # REQ-IDs this plan addresses (e.g., [AUTH-01, AUTH-02])
 
 must_haves:
   truths: []                # Observable behaviors

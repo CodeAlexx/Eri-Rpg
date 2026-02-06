@@ -373,6 +373,21 @@ After testing, respond:
 
 **If `passed`:**
 
+### 7c. Mark Requirements Complete
+
+After verification passes, mark this phase's requirements as complete:
+
+1. Read ROADMAP.md, find this phase's `**Requirements:**` line (e.g., "AUTH-01, AUTH-02")
+2. Parse the REQ-IDs from that line
+3. Read REQUIREMENTS.md
+4. For each REQ-ID from this phase:
+   - Change `- [ ] **{REQ-ID}**` to `- [x] **{REQ-ID}**` in v1 requirements section
+5. Read ROADMAP.md Coverage Matrix
+6. For each REQ-ID from this phase:
+   - Change `| {REQ-ID} | ... | Pending |` to `| {REQ-ID} | ... | Complete |`
+
+**Skip if:** REQUIREMENTS.md doesn't exist, or phase has no Requirements line in ROADMAP.md.
+
 Proceed to completion.
 </step>
 

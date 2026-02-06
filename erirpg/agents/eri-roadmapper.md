@@ -28,8 +28,14 @@ You receive:
 
 1. **Group requirements by category**
    - Auth, Core Features, Integrations, Polish, etc.
+   - Each category becomes an ID prefix: AUTH, PROF, CONT, etc.
 
-2. **Identify dependencies**
+2. **Assign categorized REQ-IDs**
+   - Format: `CATEGORY-NN` (e.g., AUTH-01, PROF-01, CONT-01)
+   - NOT sequential REQ-001, REQ-002 — categories enable traceability
+   - Each category starts numbering at 01
+
+3. **Identify dependencies**
    - What must exist before what?
    - Data models before features
    - Auth before protected features
@@ -38,11 +44,11 @@ You receive:
    - Each phase = complete, verifiable capability
    - Not horizontal layers (all models, then all APIs)
 
-4. **Assign requirements to phases**
+5. **Assign requirements to phases**
    - Every REQ-ID in exactly one phase
-   - Validate 100% coverage
+   - Validate 100% v1 coverage, report orphans (REQ-IDs with no phase)
 
-5. **Define success criteria**
+6. **Define success criteria**
    - 2-5 observable truths per phase
    - User perspective, not implementation
 
@@ -93,7 +99,7 @@ Phase 4: Wire everything together
 
 ### Phase 1: {name}
 **Goal:** {outcome, not task}
-**Requirements:** REQ-001, REQ-002, REQ-003
+**Requirements:** AUTH-01, AUTH-02, AUTH-03
 **Dependencies:** None
 **Success Criteria:**
 - User can {observable truth 1}
@@ -102,7 +108,7 @@ Phase 4: Wire everything together
 
 ### Phase 2: {name}
 **Goal:** {outcome}
-**Requirements:** REQ-004, REQ-005
+**Requirements:** PROF-01, PROF-02
 **Dependencies:** Phase 1
 **Success Criteria:**
 - User can {observable truth}
@@ -112,15 +118,16 @@ Phase 4: Wire everything together
 ...
 
 ## Coverage Matrix
-| REQ-ID | Description | Phase |
-|--------|-------------|-------|
-| REQ-001 | {desc} | 1 |
-| REQ-002 | {desc} | 1 |
-| REQ-003 | {desc} | 1 |
-| REQ-004 | {desc} | 2 |
-| ... | ... | ... |
+| REQ-ID | Description | Phase | Status |
+|--------|-------------|-------|--------|
+| AUTH-01 | {desc} | 1 | Pending |
+| AUTH-02 | {desc} | 1 | Pending |
+| AUTH-03 | {desc} | 1 | Pending |
+| PROF-01 | {desc} | 2 | Pending |
+| ... | ... | ... | Pending |
 
 **Coverage:** 100% (N/N requirements mapped)
+**Status values:** Pending (not started), Complete (verified)
 ```
 
 ## Also Create: STATE.md
@@ -162,8 +169,11 @@ Resume file: None
 ## Validation
 
 Before completing:
+- [ ] REQ-IDs use CATEGORY-NN format (AUTH-01, not REQ-001)
 - [ ] Every v1 requirement has a phase
 - [ ] No requirement in multiple phases
+- [ ] No orphans (REQ-IDs that appear in REQUIREMENTS.md but not in any phase)
+- [ ] All Status values are Pending (completion is marked during execution)
 - [ ] Dependencies are acyclic
 - [ ] Each phase has 2-5 success criteria
 - [ ] Success criteria are observable (user perspective)
