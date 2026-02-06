@@ -376,8 +376,8 @@ After testing, respond:
 Proceed to completion.
 </step>
 
-<step name="8_completion">
-## Step 8: Complete Phase
+<step name="8_finalize">
+## Step 8: Finalize Phase
 
 **Only reach this step if verification status is `passed`.**
 
@@ -400,8 +400,14 @@ If uncommitted files exist, commit them:
 git add .planning/phases/{phase_dir}/
 git commit -m "chore(phase-{N}): complete execution and verification"
 ```
+</step>
 
-### 8c. Update STATE.md
+</process>
+
+<completion>
+## On Completion
+
+### 1. Update STATE.md
 
 ```markdown
 ## Current Phase
@@ -417,13 +423,13 @@ Run `/coder:verify-work {N}` for user acceptance testing
 Or proceed to next phase: `/coder:plan-phase {N+1}`
 ```
 
-### 8d. Update Global State
+### 2. Update Global State
 
 ```bash
 python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 ```
 
-### 8e. Present Next Steps
+### 3. Present Next Steps
 
 <offer_next>
 
@@ -453,9 +459,7 @@ python3 -m erirpg.cli switch "$(pwd)" 2>/dev/null || true
 ```
 
 </offer_next>
-</step>
-
-</process>
+</completion>
 
 <agent_failure_handling>
 ## If Agent Spawn Fails

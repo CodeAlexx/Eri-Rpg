@@ -1,21 +1,25 @@
 """
-EriRPG Three-Level Verification System.
+EriRPG Verification System.
 
-Three levels of verification:
-1. Existence - File exists, not empty
-2. Substantive - Real code, not stub
-3. Wired - Connected to the system
+Two subsystems:
+1. Three-Level Structural Verification (existence → substantive → wired)
+2. Command Runner Verification (lint, test, type-check execution)
 
-Usage:
+Usage (structural):
     from erirpg.verification import verify_plan_must_haves
 
     report = verify_plan_must_haves(project_path, plan)
     if report.status == VerificationStatus.PASSED:
         print("All checks passed!")
-    else:
-        print(report.format_display())
+
+Usage (command runner):
+    from erirpg.verification import Verifier, VerificationConfig
+
+    verifier = Verifier(config)
+    result = verifier.run_step_verification(step)
 """
 
+# Three-level structural verification
 from erirpg.verification.levels import (
     verify_plan_must_haves,
     verify_truths,
@@ -49,8 +53,33 @@ from erirpg.verification.key_links import (
     verify_component_connection,
 )
 
+# Command runner verification (moved from verification.py monolith)
+from erirpg.verification.runner import (
+    VerificationStatus,
+    VerificationCommand,
+    CommandResult,
+    VerificationResult,
+    VerificationConfig,
+    Verifier,
+    SmartVerifier,
+    save_verification_result,
+    load_verification_result,
+    list_verification_results,
+    format_verification_summary,
+    load_verification_config,
+    save_verification_config,
+    get_default_python_config,
+    get_default_node_config,
+    find_relevant_tests,
+    build_smart_test_command,
+    BreakingChange,
+    signatures_compatible,
+    validate_interface_contracts,
+    format_breaking_changes,
+)
+
 __all__ = [
-    # Main API
+    # Structural verification
     "verify_plan_must_haves",
     "verify_truths",
     "verify_artifacts",
@@ -76,4 +105,26 @@ __all__ = [
     "KEY_LINK_PATTERNS",
     "detect_link_type",
     "verify_component_connection",
+    # Command runner
+    "VerificationStatus",
+    "VerificationCommand",
+    "CommandResult",
+    "VerificationResult",
+    "VerificationConfig",
+    "Verifier",
+    "SmartVerifier",
+    "save_verification_result",
+    "load_verification_result",
+    "list_verification_results",
+    "format_verification_summary",
+    "load_verification_config",
+    "save_verification_config",
+    "get_default_python_config",
+    "get_default_node_config",
+    "find_relevant_tests",
+    "build_smart_test_command",
+    "BreakingChange",
+    "signatures_compatible",
+    "validate_interface_contracts",
+    "format_breaking_changes",
 ]
