@@ -70,4 +70,5 @@ erirpg/commands/clone_behavior.py
 .planning/
 CLAUDE.md
 docs/GSD_AND_WORKFLOW.md
+docs/AUDIT_GSD_VS_CODER.md
 .claude/

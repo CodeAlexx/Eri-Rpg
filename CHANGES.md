@@ -201,9 +201,9 @@ New diagnostic command to identify and repair workflow issues. Created after Pha
 
 See `CODER-DOCTOR.md` for full documentation.
 
-### Workflow Audit Fixes (GSD Gap Analysis)
+### Workflow Audit Fixes
 
-Major fixes to plan-phase and execute-phase based on audit comparing GSD workflow to coder workflow.
+Major fixes to plan-phase and execute-phase based on workflow audit.
 
 **Root Cause of Phase 5 Failures:**
 1. Research was optional (setting-based) - now mandatory for Level 2-3
@@ -224,7 +224,7 @@ Major fixes to plan-phase and execute-phase based on audit comparing GSD workflo
 - Mid-execution STATE.md updates after each wave
 - Verification routing that blocks progress on gaps_found
 
-**Audit Document:** `docs/AUDIT_GSD_VS_CODER.md`
+**Audit Document:** `docs/WORKFLOW_AUDIT.md`
 
 ### Skill Completion Linter
 

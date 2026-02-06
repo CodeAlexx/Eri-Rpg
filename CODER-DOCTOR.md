@@ -288,7 +288,7 @@ Doctor produces a summary box after all checks:
 
 ## Background: Why Doctor Exists
 
-Doctor was created after analyzing Phase 5 execution failures. The audit (docs/AUDIT_GSD_VS_CODER.md) found:
+Doctor was created after analyzing Phase 5 execution failures. The audit found:
 
 1. **Research was optional** - External integrations proceeded without proper research
 2. **Verification wasn't enforced** - Phases marked complete despite gaps
