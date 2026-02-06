@@ -39,6 +39,8 @@ STATE_CHANGING_SKILLS = {
     "discuss-phase.md",
     "map-codebase.md",
     "plan-milestone-gaps.md",
+    "add-gaps.md",
+    "integrate-work.md",
 }
 
 # Skills that are read-only or utility (no completion required)

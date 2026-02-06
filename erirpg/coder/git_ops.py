@@ -156,6 +156,67 @@ def find_last_plan_commits() -> List[Dict[str, str]]:
     return find_plan_commits(last_plan_id)
 
 
+def find_untracked_commits(since: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Find commits NOT made by the coder workflow.
+
+    These are ad-hoc commits (manual fixes, creative sessions, etc.)
+    that don't match plan commit patterns (NN-NN) and don't only
+    touch .planning/ files.
+
+    Args:
+        since: ISO date string to filter commits after (optional).
+              If None, searches last 50 commits.
+
+    Returns:
+        List of commit dicts newest-first, each with:
+        - hash: short hash
+        - full_hash: full hash
+        - message: commit message
+        - date: ISO date string
+        - files: list of changed files
+    """
+    args = ["log", "--oneline", "--no-merges", "-50", "--format=%H|%s|%aI"]
+    if since:
+        args.append(f"--since={since}")
+
+    code, out, _ = run_git(args)
+    if code != 0 or not out.strip():
+        return []
+
+    # Plan commits match pattern like (02-03) in message
+    plan_pattern = re.compile(r"\(\d+-\d+\)")
+
+    results = []
+    for line in out.strip().split("\n"):
+        parts = line.split("|", 2)
+        if len(parts) < 3:
+            continue
+
+        full_hash, message, date = parts[0], parts[1], parts[2]
+
+        # Skip plan commits
+        if plan_pattern.search(message):
+            continue
+
+        # Get files changed by this commit
+        _, files_out, _ = run_git(["show", "--name-only", "--format=", full_hash])
+        files = [f for f in files_out.strip().split("\n") if f]
+
+        # Skip commits that only touch .planning/ files
+        if files and all(f.startswith(".planning/") for f in files):
+            continue
+
+        results.append({
+            "hash": full_hash[:7],
+            "full_hash": full_hash,
+            "message": message,
+            "date": date,
+            "files": files,
+        })
+
+    return results
+
+
 def preview_rollback(
     commits: List[Dict[str, str]], project_path: Optional[Path] = None
 ) -> Dict[str, Any]:

@@ -27,6 +27,8 @@ Commands:
 - coder-learn: Pattern extraction to knowledge
 - coder-template: File scaffolding
 - coder-handoff: Generate context documentation
+- coder-add-gaps: Report bugs found during testing
+- coder-integrate-work: Retroactive documentation from git history
 """
 
 import json
@@ -2091,6 +2093,133 @@ def get_verify_work_context(phase_num: int) -> dict:
 
 
 # ============================================================================
+# Command: coder-add-gaps
+# ============================================================================
+
+def get_add_gaps_context(phase_num: int) -> dict:
+    """Get context for reporting bugs/gaps in a phase.
+
+    Reuses phase-finding and must_haves-collecting from verify-work,
+    plus checks existing verification state so the skill can merge.
+    """
+    planning = get_planning_dir()
+    phases_dir = planning / "phases"
+
+    # Find phase directory
+    phase_dir = None
+    if phases_dir.exists():
+        for d in phases_dir.iterdir():
+            if d.is_dir() and d.name.startswith(f"{phase_num:02d}"):
+                phase_dir = d
+                break
+
+    if not phase_dir:
+        return {"error": f"Phase {phase_num} directory not found"}
+
+    # Get phase info from roadmap
+    phase_info = get_phase_assumptions(phase_num)
+
+    # Collect must_haves from all plans
+    must_haves = {"truths": [], "artifacts": [], "key_links": []}
+    for plan_path in sorted(phase_dir.glob("*-PLAN.md")):
+        fm = load_md_frontmatter(plan_path)
+        mh = fm.get("must_haves", {})
+        if isinstance(mh, dict):
+            must_haves["truths"].extend(mh.get("truths", []))
+            must_haves["artifacts"].extend(mh.get("artifacts", []))
+            must_haves["key_links"].extend(mh.get("key_links", []))
+
+    # Check existing verification
+    verification_path = phase_dir / "VERIFICATION.md"
+    verification_status = "none"
+    existing_gaps = []
+
+    if verification_path.exists():
+        v_result = check_phase_verification(phase_dir)
+        verification_status = v_result.get("status", "none")
+        existing_gaps = v_result.get("gaps", [])
+
+    return {
+        "phase": phase_num,
+        "phase_dir": str(phase_dir),
+        "phase_goal": phase_info.get("goal", ""),
+        "must_haves": must_haves,
+        "has_verification": verification_path.exists(),
+        "verification_status": verification_status,
+        "existing_gaps": existing_gaps,
+        "verification_path": str(verification_path),
+    }
+
+
+# ============================================================================
+# Command: coder-integrate-work
+# ============================================================================
+
+def get_integrate_work_context(phase_num: int, since: Optional[str] = None) -> dict:
+    """Get context for integrating ad-hoc work into planning artifacts.
+
+    Finds untracked git commits and prepares context for retroactive
+    PLAN.md + SUMMARY.md generation.
+    """
+    from erirpg.coder.git_ops import find_untracked_commits
+
+    planning = get_planning_dir()
+    phases_dir = planning / "phases"
+
+    # Find phase directory
+    phase_dir = None
+    phase_name = None
+    if phases_dir.exists():
+        for d in phases_dir.iterdir():
+            if d.is_dir() and d.name.startswith(f"{phase_num:02d}"):
+                phase_dir = d
+                phase_name = d.name
+                break
+
+    if not phase_dir:
+        return {"error": f"Phase {phase_num} directory not found"}
+
+    # Get phase goal
+    phase_info = get_phase_assumptions(phase_num)
+
+    # Find untracked commits
+    untracked = find_untracked_commits(since=since)
+
+    # Determine next plan number
+    existing_plans = sorted(phase_dir.glob("*-PLAN.md"))
+    if existing_plans:
+        # Parse highest plan number from filenames like 03-02-PLAN.md
+        import re
+        plan_nums = []
+        for p in existing_plans:
+            m = re.match(r'\d+-(\d+)-PLAN\.md', p.name)
+            if m:
+                plan_nums.append(int(m.group(1)))
+        next_plan = max(plan_nums, default=0) + 1
+    else:
+        next_plan = 1
+
+    # Get requirements from REQUIREMENTS.md
+    requirements = []
+    reqs_path = planning / "REQUIREMENTS.md"
+    if reqs_path.exists():
+        import re
+        reqs_content = reqs_path.read_text()
+        requirements = re.findall(r'(REQ-\w+)', reqs_content)
+
+    return {
+        "phase": phase_num,
+        "phase_name": phase_name,
+        "phase_dir": str(phase_dir),
+        "phase_goal": phase_info.get("goal", ""),
+        "untracked_commits": untracked,
+        "untracked_count": len(untracked),
+        "next_plan_number": next_plan,
+        "requirements": sorted(set(requirements)),
+    }
+
+
+# ============================================================================
 # Command: coder-gate (workflow enforcement)
 # ============================================================================
 
@@ -3797,6 +3926,29 @@ def register(cli):
         """
         result = get_discuss_phase_context(phase)
         safe_update_state(f"Discussing phase {phase}")
+        click.echo(json.dumps(result, indent=2))
+
+    @cli.command("coder-add-gaps")
+    @click.argument("phase", type=int)
+    def coder_add_gaps_cmd(phase: int):
+        """Get context for /coder:add-gaps skill.
+
+        Report bugs/gaps found during manual testing.
+        """
+        result = get_add_gaps_context(phase)
+        safe_update_state(f"Adding gaps for phase {phase}")
+        click.echo(json.dumps(result, indent=2))
+
+    @cli.command("coder-integrate-work")
+    @click.argument("phase", type=int)
+    @click.option("--since", "-s", help="Only commits after this ISO date")
+    def coder_integrate_work_cmd(phase: int, since: str):
+        """Get context for /coder:integrate-work skill.
+
+        Find untracked commits for retroactive documentation.
+        """
+        result = get_integrate_work_context(phase, since=since)
+        safe_update_state(f"Integrating work for phase {phase}")
         click.echo(json.dumps(result, indent=2))
 
     @cli.command("coder-plan-phase")
