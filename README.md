@@ -301,7 +301,7 @@ We built a Rust chat app (995 lines, egui UI, SQLite, streaming API) in one sess
 
 ## Status
 
-Alpha v0.57 - usable but evolving.
+Alpha v0.60.0 - usable but evolving.
 
 ### Working
 - Knowledge storage and recall

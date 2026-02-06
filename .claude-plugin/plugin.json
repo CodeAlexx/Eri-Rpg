@@ -1,6 +1,6 @@
 {
   "name": "eri-rpg",
-  "version": "0.60.0-alpha",
+  "version": "0.60.0",
   "description": "Spec-driven development framework with verification for Claude Code",
   "author": "Alex",
   "repository": "https://github.com/CodeAlexx/Eri-Rpg",

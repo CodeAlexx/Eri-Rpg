@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "erirpg"
-version = "0.60.0-alpha"
+version = "0.60.0"
 description = "Cross-project feature transplant tool for Claude Code"
 readme = "README.md"
 license = {text = "MIT"}

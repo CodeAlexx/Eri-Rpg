@@ -1,6 +1,6 @@
 # EriRPG Complete Manual
 
-**Alpha v0.59** | Making Claude better at complex code changes
+**Alpha v0.60.0** | Making Claude better at complex code changes
 
 ---
 

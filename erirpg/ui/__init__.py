@@ -1,3 +1,3 @@
 """EriRPG Web UI - Local dashboard for monitoring EriRPG state."""
 
-__version__ = "0.55.0-alpha"
+__version__ = "0.60.0"

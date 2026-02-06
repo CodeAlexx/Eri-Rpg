@@ -113,7 +113,7 @@ class Edge:
 class Graph:
     """Complete dependency graph for a project."""
     project: str
-    version: str = "0.55.0-alpha"
+    version: str = "0.60.0"
     indexed_at: datetime = field(default_factory=datetime.now)
     modules: Dict[str, Module] = field(default_factory=dict)
     edges: List[Edge] = field(default_factory=list)
@@ -172,7 +172,7 @@ class Graph:
 
         graph = cls(
             project=data["project"],
-            version=data.get("version", "0.55.0-alpha"),
+            version=data.get("version", "0.60.0"),
             indexed_at=datetime.fromisoformat(data["indexed_at"]),
             modules={k: Module.from_dict(v) for k, v in data["modules"].items()},
             edges=[Edge.from_dict(e) for e in data.get("edges", [])],

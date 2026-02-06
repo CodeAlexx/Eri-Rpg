@@ -16,7 +16,7 @@ File write hooks are installed when an Agent is created (opt-in).
 Claude Code hooks (pretooluse.py) enforce workflow at the tool level.
 """
 
-__version__ = "0.55.0-alpha"
+__version__ = "0.60.0"
 __author__ = "Alex"
 
 # NOTE: Hooks are NOT auto-installed on import anymore.

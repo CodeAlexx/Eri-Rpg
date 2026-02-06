@@ -15,7 +15,7 @@ from erirpg.cli_commands import register_all
 
 
 @click.group()
-@click.version_option(version="0.60.0-alpha")
+@click.version_option(version="0.60.0")
 def cli():
     """EriRPG - Cross-project feature transplant tool.
 

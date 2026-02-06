@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.60.0-alpha (2026-02-05)
+## v0.60.0 (2026-02-05)
 
 Phase 7 complete: Claude Code plugin system.
 

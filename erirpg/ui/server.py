@@ -24,7 +24,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="EriRPG Dashboard",
-        version="0.55.0-alpha",
+        version="0.60.0",
         docs_url=None,
         redoc_url=None
     )
