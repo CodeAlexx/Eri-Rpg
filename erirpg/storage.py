@@ -343,6 +343,33 @@ def delete_project(project_name: str, db_path: Optional[str] = None) -> bool:
         return cursor.rowcount > 0
 
 
+def count_sessions_for_project(project_name: str, db_path: Optional[str] = None) -> int:
+    """Count sessions for a project."""
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) as c FROM sessions WHERE project_name = ?",
+            (project_name,),
+        ).fetchone()
+        return row["c"]
+
+
+def delete_sessions_for_project(project_name: str, db_path: Optional[str] = None) -> int:
+    """Delete all sessions for a project.
+
+    Cascades to decisions, blockers, next_actions, session_learnings via FK.
+    Returns count of sessions deleted.
+    """
+    init_db(db_path)
+    with get_connection(db_path) as conn:
+        cursor = conn.execute(
+            "DELETE FROM sessions WHERE project_name = ?",
+            (project_name,),
+        )
+        conn.commit()
+        return cursor.rowcount
+
+
 # =============================================================================
 # Read Operations - Single Project
 # =============================================================================

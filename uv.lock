@@ -155,7 +155,7 @@ wheels = [
 
 [[package]]
 name = "erirpg"
-version = "0.55.0a0"
+version = "0.60.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

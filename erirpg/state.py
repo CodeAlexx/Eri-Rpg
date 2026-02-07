@@ -88,6 +88,13 @@ class State:
         self.active_project = name  # Legacy backwards compat
         self.save()
 
+    def clear_active_project(self) -> None:
+        """Clear the active project (e.g. after project removal)."""
+        self.active_project = None
+        self.target_project = None
+        self.target_project_path = None
+        self.save()
+
     def get_active_project(self) -> Optional[str]:
         """Get the active project name."""
         return self.active_project

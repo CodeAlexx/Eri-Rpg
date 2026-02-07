@@ -33,6 +33,7 @@ STATE_CHANGING_SKILLS = {
     "new-milestone.md",
     "insert-phase.md",
     "remove-phase.md",
+    "remove-project.md",
     "quick.md",
     "pause.md",
     "clone-behavior.md",
